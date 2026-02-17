@@ -1,0 +1,19 @@
+{
+  "name": "@scaffold-ai/ui",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./globals.css": "./src/globals.css",
+    "./lib/*": "./src/lib/*.ts",
+    "./components/*": "./src/components/*.tsx"
+  },
+  "devDependencies": {
+    "@scaffold-ai/typescript-config": "workspace:*",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.6.0"
+  }
+}

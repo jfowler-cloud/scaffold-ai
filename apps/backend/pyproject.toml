@@ -1,0 +1,35 @@
+[project]
+name = "scaffold-ai-backend"
+version = "0.1.0"
+description = "FastAPI + LangGraph backend for Scaffold AI"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "langgraph>=0.2.0",
+    "langchain-aws>=0.2.0",
+    "langchain-core>=0.3.0",
+    "pydantic>=2.10.0",
+    "gitpython>=3.1.0",
+    "python-dotenv>=1.0.0",
+    "websockets>=14.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "httpx>=0.28.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/scaffold_ai"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
