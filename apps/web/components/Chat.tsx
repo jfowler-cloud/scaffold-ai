@@ -7,7 +7,7 @@ export function Chat() {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isLoading, addMessage, setLoading } = useChatStore();
-  const { getGraphJSON } = useGraphStore();
+  const { getGraphJSON, setGraph } = useGraphStore();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -49,6 +49,11 @@ export function Chat() {
 
       const data = await response.json();
 
+      // Update the graph if the backend returned new nodes/edges
+      if (data.updated_graph?.nodes?.length > 0 || data.updated_graph?.edges?.length > 0) {
+        setGraph(data.updated_graph.nodes || [], data.updated_graph.edges || []);
+      }
+
       addMessage({
         id: `assistant-${Date.now()}`,
         role: "assistant",
@@ -74,9 +79,14 @@ export function Chat() {
           <div className="text-center text-muted-foreground py-8">
             <p className="text-lg font-medium">Welcome to Scaffold AI</p>
             <p className="text-sm mt-2">
-              Describe your application architecture or add nodes to the canvas
-              to get started.
+              Describe what you want to build and I&apos;ll create the architecture for you.
             </p>
+            <div className="mt-4 text-xs space-y-1">
+              <p className="font-medium">Try:</p>
+              <p>&quot;Build a todo app with user authentication&quot;</p>
+              <p>&quot;Create a file upload service with S3&quot;</p>
+              <p>&quot;Design a REST API with a database&quot;</p>
+            </div>
           </div>
         )}
         {messages.map((message) => (

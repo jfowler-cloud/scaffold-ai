@@ -14,7 +14,7 @@ export const APINode = memo(function APINode({
         selected ? "border-amber-500 ring-2 ring-amber-200" : "border-amber-300"
       }`}
     >
-      <Handle type="target" position={Position.Top} className="!bg-amber-500" />
+      <Handle type="target" position={Position.Left} className="!bg-amber-500" />
 
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded bg-amber-100 flex items-center justify-center">
@@ -40,7 +40,7 @@ export const APINode = memo(function APINode({
 
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         className="!bg-amber-500"
       />
     </div>

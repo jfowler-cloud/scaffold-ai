@@ -4,22 +4,20 @@ import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { AppNode } from "@/lib/store";
 
-export const DatabaseNode = memo(function DatabaseNode({
+export const FrontendNode = memo(function FrontendNode({
   data,
   selected,
 }: NodeProps<AppNode>) {
   return (
     <div
       className={`px-4 py-3 rounded-lg border-2 bg-white shadow-md min-w-[150px] ${
-        selected ? "border-blue-500 ring-2 ring-blue-200" : "border-blue-300"
+        selected ? "border-cyan-500 ring-2 ring-cyan-200" : "border-cyan-300"
       }`}
     >
-      <Handle type="target" position={Position.Left} className="!bg-blue-500" />
-
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded bg-blue-100 flex items-center justify-center">
+        <div className="w-8 h-8 rounded bg-cyan-100 flex items-center justify-center">
           <svg
-            className="w-5 h-5 text-blue-600"
+            className="w-5 h-5 text-cyan-600"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -28,20 +26,20 @@ export const DatabaseNode = memo(function DatabaseNode({
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth={2}
-              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+              d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
             />
           </svg>
         </div>
         <div>
           <div className="font-medium text-sm text-gray-900">{data.label}</div>
-          <div className="text-xs text-gray-500">Database</div>
+          <div className="text-xs text-gray-500">Frontend</div>
         </div>
       </div>
 
       <Handle
         type="source"
         position={Position.Right}
-        className="!bg-blue-500"
+        className="!bg-cyan-500"
       />
     </div>
   );

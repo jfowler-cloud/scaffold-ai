@@ -18,7 +18,7 @@ export const AuthNode = memo(function AuthNode({
     >
       <Handle
         type="target"
-        position={Position.Top}
+        position={Position.Left}
         className="!bg-emerald-500"
       />
 
@@ -46,7 +46,7 @@ export const AuthNode = memo(function AuthNode({
 
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         className="!bg-emerald-500"
       />
     </div>
