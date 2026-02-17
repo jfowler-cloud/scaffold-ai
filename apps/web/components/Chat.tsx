@@ -2,12 +2,109 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useChatStore, useGraphStore } from "@/lib/store";
+import Container from "@cloudscape-design/components/container";
+import Header from "@cloudscape-design/components/header";
+import SpaceBetween from "@cloudscape-design/components/space-between";
+import Box from "@cloudscape-design/components/box";
+import Button from "@cloudscape-design/components/button";
+import Textarea from "@cloudscape-design/components/textarea";
+import Spinner from "@cloudscape-design/components/spinner";
+import Icon from "@cloudscape-design/components/icon";
+import Select from "@cloudscape-design/components/select";
+
+interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
+function ChatBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: isUser ? "flex-end" : "flex-start",
+        marginBottom: "12px",
+      }}
+    >
+      <div
+        style={{
+          maxWidth: "85%",
+          padding: "12px 16px",
+          borderRadius: "12px",
+          backgroundColor: isUser ? "#0972d3" : "#f2f3f3",
+          color: isUser ? "#ffffff" : "#000716",
+        }}
+      >
+        <SpaceBetween direction="horizontal" size="xs">
+          {!isUser && <Icon name="contact" />}
+          <Box variant="p" color={isUser ? "inherit" : "text-body-default"}>
+            {message.content}
+          </Box>
+          {isUser && <Icon name="user-profile" />}
+        </SpaceBetween>
+      </div>
+    </div>
+  );
+}
+
+function LoadingBubble() {
+  return (
+    <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: "12px" }}>
+      <div
+        style={{
+          padding: "12px 16px",
+          borderRadius: "12px",
+          backgroundColor: "#f2f3f3",
+        }}
+      >
+        <SpaceBetween direction="horizontal" size="xs">
+          <Icon name="contact" />
+          <Spinner size="normal" />
+          <Box variant="small" color="text-body-secondary">
+            Generating response...
+          </Box>
+        </SpaceBetween>
+      </div>
+    </div>
+  );
+}
+
+function WelcomeMessage() {
+  return (
+    <Box textAlign="center" padding={{ vertical: "xl" }}>
+      <SpaceBetween size="m">
+        <Box variant="h2">Welcome to Scaffold AI</Box>
+        <Box variant="p" color="text-body-secondary">
+          Describe what you want to build and I&apos;ll create the architecture for you.
+        </Box>
+        <SpaceBetween size="xs">
+          <Box variant="small" fontWeight="bold">
+            Try:
+          </Box>
+          <Box variant="small" color="text-body-secondary">
+            &quot;Build a todo app with user authentication&quot;
+          </Box>
+          <Box variant="small" color="text-body-secondary">
+            &quot;Create a file upload service with S3&quot;
+          </Box>
+          <Box variant="small" color="text-body-secondary">
+            &quot;Design a REST API with a database&quot;
+          </Box>
+        </SpaceBetween>
+      </SpaceBetween>
+    </Box>
+  );
+}
 
 export function Chat() {
   const [input, setInput] = useState("");
+  const [iacFormat, setIacFormat] = useState({ label: "CDK (TypeScript)", value: "cdk" });
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { messages, isLoading, addMessage, setLoading } = useChatStore();
-  const { getGraphJSON, setGraph } = useGraphStore();
+  const { messages, isLoading, addMessage, setLoading, setGeneratedFiles } = useChatStore();
+  const { getGraphJSON, setGraph, nodes } = useGraphStore();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -17,13 +114,57 @@ export function Chat() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGenerateCode = async () => {
+    if (isLoading || nodes.length === 0) return;
+
+    setLoading(true);
+
+    try {
+      const graphJSON = getGraphJSON();
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: "generate code",
+          graph: graphJSON,
+          iac_format: iacFormat.value,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate code");
+      }
+
+      const data = await response.json();
+
+      if (data.generated_files && data.generated_files.length > 0) {
+        setGeneratedFiles(data.generated_files);
+      }
+
+      addMessage({
+        id: `assistant-${Date.now()}`,
+        role: "assistant",
+        content: data.message,
+      });
+    } catch (error) {
+      console.error("Generate code error:", error);
+      addMessage({
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: "Sorry, I encountered an error generating code. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!input.trim() || isLoading) return;
 
-    const userMessage = {
+    const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
-      role: "user" as const,
+      role: "user",
       content: input,
     };
 
@@ -40,6 +181,7 @@ export function Chat() {
         body: JSON.stringify({
           message: input,
           graph: graphJSON,
+          iac_format: iacFormat.value,
         }),
       });
 
@@ -52,6 +194,11 @@ export function Chat() {
       // Update the graph if the backend returned new nodes/edges
       if (data.updated_graph?.nodes?.length > 0 || data.updated_graph?.edges?.length > 0) {
         setGraph(data.updated_graph.nodes || [], data.updated_graph.edges || []);
+      }
+
+      // Save generated files if any
+      if (data.generated_files && data.generated_files.length > 0) {
+        setGeneratedFiles(data.generated_files);
       }
 
       addMessage({
@@ -71,76 +218,96 @@ export function Chat() {
     }
   };
 
-  return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && (
-          <div className="text-center text-muted-foreground py-8">
-            <p className="text-lg font-medium">Welcome to Scaffold AI</p>
-            <p className="text-sm mt-2">
-              Describe what you want to build and I&apos;ll create the architecture for you.
-            </p>
-            <div className="mt-4 text-xs space-y-1">
-              <p className="font-medium">Try:</p>
-              <p>&quot;Build a todo app with user authentication&quot;</p>
-              <p>&quot;Create a file upload service with S3&quot;</p>
-              <p>&quot;Design a REST API with a database&quot;</p>
-            </div>
-          </div>
-        )}
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${
-              message.role === "user" ? "justify-end" : "justify-start"
-            }`}
-          >
-            <div
-              className={`max-w-[85%] rounded-lg px-4 py-2 ${
-                message.role === "user"
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted"
-              }`}
-            >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-muted rounded-lg px-4 py-2">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:0.1s]" />
-                <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce [animation-delay:0.2s]" />
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
 
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-border">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Describe your application..."
-            className="flex-1 px-4 py-2 border border-input rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Send
-          </button>
+  return (
+    <Container
+      header={
+        <Header
+          variant="h2"
+          description="Describe your architecture in natural language"
+        >
+          <SpaceBetween direction="horizontal" size="xs">
+            <Icon name="gen-ai" />
+            AI Assistant
+          </SpaceBetween>
+        </Header>
+      }
+      fitHeight
+    >
+      <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        {/* Messages area */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: "16px 0",
+            minHeight: 0,
+          }}
+        >
+          {messages.length === 0 && <WelcomeMessage />}
+          {messages.map((message) => (
+            <ChatBubble key={message.id} message={message as ChatMessage} />
+          ))}
+          {isLoading && <LoadingBubble />}
+          <div ref={messagesEndRef} />
         </div>
-      </form>
-    </div>
+
+        {/* Input area */}
+        <div style={{ borderTop: "1px solid #e9ebed", paddingTop: "16px" }}>
+          <SpaceBetween size="s">
+            <SpaceBetween direction="horizontal" size="s" alignItems="center">
+              <div style={{ flex: 1 }}>
+                <Select
+                  selectedOption={iacFormat}
+                  onChange={({ detail }) => setIacFormat(detail.selectedOption as typeof iacFormat)}
+                  options={[
+                    { label: "CDK (TypeScript)", value: "cdk" },
+                    { label: "CloudFormation (YAML)", value: "cloudformation" },
+                    { label: "Terraform (HCL)", value: "terraform" },
+                  ]}
+                  placeholder="Select IaC format"
+                  disabled={isLoading}
+                />
+              </div>
+              <Button
+                variant="primary"
+                onClick={handleGenerateCode}
+                disabled={isLoading || nodes.length === 0}
+                loading={isLoading}
+                iconName="download"
+              >
+                Generate Code
+              </Button>
+            </SpaceBetween>
+            <Textarea
+              value={input}
+              onChange={({ detail }) => setInput(detail.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Describe your application architecture..."
+              rows={2}
+              disabled={isLoading}
+            />
+            <Box float="right">
+              <Button
+                variant="primary"
+                onClick={handleSubmit}
+                disabled={isLoading || !input.trim()}
+                loading={isLoading}
+                iconName="send"
+                iconAlign="right"
+              >
+                Send
+              </Button>
+            </Box>
+          </SpaceBetween>
+        </div>
+      </div>
+    </Container>
   );
 }

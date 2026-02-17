@@ -31,6 +31,7 @@ class ChatRequest(BaseModel):
 
     user_input: str
     graph_json: dict | None = None
+    iac_format: str = "cdk"  # cdk, cloudformation, or terraform
 
 
 class ChatResponse(BaseModel):
@@ -69,6 +70,7 @@ async def chat(request: ChatRequest):
             "user_input": request.user_input,
             "intent": "new_feature",  # Will be determined by interpreter
             "graph_json": request.graph_json or {"nodes": [], "edges": []},
+            "iac_format": request.iac_format,
             "generated_files": [],
             "errors": [],
             "retry_count": 0,

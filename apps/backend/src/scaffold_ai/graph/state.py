@@ -13,6 +13,48 @@ class GeneratedFile(TypedDict):
     content: str
 
 
+class SecurityIssue(TypedDict):
+    """A security issue found during review."""
+
+    service: str
+    issue: str
+    severity: str  # critical, high, medium, low
+    recommendation: str
+
+
+class SecurityRecommendation(TypedDict):
+    """A security recommendation."""
+
+    service: str
+    recommendation: str
+
+
+class ConfigChange(TypedDict):
+    """A recommended configuration change for security."""
+
+    node_id: str
+    changes: dict
+
+
+class SecurityEnhancements(TypedDict):
+    """Security enhancements to apply to the architecture."""
+
+    nodes_to_add: list[dict]
+    config_changes: list[ConfigChange]
+
+
+class SecurityReview(TypedDict):
+    """Results of a security review."""
+
+    security_score: int  # 0-100
+    passed: bool
+    critical_issues: list[SecurityIssue]
+    warnings: list[SecurityIssue]
+    recommendations: list[SecurityRecommendation]
+    compliant_services: list[str]
+    security_enhancements: SecurityEnhancements
+
+
 class GraphState(TypedDict):
     """
     State schema for the LangGraph workflow.
@@ -29,6 +71,12 @@ class GraphState(TypedDict):
 
     # The React Flow graph JSON
     graph_json: dict
+
+    # IaC format preference (cdk, cloudformation, terraform)
+    iac_format: str
+
+    # Security review results (populated before code generation)
+    security_review: SecurityReview | None
 
     # Generated code files
     generated_files: list[GeneratedFile]

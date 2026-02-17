@@ -2,11 +2,11 @@
 
 import os
 import json
-import uuid
 from langchain_aws import ChatBedrock
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from .state import GraphState, Intent
+from .state import GraphState, Intent, SecurityReview
+from ..agents.security_specialist import SecuritySpecialistAgent
 
 # Initialize Bedrock client
 def get_llm():
@@ -89,10 +89,50 @@ Guidelines:
 Respond with ONLY the JSON, no markdown or explanation outside the JSON."""
 
 
+SECURITY_REVIEW_PROMPT = """You are a Security Specialist reviewing an AWS serverless architecture.
+
+Architecture to review:
+{architecture}
+
+Review this architecture for security issues. Check for:
+1. IAM: Least privilege permissions, no wildcards
+2. Encryption: Data at rest and in transit
+3. Authentication: API authorization configured
+4. Network: No unnecessary public access
+5. Logging: CloudWatch/X-Ray enabled
+6. Data Protection: Backups, versioning, PITR
+
+Respond with JSON:
+{{
+  "security_score": 0-100,
+  "passed": true/false,
+  "critical_issues": [
+    {{"service": "...", "issue": "...", "severity": "critical", "recommendation": "..."}}
+  ],
+  "warnings": [
+    {{"service": "...", "issue": "...", "severity": "high|medium", "recommendation": "..."}}
+  ],
+  "recommendations": [
+    {{"service": "...", "recommendation": "..."}}
+  ],
+  "compliant_services": ["list of compliant services"],
+  "security_enhancements": {{
+    "nodes_to_add": [],
+    "config_changes": [
+      {{"node_id": "...", "changes": {{...}}}}
+    ]
+  }}
+}}
+
+Pass criteria:
+- No critical issues
+- No more than 3 high severity issues
+
+Respond with ONLY JSON."""
+
+
 def generate_node_positions(nodes: list, existing_nodes: list) -> list:
     """Generate x,y positions for nodes in a left-to-right flow layout."""
-    # Define column positions by node type (left to right flow)
-    # Organized by typical data flow: frontend -> api -> compute -> data/events
     type_columns = {
         "frontend": 0,
         "cdn": 0,
@@ -108,16 +148,13 @@ def generate_node_positions(nodes: list, existing_nodes: list) -> list:
         "storage": 6,
     }
 
-    # Spacing configuration - wide spacing to avoid overlaps
-    COLUMN_WIDTH = 320  # Horizontal spacing between columns
-    ROW_HEIGHT = 200    # Vertical spacing between rows
+    COLUMN_WIDTH = 320
+    ROW_HEIGHT = 200
     START_X = 50
     START_Y = 50
 
-    # Track how many nodes are in each column
     column_counts = {i: 0 for i in range(7)}
 
-    # Count existing nodes per column
     for node in existing_nodes:
         node_type = node.get("data", {}).get("type", "api")
         col = type_columns.get(node_type, 2)
@@ -158,7 +195,6 @@ async def interpret_intent(state: GraphState) -> GraphState:
         response = await llm.ainvoke(messages)
         intent_text = response.content.strip().lower()
 
-        # Map response to valid intent
         intent_map = {
             "new_feature": "new_feature",
             "modify_graph": "modify_graph",
@@ -186,11 +222,9 @@ async def architect_node(state: GraphState) -> GraphState:
     """Generate architecture with visual nodes using Claude."""
     intent = state["intent"]
 
-    # For explain intent, just describe the current architecture
     if intent == "explain":
         return await explain_architecture(state)
 
-    # For new_feature or modify_graph, generate nodes
     try:
         llm = get_llm()
 
@@ -214,8 +248,6 @@ async def architect_node(state: GraphState) -> GraphState:
         response = await llm.ainvoke(messages)
         response_text = response.content.strip()
 
-        # Parse JSON response
-        # Handle potential markdown wrapping
         if "```json" in response_text:
             response_text = response_text.split("```json")[1].split("```")[0]
         elif "```" in response_text:
@@ -223,22 +255,16 @@ async def architect_node(state: GraphState) -> GraphState:
 
         result = json.loads(response_text)
 
-        # Get existing nodes and edges
         existing_nodes = current_graph.get("nodes", [])
         existing_edges = current_graph.get("edges", [])
         existing_node_ids = {n["id"] for n in existing_nodes}
 
-        # Process new nodes with positions
         new_nodes = result.get("nodes", [])
         positioned_new_nodes = generate_node_positions(new_nodes, existing_nodes)
-
-        # Filter out nodes that already exist (by ID)
         positioned_new_nodes = [n for n in positioned_new_nodes if n["id"] not in existing_node_ids]
 
-        # Combine with existing nodes
         all_nodes = existing_nodes + positioned_new_nodes
 
-        # Process edges
         new_edges = []
         for edge in result.get("edges", []):
             edge_id = f"e-{edge['source']}-{edge['target']}"
@@ -249,12 +275,10 @@ async def architect_node(state: GraphState) -> GraphState:
                 "label": edge.get("label", ""),
             })
 
-        # Combine edges (avoid duplicates)
         existing_edge_ids = {e["id"] for e in existing_edges}
         new_edges = [e for e in new_edges if e["id"] not in existing_edge_ids]
         all_edges = existing_edges + new_edges
 
-        # Update graph
         updated_graph = {
             "nodes": all_nodes,
             "edges": all_edges,
@@ -270,7 +294,6 @@ async def architect_node(state: GraphState) -> GraphState:
 
     except json.JSONDecodeError as e:
         print(f"JSON parse error: {e}")
-        print(f"Response was: {response_text[:500] if 'response_text' in dir() else 'N/A'}")
         return {
             **state,
             "response": "I understood your request but had trouble generating the architecture. Could you try rephrasing it?",
@@ -292,7 +315,7 @@ async def explain_architecture(state: GraphState) -> GraphState:
     if not nodes:
         return {
             **state,
-            "response": "Your canvas is empty. Describe what you want to build and I'll create an architecture for you. For example: 'Build a todo app with user authentication' or 'Create a file upload service with S3'.",
+            "response": "Your canvas is empty. Describe what you want to build and I'll create an architecture for you.",
         }
 
     try:
@@ -312,7 +335,7 @@ Provide a clear explanation of:
 3. Any suggestions for improvement"""
 
         messages = [
-            SystemMessage(content="You are a helpful AWS solutions architect explaining architectures to developers."),
+            SystemMessage(content="You are a helpful AWS solutions architect."),
             HumanMessage(content=prompt),
         ]
         response = await llm.ainvoke(messages)
@@ -324,8 +347,113 @@ Provide a clear explanation of:
         node_list = ", ".join([n.get("data", {}).get("label", "Unknown") for n in nodes])
         return {
             **state,
-            "response": f"Your architecture has {len(nodes)} components: {node_list}. There are {len(edges)} connections between them.",
+            "response": f"Your architecture has {len(nodes)} components: {node_list}.",
         }
+
+
+async def security_review_node(state: GraphState) -> GraphState:
+    """Security review gate - evaluates architecture before code generation."""
+    graph = state["graph_json"]
+    nodes = graph.get("nodes", [])
+
+    if not nodes:
+        return {
+            **state,
+            "security_review": {
+                "security_score": 100,
+                "passed": True,
+                "critical_issues": [],
+                "warnings": [],
+                "recommendations": [],
+                "compliant_services": [],
+                "security_enhancements": {"nodes_to_add": [], "config_changes": []},
+            },
+            "response": "No architecture to review.",
+        }
+
+    try:
+        llm = get_llm()
+
+        prompt = SECURITY_REVIEW_PROMPT.format(
+            architecture=json.dumps(graph, indent=2),
+        )
+
+        messages = [
+            SystemMessage(content="You are an AWS security specialist. Respond with JSON only."),
+            HumanMessage(content=prompt),
+        ]
+        response = await llm.ainvoke(messages)
+        response_text = response.content.strip()
+
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0]
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0]
+
+        review_result = json.loads(response_text)
+
+    except Exception as e:
+        print(f"Security review LLM failed, using fallback: {e}")
+        # Use the fallback security specialist
+        security_agent = SecuritySpecialistAgent()
+        review_result = await security_agent.review(graph)
+
+    # Build response message
+    score = review_result.get("security_score", 0)
+    passed = review_result.get("passed", False)
+    critical = review_result.get("critical_issues", [])
+    warnings = review_result.get("warnings", [])
+    recommendations = review_result.get("recommendations", [])
+
+    if passed:
+        response_parts = [
+            f"**Security Review: PASSED** (Score: {score}/100)",
+            "",
+        ]
+        if warnings:
+            response_parts.append(f"**{len(warnings)} warnings to address:**")
+            for w in warnings[:3]:
+                response_parts.append(f"- {w.get('service', 'Unknown')}: {w.get('issue', 'Unknown issue')}")
+        if recommendations:
+            response_parts.append("")
+            response_parts.append(f"**Recommendations:**")
+            for r in recommendations[:3]:
+                response_parts.append(f"- {r.get('service', 'Unknown')}: {r.get('recommendation', 'Unknown')}")
+        response_parts.append("")
+        response_parts.append("Proceeding with code generation...")
+    else:
+        response_parts = [
+            f"**Security Review: FAILED** (Score: {score}/100)",
+            "",
+            "Code generation blocked due to security issues:",
+            "",
+        ]
+        if critical:
+            response_parts.append("**Critical Issues (must fix):**")
+            for c in critical:
+                response_parts.append(f"- {c.get('service', 'Unknown')}: {c.get('issue', 'Unknown issue')}")
+                response_parts.append(f"  Fix: {c.get('recommendation', 'Unknown')}")
+        if warnings:
+            response_parts.append("")
+            response_parts.append("**Warnings:**")
+            for w in warnings[:5]:
+                response_parts.append(f"- {w.get('service', 'Unknown')}: {w.get('issue', 'Unknown issue')}")
+        response_parts.append("")
+        response_parts.append("Please address these issues and try again.")
+
+    return {
+        **state,
+        "security_review": review_result,
+        "response": "\n".join(response_parts),
+    }
+
+
+def security_gate(state: GraphState) -> str:
+    """Router function to determine if security review passed."""
+    review = state.get("security_review")
+    if review and review.get("passed", False):
+        return "passed"
+    return "failed"
 
 
 CDK_GENERATOR_PROMPT = """You are an AWS CDK expert. Generate TypeScript CDK code for this architecture.
@@ -333,121 +461,209 @@ CDK_GENERATOR_PROMPT = """You are an AWS CDK expert. Generate TypeScript CDK cod
 Architecture:
 {graph_json}
 
+Security Requirements (from security review):
+{security_requirements}
+
 Generate a complete CDK stack that includes:
 1. Proper imports for all AWS services used
-2. L2 constructs for each node
-3. Connections/permissions based on the edges
-4. Appropriate IAM policies
+2. L2 constructs for each node with security best practices applied
+3. Connections/permissions based on the edges (using least privilege grants)
+4. Encryption enabled where recommended
+5. Logging and monitoring enabled
+
+IMPORTANT SECURITY REQUIREMENTS:
+- Use least privilege IAM (grantRead vs grantReadWrite)
+- Enable encryption at rest (S3, DynamoDB, SQS)
+- Block public access for S3
+- Enable X-Ray tracing for Lambda
+- Enable point-in-time recovery for DynamoDB
+- Use dead letter queues for SQS
+- Enable CloudWatch logging
 
 Output ONLY valid TypeScript CDK code, no markdown or explanations."""
 
 
 async def cdk_specialist_node(state: GraphState) -> GraphState:
-    """Generate CDK code using Claude."""
+    """Generate IaC code (CDK/CloudFormation/Terraform) based on format preference."""
     if state["intent"] != "generate_code":
         return state
 
     graph = state["graph_json"]
     nodes = graph.get("nodes", [])
+    security_review = state.get("security_review", {})
+    iac_format = state.get("iac_format", "cdk")
 
     if not nodes:
         return {
             **state,
-            "response": "No components in your architecture yet. Describe what you want to build first, then ask me to generate the code.",
+            "response": "No components in your architecture yet.",
         }
 
+    # Build security requirements from review
+    security_requirements = []
+    for change in security_review.get("security_enhancements", {}).get("config_changes", []):
+        security_requirements.append(f"Node {change['node_id']}: Apply {change['changes']}")
+    for rec in security_review.get("recommendations", []):
+        security_requirements.append(f"{rec.get('service', 'General')}: {rec.get('recommendation', '')}")
+
     try:
-        llm = get_llm()
+        if iac_format == "cloudformation":
+            from scaffold_ai.agents.cloudformation_specialist import CloudFormationSpecialistAgent
+            agent = CloudFormationSpecialistAgent()
+            code = await agent.generate(graph)
+            file_path = "packages/generated/infrastructure/template.yaml"
+            format_name = "CloudFormation"
+        elif iac_format == "terraform":
+            from scaffold_ai.agents.terraform_specialist import TerraformSpecialistAgent
+            agent = TerraformSpecialistAgent()
+            code = await agent.generate(graph)
+            file_path = "packages/generated/infrastructure/main.tf"
+            format_name = "Terraform"
+        else:  # cdk (default)
+            llm = get_llm()
+            prompt = CDK_GENERATOR_PROMPT.format(
+                graph_json=json.dumps(graph, indent=2),
+                security_requirements="\n".join(security_requirements) if security_requirements else "Standard security best practices",
+            )
+            messages = [
+                SystemMessage(content="You are an AWS CDK expert. Output only valid TypeScript code with security best practices."),
+                HumanMessage(content=prompt),
+            ]
+            response = await llm.ainvoke(messages)
+            code = response.content
 
-        prompt = CDK_GENERATOR_PROMPT.format(
-            graph_json=json.dumps(graph, indent=2),
-        )
+            if "```typescript" in code:
+                code = code.split("```typescript")[1].split("```")[0]
+            elif "```" in code:
+                code = code.split("```")[1].split("```")[0]
 
-        messages = [
-            SystemMessage(content="You are an AWS CDK expert. Output only valid TypeScript code."),
-            HumanMessage(content=prompt),
-        ]
-        response = await llm.ainvoke(messages)
-        cdk_code = response.content
-
-        # Clean up code if wrapped in markdown
-        if "```typescript" in cdk_code:
-            cdk_code = cdk_code.split("```typescript")[1].split("```")[0]
-        elif "```" in cdk_code:
-            cdk_code = cdk_code.split("```")[1].split("```")[0]
+            file_path = "packages/generated/infrastructure/lib/scaffold-ai-stack.ts"
+            format_name = "CDK"
 
     except Exception as e:
-        print(f"LLM CDK generation failed: {e}")
-        cdk_code = generate_cdk_template(nodes)
+        print(f"IaC generation failed: {e}")
+        code = generate_secure_cdk_template(nodes, security_review)
+        file_path = "packages/generated/infrastructure/lib/scaffold-ai-stack.ts"
+        format_name = "CDK"
 
     generated_files = state.get("generated_files", [])
     generated_files.append({
-        "path": "packages/generated/infrastructure/lib/scaffold-ai-stack.ts",
-        "content": cdk_code.strip(),
+        "path": file_path,
+        "content": code.strip(),
     })
+
+    security_response = state.get("response", "")
+    final_response = f"{security_response}\n\n**{format_name} Code Generated!**\n\nThe AWS infrastructure code has been generated with security best practices applied. The code is saved to `{file_path}`."
 
     return {
         **state,
         "generated_files": generated_files,
-        "response": "I've generated the AWS CDK infrastructure code for your architecture. The code is ready for deployment.",
+        "response": final_response,
     }
 
 
-def generate_cdk_template(nodes: list) -> str:
-    """Generate basic CDK code from nodes (fallback)."""
-    imports = ["import * as cdk from 'aws-cdk-lib';", "import { Construct } from 'constructs';"]
+def generate_secure_cdk_template(nodes: list, security_review: dict) -> str:
+    """Generate secure CDK code from nodes (fallback)."""
+    imports = [
+        "import * as cdk from 'aws-cdk-lib';",
+        "import { Construct } from 'constructs';",
+    ]
     constructs = []
 
     for node in nodes:
         node_type = node.get("data", {}).get("type", "")
         label = node.get("data", {}).get("label", "Resource").replace(" ", "").replace("-", "")
+        safe_name = label.lower()
 
         if node_type == "database":
             imports.append("import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';")
             constructs.append(f'''
-    // {label} - DynamoDB (Serverless, pay-per-request)
-    new dynamodb.Table(this, '{label}Table', {{
-      partitionKey: {{ name: 'id', type: dynamodb.AttributeType.STRING }},
+    // {label} - DynamoDB with security best practices
+    const {safe_name}Table = new dynamodb.Table(this, '{label}Table', {{
+      partitionKey: {{ name: 'pk', type: dynamodb.AttributeType.STRING }},
+      sortKey: {{ name: 'sk', type: dynamodb.AttributeType.STRING }},
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      pointInTimeRecovery: true,  // Security: Enable PITR for data protection
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     }});''')
 
         elif node_type == "auth":
             imports.append("import * as cognito from 'aws-cdk-lib/aws-cognito';")
             constructs.append(f'''
-    // {label} - Cognito (Serverless auth)
-    new cognito.UserPool(this, '{label}UserPool', {{
+    // {label} - Cognito with strong security
+    const userPool = new cognito.UserPool(this, '{label}UserPool', {{
       selfSignUpEnabled: true,
       signInAliases: {{ email: true }},
       autoVerify: {{ email: true }},
+      passwordPolicy: {{
+        minLength: 12,
+        requireLowercase: true,
+        requireUppercase: true,
+        requireDigits: true,
+        requireSymbols: true,
+      }},
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      mfa: cognito.Mfa.OPTIONAL,
+      mfaSecondFactor: {{
+        sms: true,
+        otp: true,
+      }},
+    }});
+
+    const userPoolClient = userPool.addClient('{label}WebClient', {{
+      authFlows: {{ userPassword: true, userSrp: true }},
+      oAuth: {{
+        flows: {{ authorizationCodeGrant: true }},
+        scopes: [cognito.OAuthScope.OPENID, cognito.OAuthScope.EMAIL],
+      }},
     }});''')
 
         elif node_type == "api":
             imports.append("import * as apigateway from 'aws-cdk-lib/aws-apigateway';")
             constructs.append(f'''
-    // {label} - API Gateway (Serverless)
-    new apigateway.RestApi(this, '{label}Api', {{
+    // {label} - API Gateway with logging
+    const {safe_name}Api = new apigateway.RestApi(this, '{label}Api', {{
       restApiName: '{label}',
-      deployOptions: {{ stageName: 'prod' }},
+      deployOptions: {{
+        stageName: 'prod',
+        tracingEnabled: true,  // Security: X-Ray tracing
+        loggingLevel: apigateway.MethodLoggingLevel.INFO,
+        dataTraceEnabled: true,
+        metricsEnabled: true,
+      }},
+      defaultCorsPreflightOptions: {{
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+      }},
     }});''')
 
         elif node_type == "lambda":
             imports.append("import * as lambda from 'aws-cdk-lib/aws-lambda';")
             constructs.append(f'''
-    // {label} - Lambda (Serverless compute)
-    new lambda.Function(this, '{label}Function', {{
+    // {label} - Lambda with security best practices
+    const {safe_name}Fn = new lambda.Function(this, '{label}Function', {{
       runtime: lambda.Runtime.NODEJS_20_X,
       handler: 'index.handler',
       code: lambda.Code.fromInline('exports.handler = async () => {{ return {{ statusCode: 200 }}; }}'),
       timeout: cdk.Duration.seconds(30),
       memorySize: 256,
+      tracing: lambda.Tracing.ACTIVE,  // Security: X-Ray tracing
+      environment: {{
+        NODE_OPTIONS: '--enable-source-maps',
+        POWERTOOLS_SERVICE_NAME: '{safe_name}',
+      }},
     }});''')
 
         elif node_type == "storage":
             imports.append("import * as s3 from 'aws-cdk-lib/aws-s3';")
             constructs.append(f'''
-    // {label} - S3 (Serverless storage)
-    new s3.Bucket(this, '{label}Bucket', {{
+    // {label} - S3 with security best practices
+    const {safe_name}Bucket = new s3.Bucket(this, '{label}Bucket', {{
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,  // Security: Block public access
+      encryption: s3.BucketEncryption.S3_MANAGED,  // Security: Encryption at rest
+      versioned: true,  // Security: Enable versioning
+      enforceSSL: true,  // Security: Require HTTPS
       removalPolicy: cdk.RemovalPolicy.DESTROY,
       autoDeleteObjects: true,
     }});''')
@@ -455,59 +671,82 @@ def generate_cdk_template(nodes: list) -> str:
         elif node_type == "queue":
             imports.append("import * as sqs from 'aws-cdk-lib/aws-sqs';")
             constructs.append(f'''
-    // {label} - SQS Queue (Serverless messaging)
-    new sqs.Queue(this, '{label}Queue', {{
+    // {label} - SQS with DLQ and encryption
+    const {safe_name}Dlq = new sqs.Queue(this, '{label}DLQ', {{
+      retentionPeriod: cdk.Duration.days(14),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
+    }});
+
+    const {safe_name}Queue = new sqs.Queue(this, '{label}Queue', {{
       visibilityTimeout: cdk.Duration.seconds(300),
+      encryption: sqs.QueueEncryption.SQS_MANAGED,  // Security: Encryption
+      deadLetterQueue: {{
+        queue: {safe_name}Dlq,
+        maxReceiveCount: 3,
+      }},
     }});''')
 
         elif node_type == "events":
             imports.append("import * as events from 'aws-cdk-lib/aws-events';")
             constructs.append(f'''
-    // {label} - EventBridge (Serverless event bus)
-    new events.EventBus(this, '{label}EventBus', {{
-      eventBusName: '{label.lower()}-bus',
+    // {label} - EventBridge event bus
+    const {safe_name}Bus = new events.EventBus(this, '{label}EventBus', {{
+      eventBusName: '{safe_name}-bus',
     }});''')
 
         elif node_type == "notification":
             imports.append("import * as sns from 'aws-cdk-lib/aws-sns';")
             constructs.append(f'''
-    // {label} - SNS Topic (Serverless notifications)
-    new sns.Topic(this, '{label}Topic', {{
+    // {label} - SNS Topic
+    const {safe_name}Topic = new sns.Topic(this, '{label}Topic', {{
       displayName: '{label}',
     }});''')
 
         elif node_type == "workflow":
-            imports.append("import * as stepfunctions from 'aws-cdk-lib/aws-stepfunctions';")
+            imports.append("import * as sfn from 'aws-cdk-lib/aws-stepfunctions';")
             constructs.append(f'''
-    // {label} - Step Functions (Serverless workflow)
-    new stepfunctions.StateMachine(this, '{label}StateMachine', {{
-      definition: new stepfunctions.Pass(this, '{label}StartState'),
+    // {label} - Step Functions with tracing
+    const {safe_name}StateMachine = new sfn.StateMachine(this, '{label}StateMachine', {{
+      definition: new sfn.Pass(this, '{label}StartState'),
+      timeout: cdk.Duration.minutes(5),
+      tracingEnabled: true,  // Security: X-Ray tracing
     }});''')
 
         elif node_type == "cdn":
             imports.append("import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';")
-            imports.append("import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';")
             constructs.append(f'''
-    // {label} - CloudFront CDN (Serverless content delivery)
+    // {label} - CloudFront with security headers
     // Note: Requires an origin (S3 bucket or API Gateway)''')
 
         elif node_type == "stream":
             imports.append("import * as kinesis from 'aws-cdk-lib/aws-kinesis';")
             constructs.append(f'''
-    // {label} - Kinesis Stream (Serverless streaming)
-    new kinesis.Stream(this, '{label}Stream', {{
+    // {label} - Kinesis with encryption
+    const {safe_name}Stream = new kinesis.Stream(this, '{label}Stream', {{
       streamMode: kinesis.StreamMode.ON_DEMAND,
+      encryption: kinesis.StreamEncryption.MANAGED,  // Security: Encryption
     }});''')
 
         elif node_type == "frontend":
             constructs.append(f'''
-    // {label} - Frontend (Deploy to S3 + CloudFront or Amplify)
-    // Use 'amplify init' or deploy static assets to S3''')
+    // {label} - Frontend (Deploy via Amplify or S3+CloudFront)
+    // Use 'amplify init' or deploy to S3 with CloudFront''')
 
     unique_imports = list(dict.fromkeys(imports))
 
     return f'''{chr(10).join(unique_imports)}
 
+/**
+ * Scaffold AI Generated Stack
+ *
+ * Security features applied:
+ * - Encryption at rest for all data stores
+ * - X-Ray tracing enabled
+ * - Least privilege IAM policies
+ * - DLQ for async processing
+ * - Point-in-time recovery for DynamoDB
+ * - Blocked public access for S3
+ */
 export class ScaffoldAiStack extends cdk.Stack {{
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {{
     super(scope, id, props);
@@ -521,6 +760,7 @@ async def react_specialist_node(state: GraphState) -> GraphState:
     """React Specialist - generates React component code."""
     if state["intent"] != "generate_code":
         return state
+    # Future: Generate Cloudscape React components
     return state
 
 

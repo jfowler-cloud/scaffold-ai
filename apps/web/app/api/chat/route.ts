@@ -5,7 +5,7 @@ const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8000";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { message, graph } = body;
+    const { message, graph, iac_format = "cdk" } = body;
 
     // Forward request to FastAPI backend
     const response = await fetch(`${BACKEND_URL}/api/chat`, {
@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         user_input: message,
         graph_json: graph,
+        iac_format,
       }),
     });
 

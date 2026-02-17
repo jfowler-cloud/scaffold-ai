@@ -17,7 +17,12 @@
     "zustand": "^5.0.0",
     "@tanstack/react-query": "^5.64.0",
     "ai": "^4.1.0",
-    "@scaffold-ai/ui": "workspace:*"
+    "@scaffold-ai/ui": "workspace:*",
+    "@cloudscape-design/components": "^3.0.0",
+    "@cloudscape-design/global-styles": "^1.0.0",
+    "@cloudscape-design/design-tokens": "^3.0.0",
+    "@cloudscape-design/collection-hooks": "^1.0.0",
+    "@cloudscape-design/chat-components": "^1.0.0"
   },
   "devDependencies": {
     "typescript": "^5.7.0",

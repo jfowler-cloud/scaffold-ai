@@ -26,6 +26,11 @@ export interface AppNode extends Node {
   };
 }
 
+export interface GeneratedFile {
+  path: string;
+  content: string;
+}
+
 interface GraphState {
   nodes: AppNode[];
   edges: Edge[];
@@ -226,14 +231,17 @@ interface Message {
 interface ChatState {
   messages: Message[];
   isLoading: boolean;
+  generatedFiles: GeneratedFile[];
   addMessage: (message: Message) => void;
   setLoading: (loading: boolean) => void;
   clearMessages: () => void;
+  setGeneratedFiles: (files: GeneratedFile[]) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   isLoading: false,
+  generatedFiles: [],
 
   addMessage: (message) => {
     set({ messages: [...get().messages, message] });
@@ -241,6 +249,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   setLoading: (loading) => {
     set({ isLoading: loading });
+  },
+
+  setGeneratedFiles: (files) => {
+    set({ generatedFiles: files });
   },
 
   clearMessages: () => {
