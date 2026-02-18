@@ -201,17 +201,51 @@ class ReactSpecialistAgent:
         frontend_nodes = [n for n in nodes if n.get("data", {}).get("type") == "frontend"]
 
         if frontend_nodes:
+            # Analyze architecture to determine what to generate
+            has_auth = any(n.get("data", {}).get("type") == "auth" for n in nodes)
+            has_api = any(n.get("data", {}).get("type") == "api" for n in nodes)
+            has_database = any(n.get("data", {}).get("type") == "database" for n in nodes)
+            has_storage = any(n.get("data", {}).get("type") == "storage" for n in nodes)
+
             # Generate root layout with Cloudscape
             files.append({
                 "path": "packages/generated/web/app/layout.tsx",
                 "content": self._generate_root_layout(),
             })
 
-            # Generate main page
+            # Generate main page based on architecture
             files.append({
                 "path": "packages/generated/web/app/page.tsx",
-                "content": self._generate_main_page(nodes),
+                "content": self._generate_main_page(nodes, has_auth, has_api, has_database, has_storage),
             })
+
+            # Generate auth components if auth exists
+            if has_auth:
+                files.append({
+                    "path": "packages/generated/web/components/AuthProvider.tsx",
+                    "content": self._generate_auth_provider(),
+                })
+
+            # Generate API hooks if API exists
+            if has_api:
+                files.append({
+                    "path": "packages/generated/web/lib/api.ts",
+                    "content": self._generate_api_hooks(nodes),
+                })
+
+            # Generate data table if database exists
+            if has_database:
+                files.append({
+                    "path": "packages/generated/web/components/DataTable.tsx",
+                    "content": self._generate_data_table(),
+                })
+
+            # Generate file upload if storage exists
+            if has_storage:
+                files.append({
+                    "path": "packages/generated/web/components/FileUpload.tsx",
+                    "content": self._generate_file_upload(),
+                })
 
         return files
 
@@ -238,55 +272,340 @@ export default function RootLayout({
 }
 '''
 
-    def _generate_main_page(self, nodes: list) -> str:
-        """Generate main page with Cloudscape AppLayout."""
-        return '''\"use client\";
+    def _generate_main_page(self, nodes: list, has_auth: bool, has_api: bool, has_database: bool, has_storage: bool) -> str:
+        """Generate main page with Cloudscape AppLayout based on architecture."""
+        imports = ["useState"]
+        if has_auth:
+            imports.append("useEffect")
+        
+        components = [
+            "AppLayout", "Container", "Header", "SpaceBetween", 
+            "ContentLayout", "SideNavigation", "BreadcrumbGroup"
+        ]
+        
+        if has_database:
+            components.append("Button")
+        
+        nav_items = [
+            "{ type: 'link', text: 'Dashboard', href: '/' }",
+        ]
+        
+        if has_database:
+            nav_items.append("{ type: 'link', text: 'Data', href: '/data' }")
+        if has_storage:
+            nav_items.append("{ type: 'link', text: 'Files', href: '/files' }")
+        
+        content_sections = []
+        
+        if has_auth:
+            content_sections.append("""            <Container header={<Header variant="h2">Authentication</Header>}>
+              <p>User authentication is configured with AWS Cognito.</p>
+            </Container>""")
+        
+        if has_api:
+            content_sections.append("""            <Container header={<Header variant="h2">API</Header>}>
+              <p>REST API is available via AWS API Gateway.</p>
+            </Container>""")
+        
+        if has_database:
+            content_sections.append("""            <Container header={<Header variant="h2">Database</Header>}>
+              <p>Data is stored in AWS DynamoDB.</p>
+              <Button onClick={() => console.log('Load data')}>Load Data</Button>
+            </Container>""")
+        
+        if has_storage:
+            content_sections.append("""            <Container header={<Header variant="h2">Storage</Header>}>
+              <p>Files are stored in AWS S3.</p>
+            </Container>""")
+        
+        if not content_sections:
+            content_sections.append("""            <Container header={<Header variant="h2">Overview</Header>}>
+              <p>Welcome to your generated application.</p>
+            </Container>""")
 
-import { useState } from \'react\';
-import AppLayout from \'@cloudscape-design/components/app-layout\';
-import Container from \'@cloudscape-design/components/container\';
-import Header from \'@cloudscape-design/components/header\';
-import SpaceBetween from \'@cloudscape-design/components/space-between\';
-import ContentLayout from \'@cloudscape-design/components/content-layout\';
-import SideNavigation from \'@cloudscape-design/components/side-navigation\';
-import BreadcrumbGroup from \'@cloudscape-design/components/breadcrumb-group\';
+        return f'''\"use client\";
 
-export default function Home() {
+import {{ {", ".join(imports)} }} from 'react';
+{chr(10).join(f"import {comp} from '@cloudscape-design/components/{comp.lower().replace('breadcrumbgroup', 'breadcrumb-group').replace('sidenavigation', 'side-navigation').replace('contentlayout', 'content-layout').replace('spacebetween', 'space-between').replace('applayout', 'app-layout')}';" for comp in components)}
+
+export default function Home() {{
   const [navigationOpen, setNavigationOpen] = useState(true);
 
   return (
     <AppLayout
-      navigation={
+      navigation={{
         <SideNavigation
           activeHref="#"
-          header={{ text: \'My App\', href: \'#\' }}
-          items={[
-            { type: \'link\', text: \'Dashboard\', href: \'/\' },
-            { type: \'link\', text: \'Resources\', href: \'/resources\' },
-          ]}
+          header={{{{ text: 'My App', href: '#' }}}}
+          items={{[
+            {", ".join(nav_items)}
+          ]}}
         />
-      }
-      navigationOpen={navigationOpen}
-      onNavigationChange={({ detail }) => setNavigationOpen(detail.open)}
-      breadcrumbs={
-        <BreadcrumbGroup items={[{ text: \'Home\', href: \'/\' }]} />
-      }
-      content={
-        <ContentLayout header={<Header variant="h1">Dashboard</Header>}>
+      }}
+      navigationOpen={{navigationOpen}}
+      onNavigationChange={{({{ detail }}) => setNavigationOpen(detail.open)}}
+      breadcrumbs={{
+        <BreadcrumbGroup items={{[{{ text: 'Home', href: '/' }}]}} />
+      }}
+      content={{
+        <ContentLayout header={{<Header variant="h1">Dashboard</Header>}}>
           <SpaceBetween size="l">
-            <Container header={<Header variant="h2">Overview</Header>}>
-              <p>Welcome to your generated application.</p>
-            </Container>
+{chr(10).join(content_sections)}
           </SpaceBetween>
         </ContentLayout>
-      }
-      contentType="dashboard"
-      ariaLabels={{
-        navigation: \'Side navigation\',
-        navigationClose: \'Close navigation\',
-        navigationToggle: \'Open navigation\',
       }}
+      contentType="dashboard"
+      ariaLabels={{{{
+        navigation: 'Side navigation',
+        navigationClose: 'Close navigation',
+        navigationToggle: 'Open navigation',
+      }}}}
     />
+  );
+}}
+'''
+
+
+    def _generate_auth_provider(self) -> str:
+        """Generate auth provider component for Cognito."""
+        return '''\"use client\";
+
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+
+interface AuthContextType {
+  user: any | null;
+  signIn: (username: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  isLoading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check for existing session
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      // TODO: Implement Cognito session check
+      setIsLoading(false);
+    } catch (error) {
+      setIsLoading(false);
+    }
+  };
+
+  const signIn = async (username: string, password: string) => {
+    // TODO: Implement Cognito sign in
+    console.log('Sign in:', username);
+  };
+
+  const signOut = async () => {
+    // TODO: Implement Cognito sign out
+    setUser(null);
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, signIn, signOut, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+}
+'''
+
+    def _generate_api_hooks(self, nodes: list) -> str:
+        """Generate API hooks for data fetching."""
+        api_nodes = [n for n in nodes if n.get("data", {}).get("type") == "api"]
+        api_name = api_nodes[0].get("data", {}).get("label", "API") if api_nodes else "API"
+        
+        return f'''const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.example.com';
+
+export async function fetchData<T>(endpoint: string): Promise<T> {{
+  const response = await fetch(`${{API_URL}}${{endpoint}}`);
+  if (!response.ok) {{
+    throw new Error(`{api_name} error: ${{response.status}}`);
+  }}
+  return response.json();
+}}
+
+export async function postData<T>(endpoint: string, data: any): Promise<T> {{
+  const response = await fetch(`${{API_URL}}${{endpoint}}`, {{
+    method: 'POST',
+    headers: {{ 'Content-Type': 'application/json' }},
+    body: JSON.stringify(data),
+  }});
+  if (!response.ok) {{
+    throw new Error(`{api_name} error: ${{response.status}}`);
+  }}
+  return response.json();
+}}
+
+export async function deleteData(endpoint: string): Promise<void> {{
+  const response = await fetch(`${{API_URL}}${{endpoint}}`, {{
+    method: 'DELETE',
+  }});
+  if (!response.ok) {{
+    throw new Error(`{api_name} error: ${{response.status}}`);
+  }}
+}}
+'''
+
+    def _generate_data_table(self) -> str:
+        """Generate data table component for DynamoDB data."""
+        return '''\"use client\";
+
+import { useState } from 'react';
+import Table from '@cloudscape-design/components/table';
+import Header from '@cloudscape-design/components/header';
+import Button from '@cloudscape-design/components/button';
+import SpaceBetween from '@cloudscape-design/components/space-between';
+import TextFilter from '@cloudscape-design/components/text-filter';
+import Pagination from '@cloudscape-design/components/pagination';
+
+interface DataItem {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export function DataTable() {
+  const [items, setItems] = useState<DataItem[]>([]);
+  const [selectedItems, setSelectedItems] = useState<DataItem[]>([]);
+  const [filterText, setFilterText] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const filteredItems = items.filter(item =>
+    item.name.toLowerCase().includes(filterText.toLowerCase())
+  );
+
+  return (
+    <Table
+      columnDefinitions={[
+        { id: 'id', header: 'ID', cell: item => item.id, sortingField: 'id' },
+        { id: 'name', header: 'Name', cell: item => item.name, sortingField: 'name' },
+        { id: 'createdAt', header: 'Created', cell: item => item.createdAt },
+      ]}
+      items={filteredItems}
+      selectionType="multi"
+      selectedItems={selectedItems}
+      onSelectionChange={({ detail }) => setSelectedItems(detail.selectedItems)}
+      header={
+        <Header
+          counter={`(${filteredItems.length})`}
+          actions={
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button disabled={selectedItems.length === 0}>Delete</Button>
+              <Button variant="primary">Create</Button>
+            </SpaceBetween>
+          }
+        >
+          Data Items
+        </Header>
+      }
+      filter={
+        <TextFilter
+          filteringText={filterText}
+          onChange={({ detail }) => setFilterText(detail.filteringText)}
+          filteringPlaceholder="Find items"
+        />
+      }
+      pagination={
+        <Pagination
+          currentPageIndex={currentPage}
+          pagesCount={Math.ceil(filteredItems.length / 10)}
+          onChange={({ detail }) => setCurrentPage(detail.currentPageIndex)}
+        />
+      }
+      empty="No items found"
+    />
+  );
+}
+'''
+
+    def _generate_file_upload(self) -> str:
+        """Generate file upload component for S3."""
+        return '''\"use client\";
+
+import { useState } from 'react';
+import Container from '@cloudscape-design/components/container';
+import Header from '@cloudscape-design/components/header';
+import SpaceBetween from '@cloudscape-design/components/space-between';
+import Button from '@cloudscape-design/components/button';
+import Alert from '@cloudscape-design/components/alert';
+import ProgressBar from '@cloudscape-design/components/progress-bar';
+
+export function FileUpload() {
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState('');
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setError('');
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+
+    setUploading(true);
+    setProgress(0);
+    setError('');
+
+    try {
+      // TODO: Get presigned URL from API
+      // TODO: Upload to S3
+      setProgress(100);
+    } catch (err) {
+      setError('Upload failed. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Container header={<Header variant="h2">Upload File</Header>}>
+      <SpaceBetween size="m">
+        {error && <Alert type="error">{error}</Alert>}
+        
+        <input
+          type="file"
+          onChange={handleFileChange}
+          disabled={uploading}
+        />
+
+        {file && (
+          <div>
+            <strong>Selected:</strong> {file.name} ({(file.size / 1024).toFixed(2)} KB)
+          </div>
+        )}
+
+        {uploading && <ProgressBar value={progress} />}
+
+        <Button
+          variant="primary"
+          onClick={handleUpload}
+          disabled={!file || uploading}
+          loading={uploading}
+        >
+          Upload to S3
+        </Button>
+      </SpaceBetween>
+    </Container>
   );
 }
 '''

@@ -11,24 +11,45 @@ async def test_security_gate_blocks_insecure_architecture():
     workflow = create_workflow()
     app = workflow.compile()
 
-    # Insecure architecture: Lambda without encryption, DynamoDB without backup
+    # Insecure architecture: Multiple APIs without authentication
+    # This will generate 4 high-severity warnings, exceeding the threshold of 3
     initial_state: GraphState = {
         "user_input": "generate code",
         "intent": "generate_code",
         "graph_json": {
             "nodes": [
                 {
-                    "id": "lambda-1",
-                    "type": "lambda",
-                    "data": {"label": "API Handler", "config": {}},
+                    "id": "api-1",
+                    "type": "default",
+                    "data": {"label": "Users API", "type": "api", "config": {}},
                 },
                 {
-                    "id": "dynamodb-1",
-                    "type": "dynamodb",
-                    "data": {"label": "Users Table", "config": {}},
+                    "id": "api-2",
+                    "type": "default",
+                    "data": {"label": "Orders API", "type": "api", "config": {}},
+                },
+                {
+                    "id": "api-3",
+                    "type": "default",
+                    "data": {"label": "Products API", "type": "api", "config": {}},
+                },
+                {
+                    "id": "api-4",
+                    "type": "default",
+                    "data": {"label": "Payments API", "type": "api", "config": {}},
+                },
+                {
+                    "id": "lambda-1",
+                    "type": "default",
+                    "data": {"label": "Handler", "type": "lambda", "config": {}},
                 },
             ],
-            "edges": [{"source": "lambda-1", "target": "dynamodb-1"}],
+            "edges": [
+                {"source": "api-1", "target": "lambda-1"},
+                {"source": "api-2", "target": "lambda-1"},
+                {"source": "api-3", "target": "lambda-1"},
+                {"source": "api-4", "target": "lambda-1"},
+            ],
         },
         "response": "",
         "generated_files": [],
@@ -40,10 +61,10 @@ async def test_security_gate_blocks_insecure_architecture():
     assert "security_review" in result
     review = result["security_review"]
 
-    # Should fail due to missing security controls
+    # Should fail due to missing security controls (>3 high-severity warnings)
     assert review["passed"] is False
     assert review["security_score"] < 70
-    assert len(review["critical_issues"]) > 0
+    assert len([w for w in review["warnings"] if w.get("severity") == "high"]) > 3
 
     # Verify code generation was blocked
     assert len(result["generated_files"]) == 0

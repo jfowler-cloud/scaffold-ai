@@ -102,8 +102,9 @@ function WelcomeMessage() {
 export function Chat() {
   const [input, setInput] = useState("");
   const [iacFormat, setIacFormat] = useState({ label: "CDK (TypeScript)", value: "cdk" });
+  const [deploying, setDeploying] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { messages, isLoading, addMessage, setLoading, setGeneratedFiles } = useChatStore();
+  const { messages, isLoading, addMessage, setLoading, setGeneratedFiles, generatedFiles } = useChatStore();
   const { getGraphJSON, setGraph, nodes } = useGraphStore();
 
   const scrollToBottom = () => {
@@ -113,6 +114,62 @@ export function Chat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleDeploy = async () => {
+    if (deploying || generatedFiles.length === 0 || iacFormat.value !== "cdk") return;
+
+    setDeploying(true);
+    addMessage({
+      id: `system-${Date.now()}`,
+      role: "assistant",
+      content: "Starting deployment to AWS...",
+    });
+
+    try {
+      // Find CDK files
+      const stackFile = generatedFiles.find(f => f.path.includes("stack.ts"));
+      const appFile = generatedFiles.find(f => f.path.includes("app.ts"));
+
+      if (!stackFile || !appFile) {
+        throw new Error("CDK files not found. Generate code first.");
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/deploy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stack_name: "ScaffoldAIStack",
+          cdk_code: stackFile.content,
+          app_code: appFile.content,
+          region: "us-east-1",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        addMessage({
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: `✅ Deployment successful! ${data.message || ""}`,
+        });
+      } else {
+        addMessage({
+          id: `error-${Date.now()}`,
+          role: "assistant",
+          content: `❌ Deployment failed: ${data.error}`,
+        });
+      }
+    } catch (error) {
+      addMessage({
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: `❌ Deployment error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      });
+    } finally {
+      setDeploying(false);
+    }
+  };
 
   const handleGenerateCode = async () => {
     if (isLoading || nodes.length === 0) return;
@@ -283,6 +340,14 @@ export function Chat() {
                 iconName="download"
               >
                 Generate Code
+              </Button>
+              <Button
+                onClick={handleDeploy}
+                disabled={deploying || generatedFiles.length === 0 || iacFormat.value !== "cdk"}
+                loading={deploying}
+                iconName="upload"
+              >
+                Deploy to AWS
               </Button>
             </SpaceBetween>
             <Textarea
