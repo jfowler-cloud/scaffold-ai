@@ -134,7 +134,7 @@ pnpm dev
 # Backend (.env)
 AWS_PROFILE=your-profile
 AWS_REGION=us-east-1
-BEDROCK_MODEL_ID=anthropic.claude-opus-4-5-20251101-v1:0
+BEDROCK_MODEL_ID=anthropic.claude-3-5-sonnet-20241022-v2:0
 ALLOWED_ORIGINS=http://localhost:3000
 
 # Frontend (.env.local)
@@ -149,7 +149,7 @@ NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
 | Layer | Technology | Why? |
 |-------|-----------|------|
 | **AI Orchestration** | LangGraph | Dynamic routing, state management, better than Step Functions for AI |
-| **LLM** | AWS Bedrock (Claude Opus 4.5) | Superior reasoning, code generation, AWS-native |
+| **LLM** | AWS Bedrock (Claude 3.5 Sonnet v2) | Superior reasoning, code generation, AWS-native |
 | **Backend** | FastAPI | Async, type-safe, auto-docs |
 | **Frontend** | Next.js 15 + React 19 | Server components, streaming |
 | **UI Library** | AWS Cloudscape | Professional, accessible, AWS console-style |
