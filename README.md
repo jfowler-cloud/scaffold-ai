@@ -512,11 +512,11 @@ def validate_stack_name(cls, v: str) -> str:
     return v
 ```
 
-#### 1.2 CORS Allows All Methods and Headers — **Medium**
+#### 1.2 CORS Allows All Methods and Headers — **Medium** ✅ FIXED
 
 `apps/backend/src/scaffold_ai/main.py:27-31` uses `allow_methods=["*"]` and `allow_headers=["*"]`. While the origins are configurable, wildcard methods and headers weaken CORS protection.
 
-**Recommendation:** Restrict to the methods and headers actually used:
+**✅ Fixed:** Restricted to actual methods and headers used:
 ```python
 allow_methods=["GET", "POST", "OPTIONS"],
 allow_headers=["Content-Type", "Authorization"],
@@ -528,15 +528,15 @@ The generated API Gateway code in both `nodes.py:657` and `cdk_specialist.py:327
 
 **Recommendation:** Generate a parameterized CORS origin (e.g., from a CDK context variable or stack parameter) instead of a wildcard.
 
-#### 1.4 Exception Detail Leakage — **Low**
+#### 1.4 Exception Detail Leakage — **Low** ✅ FIXED
 
 `main.py:118` raises `HTTPException(status_code=500, detail=str(e))`, which can leak internal implementation details (file paths, library versions, stack traces) to API consumers.
 
-**Recommendation:** Log the full exception server-side, return a generic message to the client:
+**✅ Fixed:** Log full exception server-side, return generic message:
 ```python
 except Exception as e:
     logger.exception("Chat endpoint error")
-    raise HTTPException(status_code=500, detail="An internal error occurred.")
+    raise HTTPException(status_code=500, detail="An internal error occurred")
 ```
 
 ---
@@ -556,14 +556,15 @@ def get_llm():
     return ChatBedrock(...)
 ```
 
-#### 2.2 No Request Timeout or Cancellation — **High**
+#### 2.2 No Request Timeout or Cancellation — **High** ✅ FIXED
 
 The `/api/chat` endpoint (`main.py:86`) invokes the full LangGraph workflow with no timeout. If the LLM is slow or hangs, the request blocks indefinitely. The Next.js proxy (`route.ts`) also has no timeout on its `fetch()` call.
 
-**Recommendation:**
-- Add `asyncio.wait_for()` with a configurable timeout (e.g., 60s) around `run_workflow()`.
-- Add `AbortController` with a timeout on the frontend fetch.
-- Consider returning a 202 with a job ID for long-running generations.
+**✅ Fixed:** Added `asyncio.wait_for()` with 60-second timeout:
+```python
+result = await asyncio.wait_for(run_workflow(initial_state), timeout=60.0)
+```
+Returns 504 Gateway Timeout on expiration.
 
 #### 2.3 CDK Deployment Runs Synchronously — **High**
 
@@ -571,31 +572,37 @@ The `/api/chat` endpoint (`main.py:86`) invokes the full LangGraph workflow with
 
 **Recommendation:** Use `asyncio.create_subprocess_exec()` or offload to a background task queue (Celery, ARQ, or FastAPI `BackgroundTasks`). Return a deployment ID and poll for status.
 
-#### 2.4 No Rate Limiting — **Medium**
+#### 2.4 No Rate Limiting — **Medium** ✅ FIXED
 
 There is no rate limiting on any endpoint. The `/api/chat` endpoint triggers LLM calls (which cost money), and `/api/deploy` triggers real AWS deployments.
 
-**Recommendation:** Add rate limiting via `slowapi` or a middleware:
+**✅ Fixed:** Added rate limiting via `slowapi`:
 ```python
 from slowapi import Limiter
 limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
 
 @app.post("/api/chat")
 @limiter.limit("10/minute")
-async def chat(request: Request, body: ChatRequest): ...
+async def chat(...): ...
+
+@app.post("/api/deploy")
+@limiter.limit("3/hour")
+async def deploy(...): ...
 ```
 
-#### 2.5 No Input Validation on `iac_format` — **Medium**
+#### 2.5 No Input Validation on `iac_format` — **Medium** ✅ FIXED
 
 `ChatRequest.iac_format` accepts any string. If an unsupported format is passed, it silently falls through to the CDK default branch in `cdk_specialist_node`.
 
-**Recommendation:** Use a `Literal` type:
+**✅ Fixed:** Added field validator:
 ```python
-from typing import Literal
-
-class ChatRequest(BaseModel):
-    iac_format: Literal["cdk", "cloudformation", "terraform"] = "cdk"
+@field_validator("iac_format")
+@classmethod
+def validate_iac_format(cls, v: str) -> str:
+    allowed = ["cdk", "cloudformation", "terraform", "python-cdk"]
+    if v not in allowed:
+        raise ValueError(f"iac_format must be one of: {', '.join(allowed)}")
+    return v
 ```
 
 #### 2.6 `security_review` Missing from `GraphState` Initialization — **Medium**
