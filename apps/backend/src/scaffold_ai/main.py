@@ -87,6 +87,7 @@ class DeployRequest(BaseModel):
     app_code: str
     region: str = "us-east-1"
     profile: str | None = None
+    require_approval: bool = True
 
     @field_validator("stack_name")
     @classmethod
@@ -234,7 +235,8 @@ async def deploy_stack(http_request: Request, request: DeployRequest):
             cdk_code=request.cdk_code,
             app_code=request.app_code,
             region=request.region,
-            profile=request.profile
+            profile=request.profile,
+            require_approval=request.require_approval
         )
         
         return DeployResponse(**result)
