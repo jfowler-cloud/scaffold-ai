@@ -50,3 +50,32 @@
   border-color: #2d3139 !important;
 }
 
+/* Fix Select dropdowns in dark mode */
+.awsui-dark-mode [class*="awsui_select"] [class*="awsui_trigger"],
+.awsui-dark-mode [class*="awsui_select"] button {
+  background-color: #16191f !important;
+  border-color: #414d5c !important;
+  color: #e8eaed !important;
+}
+
+.awsui-dark-mode [class*="awsui_select"] [class*="awsui_trigger"]:hover,
+.awsui-dark-mode [class*="awsui_select"] button:hover {
+  background-color: #1e2228 !important;
+  border-color: #5f6b7a !important;
+}
+
+/* Fix dropdown menu in dark mode */
+.awsui-dark-mode [class*="awsui_dropdown"] {
+  background-color: #16191f !important;
+  border-color: #414d5c !important;
+}
+
+.awsui-dark-mode [class*="awsui_option"] {
+  background-color: #16191f !important;
+  color: #e8eaed !important;
+}
+
+.awsui-dark-mode [class*="awsui_option"]:hover {
+  background-color: #1e2228 !important;
+}
+
