@@ -50,6 +50,12 @@
   border-color: #2d3139 !important;
 }
 
+/* Fix React Flow panel containers in dark mode */
+.awsui-dark-mode .react-flow__panel > div {
+  background-color: #16191f !important;
+  border: 1px solid #414d5c !important;
+}
+
 /* Fix Select dropdowns in dark mode */
 .awsui-dark-mode [class*="awsui_select"] [class*="awsui_trigger"],
 .awsui-dark-mode [class*="awsui_select"] button {
