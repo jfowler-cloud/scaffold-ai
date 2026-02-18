@@ -253,7 +253,6 @@ class CDKSpecialistAgent:
         if not nodes:
             return []
 
-        # Generate placeholder stack
         stack_code = self._generate_stack(nodes)
 
         return [

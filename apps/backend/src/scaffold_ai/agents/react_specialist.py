@@ -392,7 +392,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuth = async () => {
     try {
-      // TODO: Implement Cognito session check
+      const session = await Auth.currentSession();
+      const user = await Auth.currentAuthenticatedUser();
+      setUser(user);
       setIsLoading(false);
     } catch (error) {
       setIsLoading(false);
@@ -400,12 +402,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (username: string, password: string) => {
-    // TODO: Implement Cognito sign in
-    console.log('Sign in:', username);
+    await Auth.signIn(username, password);
+    await checkAuth();
   };
 
   const signOut = async () => {
-    // TODO: Implement Cognito sign out
+    await Auth.signOut();
     setUser(null);
   };
 
@@ -567,8 +569,14 @@ export function FileUpload() {
     setError('');
 
     try {
-      // TODO: Get presigned URL from API
-      // TODO: Upload to S3
+      const { uploadUrl, key } = await fetchData('/api/upload-url');
+      
+      await fetch(uploadUrl, {{
+        method: 'PUT',
+        body: file,
+        headers: {{ 'Content-Type': file.type }}
+      }});
+      
       setProgress(100);
     } catch (err) {
       setError('Upload failed. Please try again.');
