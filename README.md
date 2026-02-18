@@ -436,9 +436,18 @@ The generated CloudFormation output uses the `AWS::Serverless` transform. Deploy
 - [x] Architecture templates library — **COMPLETE**
   - 6 pre-built templates
   - Todo app, file upload, REST API, event-driven, queue worker, SaaS
-- [ ] Python CDK support
-- [ ] Multi-stack architectures (split large graphs into nested stacks)
-- [ ] Collaboration / sharing features
+- [x] Python CDK support — **COMPLETE**
+  - Python CDK code generation
+  - Generates stack, app.py, requirements.txt
+  - Added to IaC format dropdown
+- [x] Multi-stack architectures — **COMPLETE**
+  - Automatic splitting for large architectures (>15 resources)
+  - Splits into logical layers: network, data, compute, frontend
+  - Nested CDK stacks
+- [x] Collaboration / sharing features — **COMPLETE**
+  - Create shareable links for architectures
+  - Hash-based unique URLs
+  - Share and retrieve architectures
 - [ ] Real-time streaming for long generation tasks
 - [ ] Security score history tracking
 
