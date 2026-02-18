@@ -3,12 +3,15 @@
 import os
 import json
 import pathlib
+import logging
 from functools import lru_cache
 from langchain_aws import ChatBedrock
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from .state import GraphState, Intent, SecurityReview
 from ..agents.security_specialist import SecuritySpecialistAgent
+
+logger = logging.getLogger(__name__)
 
 # Initialize Bedrock client (singleton)
 @lru_cache(maxsize=1)
@@ -207,7 +210,7 @@ async def interpret_intent(state: GraphState) -> GraphState:
         intent: Intent = intent_map.get(intent_text, "new_feature")
 
     except Exception as e:
-        print(f"LLM intent classification failed: {e}")
+        logger.warning(f"LLM intent classification failed: {e}")
         user_input = state["user_input"].lower()
         if any(word in user_input for word in ["generate", "code", "deploy", "build", "cdk"]):
             intent = "generate_code"
@@ -251,10 +254,8 @@ async def architect_node(state: GraphState) -> GraphState:
         response = await llm.ainvoke(messages)
         response_text = response.content.strip()
 
-        if "```json" in response_text:
-            response_text = response_text.split("```json")[1].split("```")[0]
-        elif "```" in response_text:
-            response_text = response_text.split("```")[1].split("```")[0]
+        from scaffold_ai.utils.llm_utils import strip_code_fences
+        response_text = strip_code_fences(response_text)
 
         result = json.loads(response_text)
 
@@ -296,13 +297,13 @@ async def architect_node(state: GraphState) -> GraphState:
         }
 
     except json.JSONDecodeError as e:
-        print(f"JSON parse error: {e}")
+        logger.error(f"JSON parse error: {e}")
         return {
             **state,
             "response": "I understood your request but had trouble generating the architecture. Could you try rephrasing it?",
         }
     except Exception as e:
-        print(f"LLM architect call failed: {e}")
+        logger.exception(f"LLM architect call failed: {e}")
         return {
             **state,
             "response": f"I encountered an error while designing the architecture. Please try again.",
@@ -346,7 +347,7 @@ Provide a clear explanation of:
         return {**state, "response": response.content}
 
     except Exception as e:
-        print(f"Explain failed: {e}")
+        logger.exception(f"Explain failed: {e}")
         node_list = ", ".join([n.get("data", {}).get("label", "Unknown") for n in nodes])
         return {
             **state,
@@ -388,15 +389,14 @@ async def security_review_node(state: GraphState) -> GraphState:
         response = await llm.ainvoke(messages)
         response_text = response.content.strip()
 
-        if "```json" in response_text:
-            response_text = response_text.split("```json")[1].split("```")[0]
-        elif "```" in response_text:
-            response_text = response_text.split("```")[1].split("```")[0]
+        from scaffold_ai.utils.llm_utils import strip_code_fences
+        response_text = strip_code_fences(response_text)
 
         review_result = json.loads(response_text)
 
     except Exception as e:
-        print(f"Security review LLM failed, using fallback: {e}")
+        import logging
+        logging.getLogger(__name__).warning(f"Security review LLM failed, using fallback: {e}")
         # Use the fallback security specialist
         security_agent = SecuritySpecialistAgent()
         review_result = await security_agent.review(graph)
@@ -583,7 +583,7 @@ async def cdk_specialist_node(state: GraphState) -> GraphState:
             format_name = "CDK"
 
     except Exception as e:
-        print(f"IaC generation failed: {e}")
+        logger.exception(f"IaC generation failed: {e}")
         code = generate_secure_cdk_template(nodes, security_review)
         file_path = "packages/generated/infrastructure/lib/scaffold-ai-stack.ts"
         format_name = "CDK"
@@ -619,9 +619,9 @@ def _write_generated_file(file: dict) -> None:
         dest = repo_root / file["path"]
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(file["content"], encoding="utf-8")
-        print(f"Generated file written to {dest}")
+        logger.info(f"Generated file written to {dest}")
     except Exception as e:
-        print(f"Could not write generated file to disk: {e}")
+        logger.error(f"Could not write generated file to disk: {e}")
 
 
 def generate_secure_cdk_template(nodes: list, security_review: dict) -> str:
@@ -653,10 +653,9 @@ async def react_specialist_node(state: GraphState) -> GraphState:
             return {**state, "generated_files": generated_files}
 
     except Exception as e:
-        print(f"React specialist failed: {e}")
+        logger.exception(f"React specialist failed: {e}")
 
     return state
-
 
 def should_generate_code(state: GraphState) -> str:
     """Router function to determine if we should generate code."""

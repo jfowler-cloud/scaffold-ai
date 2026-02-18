@@ -86,6 +86,10 @@ export class ScaffoldAiStack extends cdk.Stack {{
         tracingEnabled: true,
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
       }},
+      defaultCorsPreflightOptions: {{
+        allowOrigins: ['https://example.com'],  // TODO: Configure allowed origins
+        allowMethods: apigateway.Cors.ALL_METHODS,
+      }},
     }});''')
             
             elif node_type == "database":

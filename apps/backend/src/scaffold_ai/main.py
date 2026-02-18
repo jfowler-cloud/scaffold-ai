@@ -146,6 +146,7 @@ async def chat(request: Request, body: ChatRequest):
             "errors": [],
             "retry_count": 0,
             "response": "",
+            "security_review": None,
         }
 
         # Run the workflow with timeout
