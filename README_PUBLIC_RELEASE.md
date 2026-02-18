@@ -58,14 +58,14 @@ Transformed from "LangGraph project" to **"Rapid learning showcase"**:
 ## 🎯 Key Narrative
 
 ### Portfolio Message
-"Built two AI orchestration projects in 5 weeks:
+"Built two AI orchestration projects in ~3 weeks:
 - **Resume Tailor AI**: AWS Step Functions (familiar, 3 weeks)
-- **Scaffold AI**: LangGraph (new frameworks, 2 weeks)
+- **Scaffold AI**: LangGraph (new frameworks, 1 day)
 
 This showcases rapid learning, framework diversity, and ability to evaluate architectural trade-offs."
 
 ### Interview Talking Points
-1. **Rapid Learning**: "Mastered LangGraph, React 19, Next.js 15 in 2 weeks"
+1. **Rapid Learning**: "Mastered LangGraph, React 19, Next.js 15 in 1 day"
 2. **Framework Diversity**: "Can use both AWS-native and framework-based orchestration"
 3. **Architectural Judgment**: "Can articulate trade-offs and choose the right tool"
 4. **Production Mindset**: "Security gates, rate limiting, 135+ tests in both projects"

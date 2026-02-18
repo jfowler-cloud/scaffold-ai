@@ -11,7 +11,7 @@
 **Option 1: Detailed (for technical roles)**
 ```
 Scaffold AI - AI Architecture Designer (Personal Project)                    Feb 2026
-• Built production-ready AI platform in 2 weeks using LangGraph, FastAPI, and Next.js 15
+• Built production-ready AI platform in 1 day using LangGraph, FastAPI, and Next.js 15
   (all new frameworks) to demonstrate rapid learning and framework-agnostic development
 • Implemented multi-agent workflow with dynamic routing as alternative to AWS Step Functions,
   showcasing ability to evaluate orchestration trade-offs beyond AWS-native approaches
@@ -25,7 +25,7 @@ Scaffold AI - AI Architecture Designer (Personal Project)                    Feb
 **Option 2: Concise (for space-constrained resumes)**
 ```
 Scaffold AI - AI Architecture Designer (Personal Project)                    Feb 2026
-• Built AI platform in 2 weeks with LangGraph (new framework) showcasing rapid learning
+• Built AI platform in 1 day with LangGraph (new framework) showcasing rapid learning
 • Multi-agent workflow with security gates, rate limiting, and 135+ tests
 • Alternative to AWS Step Functions for dynamic AI routing
 • Tech: LangGraph, AWS Bedrock, FastAPI, Next.js 15, React 19, Python, TypeScript
@@ -42,7 +42,7 @@ Scaffold AI - AI Architecture Designer (Personal Project)                    Feb
 
 **Strengthen Existing**:
 - AI/ML Orchestration (now have both Step Functions and LangGraph)
-- Rapid prototyping (2 weeks to production-quality)
+- Rapid prototyping (1 day to production-quality)
 - Framework evaluation (can compare trade-offs)
 
 ---
@@ -65,7 +65,7 @@ AWS Solutions Architect | Full-stack Developer
 
 **Option 3: Balanced**
 ```
-Cloud Engineer | Built 2 AI platforms in 5 weeks (AWS Step Functions & LangGraph) | 
+Cloud Engineer | Built 2 AI platforms in ~3 weeks (AWS Step Functions & LangGraph) | 
 Rapid learner | AWS Certified
 ```
 
@@ -78,7 +78,7 @@ Recently built two AI orchestration projects showcasing different approaches:
 • Scaffold AI: LangGraph (dynamic, framework-agnostic)
 
 Both built to production standards with security gates, rate limiting, and comprehensive 
-testing. This demonstrates my ability to rapidly learn new frameworks (LangGraph in 2 weeks) 
+testing. This demonstrates my ability to rapidly learn new frameworks (LangGraph in 1 day) 
 and evaluate architectural trade-offs beyond just AWS-native solutions.
 ```
 
@@ -89,7 +89,7 @@ and evaluate architectural trade-offs beyond just AWS-native solutions.
 Scaffold AI - AI Architecture Designer
 Feb 2026 - Present
 
-Built in 2 weeks to explore LangGraph as an alternative to AWS Step Functions for AI 
+Built in 1 day to explore LangGraph as an alternative to AWS Step Functions for AI 
 workflows. Demonstrates rapid learning of new frameworks (LangGraph, React 19, Next.js 15) 
 and framework-agnostic development approach.
 
@@ -114,7 +114,7 @@ GitHub: https://github.com/jfowler-cloud/scaffold-ai
 🚀 Just open-sourced Scaffold AI - an AI-powered AWS architecture designer!
 
 After building Resume Tailor AI with AWS Step Functions, I wanted to explore modern AI 
-orchestration frameworks. Built this in 2 weeks with LangGraph, React 19, and Next.js 15 
+orchestration frameworks. Built this in 1 day with LangGraph, React 19, and Next.js 15 
 (all new to me) to showcase rapid learning and framework diversity.
 
 🎯 Key highlights:
@@ -160,7 +160,7 @@ Would love your feedback! What orchestration approach do you prefer for AI workf
 ### Resume Talking Points
 
 **"Tell me about Scaffold AI"**
-"I built this in 2 weeks to learn LangGraph, React 19, and Next.js 15 - all frameworks I 
+"I built this in 1 day to learn LangGraph, React 19, and Next.js 15 - all frameworks I 
 hadn't used before. After building Resume Tailor AI with AWS Step Functions, I wanted to 
 explore alternatives for AI workflows. This showcases my ability to rapidly learn new 
 technologies and evaluate architectural trade-offs."
@@ -190,7 +190,7 @@ Third, dynamic routing based on LLM content is powerful but requires careful err
 Scaffold AI
 AI-powered AWS architecture designer built with LangGraph
 
-Built in 2 weeks with unfamiliar frameworks (LangGraph, React 19, Next.js 15) to 
+Built in 1 day with unfamiliar frameworks (LangGraph, React 19, Next.js 15) to 
 demonstrate rapid learning and framework diversity.
 
 • Multi-agent AI workflow with dynamic routing
@@ -217,7 +217,7 @@ I've built two AI orchestration projects showcasing different approaches:
 2. Scaffold AI (LangGraph)
    - Dynamic AI routing
    - Framework-agnostic
-   - 2 weeks development (with new frameworks)
+   - 1 day development (with new frameworks)
 
 Both demonstrate production patterns (security, testing, rate limiting) but with different 
 architectural approaches. This showcases my ability to evaluate trade-offs and choose the 
@@ -232,7 +232,7 @@ right tool for the job.
 - [ ] Add Scaffold AI project entry
 - [ ] Update skills section (LangGraph, React 19, Next.js 15)
 - [ ] Ensure both projects are visible
-- [ ] Highlight rapid learning (2 weeks)
+- [ ] Highlight rapid learning (1 day)
 
 ### LinkedIn
 - [ ] Update headline (optional)
@@ -257,7 +257,7 @@ right tool for the job.
 
 ## 🎯 Key Messages to Emphasize
 
-1. **Rapid Learning**: "Built in 2 weeks with unfamiliar frameworks"
+1. **Rapid Learning**: "Built in 1 day with unfamiliar frameworks"
 2. **Framework Diversity**: "AWS-native and framework-based orchestration"
 3. **Production Mindset**: "Security gates, rate limiting, 135+ tests"
 4. **Architectural Judgment**: "Can evaluate trade-offs and choose the right tool"

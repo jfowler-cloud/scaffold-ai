@@ -9,7 +9,7 @@
 ## 🎯 Core Positioning
 
 **Primary Message**: 
-"Built in 2 weeks to demonstrate rapid learning of unfamiliar frameworks (LangGraph, React 19, Next.js 15) and showcase alternatives to AWS-native orchestration. Complements Resume Tailor AI by highlighting framework-agnostic development vs AWS-native approaches."
+"Built in 1 day to demonstrate rapid learning of unfamiliar frameworks (LangGraph, React 19, Next.js 15) and showcase alternatives to AWS-native orchestration. Complements Resume Tailor AI by highlighting framework-agnostic development vs AWS-native approaches."
 
 **Portfolio Narrative**:
 - **Resume Tailor AI**: AWS Step Functions (deterministic, AWS-native)
@@ -73,7 +73,7 @@
 ## 📊 Key Highlights for Interviews
 
 ### Rapid Learning Story
-**"I built this in 2 weeks to learn LangGraph, React 19, and Next.js 15 - all frameworks I hadn't used before."**
+**"I built this in 1 day to learn LangGraph, React 19, and Next.js 15 - all frameworks I hadn't used before."**
 
 **Why this matters**:
 - Demonstrates learning velocity
@@ -88,7 +88,7 @@
 |--------|-----------------|-------------|
 | **Orchestration** | AWS Step Functions | LangGraph |
 | **Learning Curve** | Familiar (AWS-native) | New framework |
-| **Development Time** | 3 weeks | 2 weeks |
+| **Development Time** | 3 weeks | 1 day |
 | **Use Case** | Deterministic workflow | Dynamic AI routing |
 | **State Management** | S3/DynamoDB | Built-in memory |
 | **Testing** | AWS mocking | Pure Python |
@@ -132,7 +132,7 @@
 
 ### For Recruiters
 **Elevator Pitch**:
-"I built two AI orchestration projects in 5 weeks total - one with AWS Step Functions (familiar) and one with LangGraph (new framework). Both have production patterns like security gates, rate limiting, and comprehensive testing. This showcases my ability to rapidly learn new technologies and choose the right tool for the job."
+"I built two AI orchestration projects in ~3 weeks total - one with AWS Step Functions (familiar) and one with LangGraph (new framework). Both have production patterns like security gates, rate limiting, and comprehensive testing. This showcases my ability to rapidly learn new technologies and choose the right tool for the job."
 
 ### For Technical Interviewers
 **Deep Dive Topics**:
@@ -140,11 +140,11 @@
 2. **Multi-agent architecture**: How agents communicate, state management, error handling
 3. **Security implementation**: Automated scoring, blocking insecure designs
 4. **Testing strategy**: Pure Python vs AWS mocking, coverage approach
-5. **Rapid development**: How I built this in 2 weeks with unfamiliar frameworks
+5. **Rapid development**: How I built this in 1 day with unfamiliar frameworks
 
 ### For Hiring Managers
 **Business Value**:
-- **Learning velocity**: 2 weeks to production-quality with new frameworks
+- **Learning velocity**: 1 day to production-quality with new frameworks
 - **Risk mitigation**: Security gates prevent insecure deployments
 - **Cost awareness**: Rate limiting, approval gates, cost estimation
 - **Quality focus**: 135+ tests, type safety, documentation
@@ -165,11 +165,11 @@
 - Built with LangGraph (new framework)
 - Dynamic AI routing (based on LLM responses)
 - Framework-agnostic
-- 2 weeks development time (faster due to learning from Resume Tailor)
+- 1 day development time (faster due to learning from Resume Tailor)
 - Same production patterns applied
 
 ### Combined Message
-"I can work with familiar tools efficiently (Resume Tailor AI in 3 weeks) and learn new frameworks rapidly (Scaffold AI in 2 weeks). I understand the trade-offs between AWS-native and framework-based approaches and can choose appropriately."
+"I can work with familiar tools efficiently (Resume Tailor AI in 3 weeks) and learn new frameworks rapidly (Scaffold AI in 1 day). I understand the trade-offs between AWS-native and framework-based approaches and can choose appropriately."
 
 ---
 
@@ -209,7 +209,7 @@ scaffold-ai/
 ```
 
 ### Clear Value Proposition
-> Portfolio Project: Demonstrates expertise in LangGraph orchestration, multi-agent AI systems, and rapid full-stack development. Built in 2 weeks to showcase alternatives to AWS Step Functions for complex AI workflows.
+> Portfolio Project: Demonstrates expertise in LangGraph orchestration, multi-agent AI systems, and rapid full-stack development. Built in 1 day to showcase alternatives to AWS Step Functions for complex AI workflows.
 
 ### Metrics Section
 - Lines of Code: 4,568 Python + 2,000 TypeScript
@@ -227,11 +227,11 @@ scaffold-ai/
 ## 🎯 Portfolio Positioning
 
 ### Primary Message
-"Built a production-ready AI architecture designer in 2 weeks using LangGraph as an alternative to AWS Step Functions, demonstrating rapid development skills and deep understanding of AI orchestration patterns."
+"Built a production-ready AI architecture designer in 1 day using LangGraph as an alternative to AWS Step Functions, demonstrating rapid development skills and deep understanding of AI orchestration patterns."
 
 ### Key Differentiators
 1. **LangGraph Expertise**: Not just using it, but understanding when/why vs Step Functions
-2. **Rapid Development**: 2 weeks to MVP with production patterns
+2. **Rapid Development**: 1 day to MVP with production patterns
 3. **Security-First**: Automated security gates, pre-commit hooks
 4. **Self-Aware**: Critical review shows understanding of production requirements
 5. **Well-Documented**: Multiple docs for different audiences
@@ -301,7 +301,7 @@ scaffold-ai/
 ### Resume Bullet Points
 ```
 Scaffold AI - AI Architecture Designer (Personal Project)
-• Built production-ready AI platform in 2 weeks using LangGraph, FastAPI, and Next.js 15
+• Built production-ready AI platform in 1 day using LangGraph, FastAPI, and Next.js 15
 • Implemented multi-agent workflow with dynamic routing as alternative to AWS Step Functions
 • Achieved 50% test coverage with 135+ tests; added security gates blocking insecure architectures
 • Designed for 12 AWS service types with multi-format IaC output (CDK, CloudFormation, Terraform)
@@ -312,7 +312,7 @@ Scaffold AI - AI Architecture Designer (Personal Project)
 ```
 🚀 Just open-sourced Scaffold AI - an AI-powered AWS architecture designer!
 
-Built in 2 weeks to explore LangGraph as an alternative to AWS Step Functions for AI workflows.
+Built in 1 day to explore LangGraph as an alternative to AWS Step Functions for AI workflows.
 
 Key highlights:
 ✅ Multi-agent AI system with dynamic routing

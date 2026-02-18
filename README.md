@@ -7,22 +7,22 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
-> **Portfolio Project**: Built in 2 weeks to demonstrate rapid learning of new frameworks (LangGraph, React 19, Next.js 15) and showcase alternatives to AWS-native orchestration. Complements [Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai) by highlighting framework-agnostic development vs AWS-native approaches.
+> **Portfolio Project**: Built in a single day to demonstrate rapid learning of new frameworks (LangGraph, React 19, Next.js 15) and showcase alternatives to AWS-native orchestration. Complements [Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai) by highlighting framework-agnostic development vs AWS-native approaches.
 
 ## 🎯 Why This Project Exists
 
 **Rapid Capability Growth**: After building Resume Tailor AI with AWS Step Functions, I wanted to explore modern AI orchestration frameworks. This project demonstrates:
 
-- **Learning Velocity**: Mastered LangGraph, React 19, and Next.js 15 in 2 weeks
+- **Learning Velocity**: Mastered LangGraph, React 19, and Next.js 15 in a single day
 - **Framework Diversity**: AWS-native (Step Functions) vs framework-based (LangGraph) orchestration
 - **Architectural Judgment**: Understanding when to use each approach and articulating trade-offs
 - **Production Mindset**: Security gates, rate limiting, testing, and validation from day 1
 
 **Portfolio Positioning**:
-| Project | Orchestration | Focus | State Management | Best For |
-|---------|--------------|-------|------------------|----------|
-| **Resume Tailor AI** | AWS Step Functions | Deterministic workflow | S3/DynamoDB | Predictable, AWS-native flows |
-| **Scaffold AI** | LangGraph | AI multi-agent | Built-in memory | Dynamic routing, conversational AI |
+| Project | Orchestration | Focus | State Management | Best For | Time |
+|---------|--------------|-------|------------------|----------|------|
+| **Resume Tailor AI** | AWS Step Functions | Deterministic workflow | S3/DynamoDB | Predictable, AWS-native flows | 3 weeks |
+| **Scaffold AI** | LangGraph | AI multi-agent | Built-in memory | Dynamic routing, conversational AI | 1 day |
 
 Both projects showcase production patterns (validation, error handling, security, CI/CD) but with different architectural approaches.
 
@@ -188,9 +188,8 @@ scaffold-ai/
 
 ## 🎓 Development Highlights
 
-### Rapid Iteration (2 Weeks)
-**Week 1**: Core workflow + 3 agents + basic UI  
-**Week 2**: Security gate + multi-format IaC + deployment + tests
+### Rapid Iteration (Single Day)
+Built complete multi-agent AI platform with production patterns in one intensive development session.
 
 ### Key Decisions
 1. **LangGraph over Step Functions**: More flexible for AI, easier local dev
@@ -251,7 +250,7 @@ scaffold-ai/
 - **Testing**: Pure Python (no AWS mocking needed)
 - **Deployment**: Framework-agnostic (can run anywhere)
 - **Strengths**: Dynamic routing, faster local dev, conversational AI
-- **Development Time**: 2 weeks
+- **Development Time**: 1 day
 
 ### Shared Patterns (Production Mindset)
 Both projects demonstrate:
