@@ -207,6 +207,46 @@ export function Chat() {
     }
   };
 
+  const handleDownloadZip = async () => {
+    if (generatedFiles.length === 0) return;
+
+    try {
+      // Dynamically import JSZip
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+
+      // Add all files to zip with proper folder structure
+      generatedFiles.forEach(file => {
+        zip.file(file.path, file.content);
+      });
+
+      // Generate zip file
+      const blob = await zip.generateAsync({ type: 'blob' });
+      
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `scaffold-ai-${iacFormat.value}-${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      addMessage({
+        id: `system-${Date.now()}`,
+        role: "assistant",
+        content: `✅ Downloaded ${generatedFiles.length} files as ZIP with proper folder structure.`,
+      });
+    } catch (error) {
+      addMessage({
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: `❌ Download failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      });
+    }
+  };
+
   const handleSecurityFix = async () => {
     if (isLoading || nodes.length === 0) return;
 
@@ -437,6 +477,13 @@ export function Chat() {
                 iconName="security"
               >
                 Fix Security
+              </Button>
+              <Button
+                onClick={handleDownloadZip}
+                disabled={generatedFiles.length === 0}
+                iconName="download"
+              >
+                Download ZIP
               </Button>
               <Button
                 onClick={handleDeploy}
