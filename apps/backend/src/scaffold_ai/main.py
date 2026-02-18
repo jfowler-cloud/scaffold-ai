@@ -12,6 +12,7 @@ from .graph.workflow import run_workflow
 from .graph.state import GraphState, Intent
 from .services.cdk_deployment import CDKDeploymentService
 from .services.cost_estimator import CostEstimator
+from .services.security_autofix import SecurityAutoFix
 
 app = FastAPI(
     title="Scaffold AI Backend",
@@ -35,6 +36,7 @@ app.add_middleware(
 # Initialize deployment service
 deployment_service = CDKDeploymentService()
 cost_estimator = CostEstimator()
+security_autofix = SecurityAutoFix()
 
 
 class ChatRequest(BaseModel):
@@ -204,6 +206,26 @@ async def estimate_cost(graph: dict):
         return {
             **estimate,
             "optimization_tips": tips
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/security/autofix")
+async def security_autofix_endpoint(graph: dict):
+    """
+    Automatically fix security issues in architecture.
+    
+    Returns updated graph with security improvements applied.
+    """
+    try:
+        updated_graph, changes = security_autofix.analyze_and_fix(graph)
+        score = security_autofix.get_security_score(updated_graph)
+        
+        return {
+            "updated_graph": updated_graph,
+            "changes": changes,
+            "security_score": score
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -189,6 +189,54 @@ export function Chat() {
     }
   };
 
+  const handleSecurityFix = async () => {
+    if (isLoading || nodes.length === 0) return;
+
+    setLoading(true);
+    addMessage({
+      id: `system-${Date.now()}`,
+      role: "assistant",
+      content: "Analyzing security and applying fixes...",
+    });
+
+    try {
+      const graphJSON = getGraphJSON();
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/security/autofix`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(graphJSON),
+      });
+
+      const data = await response.json();
+
+      if (data.updated_graph) {
+        setGraph(data.updated_graph.nodes || [], data.updated_graph.edges || []);
+      }
+
+      if (data.changes && data.changes.length > 0) {
+        addMessage({
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: `Security improvements applied:\n${data.changes.join("\n")}\n\nSecurity score: ${data.security_score.percentage}%`,
+        });
+      } else {
+        addMessage({
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: "✅ No security issues found. Your architecture looks good!",
+        });
+      }
+    } catch (error) {
+      addMessage({
+        id: `error-${Date.now()}`,
+        role: "assistant",
+        content: `❌ Security fix error: ${error instanceof Error ? error.message : "Unknown error"}`,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleGenerateCode = async () => {
     if (isLoading || nodes.length === 0) return;
 
@@ -363,6 +411,13 @@ export function Chat() {
                 iconName="download"
               >
                 Generate Code
+              </Button>
+              <Button
+                onClick={handleSecurityFix}
+                disabled={isLoading || nodes.length === 0}
+                iconName="security"
+              >
+                Fix Security
               </Button>
               <Button
                 onClick={handleDeploy}
