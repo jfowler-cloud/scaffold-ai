@@ -21,7 +21,7 @@
     "@scaffold-ai/ui": "workspace:*",
     "@tanstack/react-query": "^5.64.0",
     "@xyflow/react": "^12.4.0",
-    "ai": "^4.1.0",
+    "ai": "^6.0.90",
     "jszip": "^3.10.1",
     "next": "15.2.0",
     "react": "^19.0.0",
