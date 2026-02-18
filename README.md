@@ -323,11 +323,19 @@ cd apps/web && pnpm dev
 
 ## 📚 Documentation
 
-- **[CRITICAL_REVIEW.md](CRITICAL_REVIEW.md)**: 44 identified improvements
-- **[CONTRIBUTING.md](CONTRIBUTING.md)**: Development guidelines
-- **[ROUND_3_FINDINGS.md](ROUND_3_FINDINGS.md)**: Security audit results
-- **[TESTING_SUMMARY.md](TESTING_SUMMARY.md)**: Test coverage details
-- **[docs/MULTI_FORMAT_IAC.md](docs/MULTI_FORMAT_IAC.md)**: IaC generation patterns
+### Architecture & Design
+- **[LANGGRAPH_VS_STEP_FUNCTIONS.md](LANGGRAPH_VS_STEP_FUNCTIONS.md)** - Technical comparison and trade-offs
+- **[DEVELOPMENT_JOURNEY.md](DEVELOPMENT_JOURNEY.md)** - Build timeline and key decisions
+- **[docs/MULTI_FORMAT_IAC.md](docs/MULTI_FORMAT_IAC.md)** - IaC generation patterns
+
+### Development
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development setup and guidelines
+- **[TESTING_SUMMARY.md](TESTING_SUMMARY.md)** - Test coverage and strategy
+
+### Quality & Security
+- **[CRITICAL_REVIEW.md](CRITICAL_REVIEW.md)** - Self-assessment and improvements
+- **[CRITICAL_REVIEW_SUMMARY.md](CRITICAL_REVIEW_SUMMARY.md)** - Executive summary
+- **[ROUND_3_FINDINGS.md](ROUND_3_FINDINGS.md)** - Security audit results
 
 ---
 
