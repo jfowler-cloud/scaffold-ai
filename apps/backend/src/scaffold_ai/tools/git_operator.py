@@ -39,23 +39,22 @@ class GitOperatorTool:
         except GitCommandError as e:
             return {"success": False, "error": str(e)}
 
-    async def commit_changes(self, message: str, files: list[str] | None = None) -> dict:
+    async def commit_changes(self, message: str, files: list[str]) -> dict:
         """
         Commit generated code changes.
 
         Args:
             message: Commit message
-            files: Optional list of specific files to commit
+            files: List of specific files to commit (required)
 
         Returns:
             dict with success status and commit hash
         """
+        if not files:
+            return {"success": False, "error": "files parameter is required"}
+        
         try:
-            if files:
-                self.repo.index.add(files)
-            else:
-                self.repo.index.add("*")
-
+            self.repo.index.add(files)
             commit = self.repo.index.commit(message)
             return {"success": True, "commit": commit.hexsha}
         except GitCommandError as e:

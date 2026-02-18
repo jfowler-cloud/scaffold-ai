@@ -33,7 +33,8 @@ class CDKDeploymentService:
         cdk_code: str,
         app_code: str,
         region: str = "us-east-1",
-        profile: Optional[str] = None
+        profile: Optional[str] = None,
+        require_approval: bool = True
     ) -> Dict[str, any]:
         """
         Deploy a CDK stack.
@@ -44,6 +45,7 @@ class CDKDeploymentService:
             app_code: CDK app code (bin/app.ts)
             region: AWS region
             profile: AWS profile name
+            require_approval: Whether to require manual approval (default: True)
             
         Returns:
             Dict with deployment status and outputs
@@ -81,7 +83,7 @@ class CDKDeploymentService:
                 return bootstrap_result
 
             # Deploy stack
-            deploy_result = self._deploy_stack(project_path, region, profile)
+            deploy_result = self._deploy_stack(project_path, region, profile, require_approval)
             
             return deploy_result
 
@@ -161,9 +163,10 @@ class CDKDeploymentService:
             json.dump(tsconfig, f, indent=2)
 
         # Write cdk.json
+        approval_level = "never" if not require_approval else "broadening"
         cdk_json = {
             "app": "npx ts-node --prefer-ts-exts bin/app.ts",
-            "requireApproval": "never",
+            "requireApproval": approval_level,
             "context": {
                 "@aws-cdk/core:enableStackNameDuplicates": True,
                 "aws-cdk:enableDiffNoFail": True
@@ -211,10 +214,12 @@ class CDKDeploymentService:
         self,
         project_path: Path,
         region: str,
-        profile: Optional[str]
+        profile: Optional[str],
+        require_approval: bool
     ) -> Dict[str, any]:
         """Deploy the CDK stack."""
-        cmd = ["npx", "cdk", "deploy", "--require-approval", "never", "--outputs-file", "outputs.json"]
+        approval_flag = "never" if not require_approval else "broadening"
+        cmd = ["npx", "cdk", "deploy", "--require-approval", approval_flag, "--outputs-file", "outputs.json"]
         
         env = os.environ.copy()
         env["AWS_REGION"] = region

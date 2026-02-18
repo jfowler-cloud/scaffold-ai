@@ -87,7 +87,7 @@ export class ScaffoldAiStack extends cdk.Stack {{
         loggingLevel: apigateway.MethodLoggingLevel.INFO,
       }},
       defaultCorsPreflightOptions: {{
-        allowOrigins: ['https://example.com'],  // TODO: Configure allowed origins
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
         allowMethods: apigateway.Cors.ALL_METHODS,
       }},
     }});''')
@@ -140,9 +140,11 @@ export class ScaffoldAiStack extends cdk.Stack {{
     }});''')
             
             elif node_type == "cdn":
+                # CloudFront requires an origin - use S3 bucket or API Gateway from graph
+                origin_ref = "/* Configure origin: S3 bucket or API Gateway */"
                 constructs.append(f'''    const {var_name} = new cloudfront.Distribution(this, '{node_id}', {{
       defaultBehavior: {{
-        origin: new cloudfront.HttpOrigin('example.com'),
+        origin: {origin_ref},
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       }},
     }});''')

@@ -430,7 +430,7 @@ export function useAuth() {
         api_nodes = [n for n in nodes if n.get("data", {}).get("type") == "api"]
         api_name = api_nodes[0].get("data", {}).get("label", "API") if api_nodes else "API"
         
-        return f'''const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.example.com';
+        return f'''const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export async function fetchData<T>(endpoint: string): Promise<T> {{
   const response = await fetch(`${{API_URL}}${{endpoint}}`);

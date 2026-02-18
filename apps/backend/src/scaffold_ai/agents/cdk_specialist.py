@@ -167,7 +167,8 @@ const topic = new sns.Topic(this, 'Topic', {
   displayName: 'Notifications',
 });
 
-topic.addSubscription(new subscriptions.EmailSubscription('user@example.com'));
+// Add subscriptions as needed:
+// topic.addSubscription(new subscriptions.EmailSubscription('user@example.com'));
 topic.addSubscription(new subscriptions.LambdaSubscription(fn));
 ```
 
