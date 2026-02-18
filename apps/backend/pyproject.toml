@@ -17,6 +17,7 @@ dependencies = [
     "websockets>=14.0",
     "awscrt>=0.23.0",
     "boto3>=1.35.0",
+    "slowapi>=0.1.9",
 ]
 
 [project.optional-dependencies]

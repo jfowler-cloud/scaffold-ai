@@ -4,9 +4,12 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from .graph.workflow import run_workflow
 from .graph.state import GraphState, Intent
@@ -17,11 +20,17 @@ from .services.templates import ArchitectureTemplates
 from .services.sharing import SharingService
 from .services.security_history import SecurityHistoryService
 
+# Rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 app = FastAPI(
     title="Scaffold AI Backend",
     description="LangGraph-powered backend for the Scaffold AI platform",
     version="0.1.0",
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS — configurable via ALLOWED_ORIGINS env var (comma-separated).
 # Defaults to localhost:3000 for local development.
@@ -32,8 +41,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Initialize deployment service
@@ -50,7 +59,16 @@ class ChatRequest(BaseModel):
 
     user_input: str
     graph_json: dict | None = None
-    iac_format: str = "cdk"  # cdk, cloudformation, or terraform
+    iac_format: str = "cdk"  # cdk, cloudformation, terraform, or python-cdk
+
+    @field_validator("iac_format")
+    @classmethod
+    def validate_iac_format(cls, v: str) -> str:
+        """Validate IaC format."""
+        allowed = ["cdk", "cloudformation", "terraform", "python-cdk"]
+        if v not in allowed:
+            raise ValueError(f"iac_format must be one of: {', '.join(allowed)}")
+        return v
 
 
 class ChatResponse(BaseModel):
@@ -102,7 +120,8 @@ async def health():
 
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
+@limiter.limit("10/minute")
+async def chat(request: Request, body: ChatRequest):
     """
     Process a chat message through the LangGraph workflow.
 
@@ -111,21 +130,26 @@ async def chat(request: ChatRequest):
     2. Routes to appropriate agents (architect, CDK specialist, React specialist)
     3. Returns the response and any graph/file updates
     """
+    import asyncio
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    
     try:
         # Initialize state
         initial_state: GraphState = {
-            "user_input": request.user_input,
+            "user_input": body.user_input,
             "intent": "new_feature",  # Will be determined by interpreter
-            "graph_json": request.graph_json or {"nodes": [], "edges": []},
-            "iac_format": request.iac_format,
+            "graph_json": body.graph_json or {"nodes": [], "edges": []},
+            "iac_format": body.iac_format,
             "generated_files": [],
             "errors": [],
             "retry_count": 0,
             "response": "",
         }
 
-        # Run the workflow
-        result = await run_workflow(initial_state)
+        # Run the workflow with timeout
+        result = await asyncio.wait_for(run_workflow(initial_state), timeout=60.0)
 
         return ChatResponse(
             message=result.get("response", "I processed your request."),
@@ -133,8 +157,12 @@ async def chat(request: ChatRequest):
             generated_files=result.get("generated_files"),
         )
 
+    except asyncio.TimeoutError:
+        logger.error("Workflow timeout after 60 seconds")
+        raise HTTPException(status_code=504, detail="Request timeout - operation took too long")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Chat endpoint error")
+        raise HTTPException(status_code=500, detail="An internal error occurred")
 
 
 @app.get("/api/graph")
@@ -169,7 +197,8 @@ async def get_sample_graph():
 
 
 @app.post("/api/deploy", response_model=DeployResponse)
-async def deploy_stack(request: DeployRequest):
+@limiter.limit("3/hour")
+async def deploy_stack(http_request: Request, request: DeployRequest):
     """
     Deploy a CDK stack to AWS.
     
