@@ -45,3 +45,6 @@ pnpm-debug.log*
 
 # Generated (can be regenerated)
 packages/generated/infrastructure/cdk.out/
+
+# Internal documentation (not for public)
+.archive/
