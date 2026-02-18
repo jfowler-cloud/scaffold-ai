@@ -413,15 +413,15 @@ export function Chat() {
           variant="h2"
           description="Describe your architecture in natural language"
         >
-          <SpaceBetween direction="horizontal" size="xs">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Icon name="gen-ai" />
-            AI Assistant
+            <span>AI Assistant</span>
             {costEstimate && (
               <Box color="text-status-info" fontSize="body-s">
                 Est. ${costEstimate.total_monthly}/mo
               </Box>
             )}
-          </SpaceBetween>
+          </div>
         </Header>
       }
       fitHeight
