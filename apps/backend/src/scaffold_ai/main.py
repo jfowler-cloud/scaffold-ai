@@ -1,5 +1,6 @@
 """FastAPI application for Scaffold AI backend."""
 
+import os
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -16,10 +17,14 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS configuration for Next.js frontend
+# CORS — configurable via ALLOWED_ORIGINS env var (comma-separated).
+# Defaults to localhost:3000 for local development.
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
