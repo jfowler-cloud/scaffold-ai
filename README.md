@@ -37,7 +37,7 @@ Generative UI platform for designing full-stack AWS serverless applications usin
 | Generated code viewer | Working | Tabbed modal via Side Navigation → Generated Code |
 | Generated files persisted to disk | Working | Written to `packages/generated/` on each generation |
 | CORS origins | Configurable | Via `ALLOWED_ORIGINS` env var; defaults to localhost:3000 |
-| Backend unit test suite | Working | 57 tests, no AWS credentials needed |
+| Backend unit test suite | Working | 76 tests, no AWS credentials needed |
 | CDK deployment integration | Not started | |
 | Cost estimation | Not started | |
 
@@ -253,7 +253,7 @@ When the LLM is unavailable, `SecuritySpecialistAgent` provides a rule-based sta
 | `events` | EventBridge | ✅ | ✅ | ✅ |
 | `notification` | SNS | ✅ | ✅ | ✅ |
 | `workflow` | Step Functions | ✅ | ✅ | ✅ |
-| `cdn` | CloudFront | ✅ (commented) | — | — |
+| `cdn` | CloudFront | ✅ | — | — |
 | `stream` | Kinesis | ✅ | ✅ | ✅ |
 
 ## Development
@@ -345,11 +345,12 @@ Tests use `pytest-asyncio` with `asyncio_mode = "auto"`. LLM-hitting tests requi
 | `TerraformSpecialistAgent.generate` — all 10 node types + slug + outputs | `test_units.py` | ✅ |
 | `react_specialist_node` — intent skip, no nodes, frontend, non-frontend | `test_units.py` | ✅ |
 
+| `SecuritySpecialistAgent.review` — all node-type branches, scoring arithmetic, pass/fail thresholds | `test_units.py` | ✅ |
+
 ### Remaining coverage gaps
 
 #### Backend
 
-- **`SecuritySpecialistAgent.review`** — unit test every node-type branch independently; verify the `-30/-15/-5` scoring arithmetic
 - **`architect_node` JSON recovery** — test code-fenced JSON and malformed JSON fallback paths (requires mocking `ChatBedrock`)
 - **`cdk_specialist_node`** — test all three IaC format dispatch branches with a mock graph and mocked agents
 - **`generate_secure_cdk_template`** — assert correct CDK constructs and deduplication of imports for every node type
@@ -391,7 +392,7 @@ The generated CloudFormation output uses the `AWS::Serverless` transform. Deploy
 
 - [ ] Add frontend unit test suite (Vitest + Testing Library)
 - [ ] LLM-driven React component generation (architecture-aware Cloudscape components)
-- [ ] `SecuritySpecialistAgent.review` unit tests — test every node-type branch independently
+- [ ] `architect_node` JSON recovery tests (mocked LLM)
 
 ### Medium-term
 
