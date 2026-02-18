@@ -13,6 +13,7 @@ from .graph.state import GraphState, Intent
 from .services.cdk_deployment import CDKDeploymentService
 from .services.cost_estimator import CostEstimator
 from .services.security_autofix import SecurityAutoFix
+from .services.templates import ArchitectureTemplates
 
 app = FastAPI(
     title="Scaffold AI Backend",
@@ -37,6 +38,7 @@ app.add_middleware(
 deployment_service = CDKDeploymentService()
 cost_estimator = CostEstimator()
 security_autofix = SecurityAutoFix()
+templates = ArchitectureTemplates()
 
 
 class ChatRequest(BaseModel):
@@ -229,4 +231,19 @@ async def security_autofix_endpoint(graph: dict):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/templates")
+async def list_templates():
+    """List all available architecture templates."""
+    return templates.list_templates()
+
+
+@app.get("/api/templates/{template_id}")
+async def get_template(template_id: str):
+    """Get a specific architecture template."""
+    try:
+        return templates.get_template(template_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
