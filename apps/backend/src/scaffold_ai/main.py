@@ -98,6 +98,24 @@ class DeployRequest(BaseModel):
         return v
 
 
+class GraphRequest(BaseModel):
+    """Request model for graph-based endpoints."""
+    graph: dict
+
+
+class ShareRequest(BaseModel):
+    """Request model for sharing endpoint."""
+    graph: dict
+    title: str = "Shared Architecture"
+
+
+class SecurityHistoryRequest(BaseModel):
+    """Request model for security history."""
+    architecture_id: str
+    score: int
+    issues: list[dict] = []
+
+
 class DeployResponse(BaseModel):
     """Response model for deployment endpoint."""
 
@@ -238,33 +256,42 @@ async def deployment_status():
 
 
 @app.post("/api/cost/estimate")
-async def estimate_cost(graph: dict):
+@limiter.limit("20/minute")
+async def estimate_cost(request: Request, body: GraphRequest):
     """
     Estimate monthly AWS costs for an architecture.
     
     Returns cost breakdown by service and optimization tips.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
-        estimate = cost_estimator.estimate(graph)
-        tips = cost_estimator.get_optimization_tips(graph)
+        estimate = cost_estimator.estimate(body.graph)
+        tips = cost_estimator.get_optimization_tips(body.graph)
         
         return {
             **estimate,
             "optimization_tips": tips
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Cost estimation error")
+        raise HTTPException(status_code=500, detail="Cost estimation failed")
 
 
 @app.post("/api/security/autofix")
-async def security_autofix_endpoint(graph: dict):
+@limiter.limit("10/minute")
+async def security_autofix_endpoint(request: Request, body: GraphRequest):
     """
     Automatically fix security issues in architecture.
     
     Returns updated graph with security improvements applied.
     """
+    import logging
+    logger = logging.getLogger(__name__)
+    
     try:
-        updated_graph, changes = security_autofix.analyze_and_fix(graph)
+        updated_graph, changes = security_autofix.analyze_and_fix(body.graph)
         score = security_autofix.get_security_score(updated_graph)
         
         return {
@@ -273,17 +300,20 @@ async def security_autofix_endpoint(graph: dict):
             "security_score": score
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Security autofix error")
+        raise HTTPException(status_code=500, detail="Security autofix failed")
 
 
 @app.get("/api/templates")
-async def list_templates():
+@limiter.limit("30/minute")
+async def list_templates(request: Request):
     """List all available architecture templates."""
     return templates.list_templates()
 
 
 @app.get("/api/templates/{template_id}")
-async def get_template(template_id: str):
+@limiter.limit("30/minute")
+async def get_template(request: Request, template_id: str):
     """Get a specific architecture template."""
     try:
         return templates.get_template(template_id)
@@ -292,20 +322,16 @@ async def get_template(template_id: str):
 
 
 @app.post("/api/share")
-async def create_share(data: dict):
+@limiter.limit("10/minute")
+async def create_share(request: Request, body: ShareRequest):
     """Create a shareable link for an architecture."""
-    graph = data.get("graph")
-    title = data.get("title", "Shared Architecture")
-    
-    if not graph:
-        raise HTTPException(status_code=400, detail="Graph data required")
-    
-    share_id = sharing_service.create_share_link(graph, title)
+    share_id = sharing_service.create_share_link(body.graph, body.title)
     return {"share_id": share_id, "url": f"/shared/{share_id}"}
 
 
 @app.get("/api/share/{share_id}")
-async def get_shared(share_id: str):
+@limiter.limit("30/minute")
+async def get_shared(request: Request, share_id: str):
     """Get a shared architecture by ID."""
     architecture = sharing_service.get_shared_architecture(share_id)
     
@@ -316,21 +342,16 @@ async def get_shared(share_id: str):
 
 
 @app.post("/api/security/history")
-async def record_security_score(data: dict):
+@limiter.limit("20/minute")
+async def record_security_score(request: Request, body: SecurityHistoryRequest):
     """Record a security score for history tracking."""
-    arch_id = data.get("architecture_id")
-    score = data.get("score")
-    issues = data.get("issues", [])
-    
-    if not arch_id or score is None:
-        raise HTTPException(status_code=400, detail="architecture_id and score required")
-    
-    security_history.record_score(arch_id, score, issues)
+    security_history.record_score(body.architecture_id, body.score, body.issues)
     return {"status": "recorded"}
 
 
 @app.get("/api/security/history/{architecture_id}")
-async def get_security_history(architecture_id: str):
+@limiter.limit("30/minute")
+async def get_security_history(request: Request, architecture_id: str):
     """Get security score history for an architecture."""
     history = security_history.get_history(architecture_id)
     improvement = security_history.get_improvement(architecture_id)
