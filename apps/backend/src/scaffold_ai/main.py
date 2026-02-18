@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from .graph.workflow import run_workflow
 from .graph.state import GraphState, Intent
 from .services.cdk_deployment import CDKDeploymentService
+from .services.cost_estimator import CostEstimator
 
 app = FastAPI(
     title="Scaffold AI Backend",
@@ -33,6 +34,7 @@ app.add_middleware(
 
 # Initialize deployment service
 deployment_service = CDKDeploymentService()
+cost_estimator = CostEstimator()
 
 
 class ChatRequest(BaseModel):
@@ -186,4 +188,23 @@ async def deployment_status():
         "cdk_available": deployment_service.cdk_version is not None,
         "cdk_version": deployment_service.cdk_version
     }
+
+
+@app.post("/api/cost/estimate")
+async def estimate_cost(graph: dict):
+    """
+    Estimate monthly AWS costs for an architecture.
+    
+    Returns cost breakdown by service and optimization tips.
+    """
+    try:
+        estimate = cost_estimator.estimate(graph)
+        tips = cost_estimator.get_optimization_tips(graph)
+        
+        return {
+            **estimate,
+            "optimization_tips": tips
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 

@@ -103,6 +103,7 @@ export function Chat() {
   const [input, setInput] = useState("");
   const [iacFormat, setIacFormat] = useState({ label: "CDK (TypeScript)", value: "cdk" });
   const [deploying, setDeploying] = useState(false);
+  const [costEstimate, setCostEstimate] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isLoading, addMessage, setLoading, setGeneratedFiles, generatedFiles } = useChatStore();
   const { getGraphJSON, setGraph, nodes } = useGraphStore();
@@ -114,6 +115,23 @@ export function Chat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    // Estimate cost when nodes change
+    if (nodes.length > 0) {
+      const graphJSON = getGraphJSON();
+      fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/cost/estimate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(graphJSON),
+      })
+        .then(res => res.json())
+        .then(data => setCostEstimate(data))
+        .catch(() => setCostEstimate(null));
+    } else {
+      setCostEstimate(null);
+    }
+  }, [nodes, getGraphJSON]);
 
   const handleDeploy = async () => {
     if (deploying || generatedFiles.length === 0 || iacFormat.value !== "cdk") return;
@@ -292,6 +310,11 @@ export function Chat() {
           <SpaceBetween direction="horizontal" size="xs">
             <Icon name="gen-ai" />
             AI Assistant
+            {costEstimate && (
+              <Box color="text-status-info" fontSize="body-s">
+                Est. ${costEstimate.total_monthly}/mo
+              </Box>
+            )}
           </SpaceBetween>
         </Header>
       }
