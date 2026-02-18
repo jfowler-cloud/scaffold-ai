@@ -134,7 +134,8 @@ export function Chat() {
   }, [nodes, getGraphJSON]);
 
   const handleDeploy = async () => {
-    if (deploying || generatedFiles.length === 0 || iacFormat.value !== "cdk") return;
+    if (deploying || generatedFiles.length === 0) return;
+    if (!["cdk", "cloudformation"].includes(iacFormat.value)) return;
 
     setDeploying(true);
     addMessage({
@@ -144,7 +145,24 @@ export function Chat() {
     });
 
     try {
-      // Find CDK files
+      if (iacFormat.value === "cloudformation") {
+        // CloudFormation deployment
+        const templateFile = generatedFiles.find(f => f.path.includes("template.yaml"));
+        
+        if (!templateFile) {
+          throw new Error("CloudFormation template not found. Generate code first.");
+        }
+
+        addMessage({
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: `⚠️ CloudFormation deployment requires AWS SAM CLI.\n\nTo deploy manually:\n\n1. Save the template to \`template.yaml\`\n2. Run: \`sam deploy --guided\`\n\nOr use AWS Console to create a stack with the generated template.`,
+        });
+        setDeploying(false);
+        return;
+      }
+
+      // CDK deployment
       const stackFile = generatedFiles.find(f => f.path.includes("stack.ts"));
       const appFile = generatedFiles.find(f => f.path.includes("app.ts"));
 
@@ -422,7 +440,7 @@ export function Chat() {
               </Button>
               <Button
                 onClick={handleDeploy}
-                disabled={deploying || generatedFiles.length === 0 || iacFormat.value !== "cdk"}
+                disabled={deploying || generatedFiles.length === 0 || !["cdk", "cloudformation"].includes(iacFormat.value)}
                 loading={deploying}
                 iconName="upload"
               >
