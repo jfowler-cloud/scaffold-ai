@@ -7,9 +7,31 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
+![Built in 1 Day](https://img.shields.io/badge/Built%20in-1%20Day-brightgreen?style=flat-square)
+![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-purple?style=flat-square)
+![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
+
 Describe your application in natural language and Scaffold AI designs the AWS serverless architecture, runs a security review against AWS Well-Architected principles, and generates deployment-ready infrastructure-as-code -- all through a visual canvas and chat interface.
 
-> **Portfolio context**: Complements [Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai) (AWS Step Functions) by demonstrating framework-based orchestration with LangGraph. See [LangGraph vs Step Functions](LANGGRAPH_VS_STEP_FUNCTIONS.md) for a detailed comparison.
+## Why This Project
+
+After building [Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai) with AWS Step Functions, I wanted to explore modern AI orchestration beyond AWS-native tooling. I picked up LangGraph, React 19, Next.js 15, and AWS Cloudscape -- all frameworks I had no prior experience with -- and built this full-stack multi-agent platform in a single day.
+
+The goal was to demonstrate:
+
+- **Learning velocity** -- Shipping production-quality code in unfamiliar frameworks, fast
+- **Architectural judgment** -- Knowing when LangGraph fits better than Step Functions (and vice versa), rather than defaulting to one tool
+- **Production mindset** -- Security gates, rate limiting, input validation, and testing from the start, not bolted on later
+
+| | Resume Tailor AI | Scaffold AI |
+|---|---|---|
+| **Orchestration** | AWS Step Functions | LangGraph |
+| **Use case** | Deterministic resume tailoring | Dynamic AI multi-agent conversations |
+| **State** | S3 + DynamoDB | LangGraph built-in memory |
+| **Deployment** | AWS-native (Lambda, Step Functions) | Framework-agnostic |
+| **Development time** | 3 days | 1 day |
+
+Both projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing) -- the difference is the orchestration approach chosen to match the problem. See [LangGraph vs Step Functions](LANGGRAPH_VS_STEP_FUNCTIONS.md) for a detailed technical comparison.
 
 ---
 
