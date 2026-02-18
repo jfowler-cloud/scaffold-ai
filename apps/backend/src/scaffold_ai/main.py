@@ -14,6 +14,7 @@ from .services.cdk_deployment import CDKDeploymentService
 from .services.cost_estimator import CostEstimator
 from .services.security_autofix import SecurityAutoFix
 from .services.templates import ArchitectureTemplates
+from .services.sharing import SharingService
 
 app = FastAPI(
     title="Scaffold AI Backend",
@@ -39,6 +40,7 @@ deployment_service = CDKDeploymentService()
 cost_estimator = CostEstimator()
 security_autofix = SecurityAutoFix()
 templates = ArchitectureTemplates()
+sharing_service = SharingService()
 
 
 class ChatRequest(BaseModel):
@@ -246,4 +248,28 @@ async def get_template(template_id: str):
         return templates.get_template(template_id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.post("/api/share")
+async def create_share(data: dict):
+    """Create a shareable link for an architecture."""
+    graph = data.get("graph")
+    title = data.get("title", "Shared Architecture")
+    
+    if not graph:
+        raise HTTPException(status_code=400, detail="Graph data required")
+    
+    share_id = sharing_service.create_share_link(graph, title)
+    return {"share_id": share_id, "url": f"/shared/{share_id}"}
+
+
+@app.get("/api/share/{share_id}")
+async def get_shared(share_id: str):
+    """Get a shared architecture by ID."""
+    architecture = sharing_service.get_shared_architecture(share_id)
+    
+    if not architecture:
+        raise HTTPException(status_code=404, detail="Shared architecture not found")
+    
+    return architecture
 
