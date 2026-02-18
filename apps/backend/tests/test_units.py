@@ -493,6 +493,50 @@ class TestReactSpecialistNode:
         assert any("page.tsx" in p for p in paths)
 
     @pytest.mark.asyncio
+    async def test_frontend_with_auth_adds_auth_provider(self):
+        nodes = [
+            {"id": "fe-1", "type": "frontend", "data": {"label": "Frontend", "type": "frontend"}},
+            {"id": "auth-1", "type": "auth", "data": {"label": "Auth", "type": "auth"}},
+        ]
+        state = self._state("generate_code", nodes=nodes)
+        result = await react_specialist_node(state)
+        paths = [f["path"] for f in result["generated_files"]]
+        assert any("AuthProvider.tsx" in p for p in paths)
+
+    @pytest.mark.asyncio
+    async def test_frontend_with_api_adds_api_hooks(self):
+        nodes = [
+            {"id": "fe-1", "type": "frontend", "data": {"label": "Frontend", "type": "frontend"}},
+            {"id": "api-1", "type": "api", "data": {"label": "API", "type": "api"}},
+        ]
+        state = self._state("generate_code", nodes=nodes)
+        result = await react_specialist_node(state)
+        paths = [f["path"] for f in result["generated_files"]]
+        assert any("api.ts" in p for p in paths)
+
+    @pytest.mark.asyncio
+    async def test_frontend_with_database_adds_data_table(self):
+        nodes = [
+            {"id": "fe-1", "type": "frontend", "data": {"label": "Frontend", "type": "frontend"}},
+            {"id": "db-1", "type": "database", "data": {"label": "DB", "type": "database"}},
+        ]
+        state = self._state("generate_code", nodes=nodes)
+        result = await react_specialist_node(state)
+        paths = [f["path"] for f in result["generated_files"]]
+        assert any("DataTable.tsx" in p for p in paths)
+
+    @pytest.mark.asyncio
+    async def test_frontend_with_storage_adds_file_upload(self):
+        nodes = [
+            {"id": "fe-1", "type": "frontend", "data": {"label": "Frontend", "type": "frontend"}},
+            {"id": "s3-1", "type": "storage", "data": {"label": "S3", "type": "storage"}},
+        ]
+        state = self._state("generate_code", nodes=nodes)
+        result = await react_specialist_node(state)
+        paths = [f["path"] for f in result["generated_files"]]
+        assert any("FileUpload.tsx" in p for p in paths)
+
+    @pytest.mark.asyncio
     async def test_non_frontend_nodes_add_no_files(self):
         nodes = [
             {
