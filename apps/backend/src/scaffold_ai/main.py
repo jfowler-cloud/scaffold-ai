@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from .graph.workflow import run_workflow
 from .graph.state import GraphState, Intent
+from .services.cdk_deployment import CDKDeploymentService
 
 app = FastAPI(
     title="Scaffold AI Backend",
@@ -30,6 +31,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize deployment service
+deployment_service = CDKDeploymentService()
+
 
 class ChatRequest(BaseModel):
     """Request model for chat endpoint."""
@@ -45,6 +49,25 @@ class ChatResponse(BaseModel):
     message: str
     updated_graph: dict | None = None
     generated_files: list[dict] | None = None
+
+
+class DeployRequest(BaseModel):
+    """Request model for deployment endpoint."""
+
+    stack_name: str
+    cdk_code: str
+    app_code: str
+    region: str = "us-east-1"
+    profile: str | None = None
+
+
+class DeployResponse(BaseModel):
+    """Response model for deployment endpoint."""
+
+    success: bool
+    message: str | None = None
+    error: str | None = None
+    outputs: dict | None = None
 
 
 @app.get("/")
@@ -124,3 +147,43 @@ async def get_sample_graph():
             {"id": "e2", "source": "api-1", "target": "db-1"},
         ],
     }
+
+
+@app.post("/api/deploy", response_model=DeployResponse)
+async def deploy_stack(request: DeployRequest):
+    """
+    Deploy a CDK stack to AWS.
+    
+    This endpoint:
+    1. Creates a temporary CDK project
+    2. Installs dependencies
+    3. Bootstraps CDK (if needed)
+    4. Deploys the stack
+    5. Returns deployment status and outputs
+    """
+    try:
+        result = deployment_service.deploy(
+            stack_name=request.stack_name,
+            cdk_code=request.cdk_code,
+            app_code=request.app_code,
+            region=request.region,
+            profile=request.profile
+        )
+        
+        return DeployResponse(**result)
+    
+    except Exception as e:
+        return DeployResponse(
+            success=False,
+            error=f"Deployment error: {str(e)}"
+        )
+
+
+@app.get("/api/deploy/status")
+async def deployment_status():
+    """Check if CDK CLI is available."""
+    return {
+        "cdk_available": deployment_service.cdk_version is not None,
+        "cdk_version": deployment_service.cdk_version
+    }
+

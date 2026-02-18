@@ -7,32 +7,40 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "dependencies": {
+    "@cloudscape-design/chat-components": "^1.0.0",
+    "@cloudscape-design/collection-hooks": "^1.0.0",
+    "@cloudscape-design/components": "^3.0.0",
+    "@cloudscape-design/design-tokens": "^3.0.0",
+    "@cloudscape-design/global-styles": "^1.0.0",
+    "@scaffold-ai/ui": "workspace:*",
+    "@tanstack/react-query": "^5.64.0",
+    "@xyflow/react": "^12.4.0",
+    "ai": "^4.1.0",
+    "next": "15.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "next": "15.2.0",
-    "@xyflow/react": "^12.4.0",
-    "zustand": "^5.0.0",
-    "@tanstack/react-query": "^5.64.0",
-    "ai": "^4.1.0",
-    "@scaffold-ai/ui": "workspace:*",
-    "@cloudscape-design/components": "^3.0.0",
-    "@cloudscape-design/global-styles": "^1.0.0",
-    "@cloudscape-design/design-tokens": "^3.0.0",
-    "@cloudscape-design/collection-hooks": "^1.0.0",
-    "@cloudscape-design/chat-components": "^1.0.0"
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
+    "@scaffold-ai/eslint-config": "workspace:*",
+    "@scaffold-ai/typescript-config": "workspace:*",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^5.1.4",
+    "autoprefixer": "^10.0.0",
+    "jsdom": "^28.1.0",
     "postcss": "^8.0.0",
     "tailwindcss": "^3.4.0",
-    "autoprefixer": "^10.0.0",
-    "@scaffold-ai/typescript-config": "workspace:*",
-    "@scaffold-ai/eslint-config": "workspace:*"
+    "typescript": "^5.7.0",
+    "vitest": "^4.0.18"
   }
 }
