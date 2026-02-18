@@ -130,13 +130,17 @@ class SecurityAutoFix:
         else:
             score += 15
 
-        # Network security (15 points) - placeholder
+        # Network security (15 points)
         max_score += 15
-        score += 10  # Assume basic network security
+        vpc_nodes = [n for n in nodes if n.get("data", {}).get("config", {}).get("vpc_enabled")]
+        if vpc_nodes:
+            score += int((len(vpc_nodes) / len(nodes)) * 15)
 
-        # Monitoring (20 points) - placeholder
+        # Monitoring (20 points)
         max_score += 20
-        score += 15  # Assume basic monitoring
+        monitored = [n for n in nodes if n.get("data", {}).get("config", {}).get("monitoring_enabled")]
+        if monitored:
+            score += int((len(monitored) / len(nodes)) * 20)
 
         percentage = int((score / max_score) * 100) if max_score > 0 else 0
 
