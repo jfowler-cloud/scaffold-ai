@@ -491,6 +491,7 @@ async def cdk_specialist_node(state: GraphState) -> GraphState:
 
     graph = state["graph_json"]
     nodes = graph.get("nodes", [])
+    edges = graph.get("edges", [])
     security_review = state.get("security_review", {})
     iac_format = state.get("iac_format", "cdk")
 
@@ -506,6 +507,11 @@ async def cdk_specialist_node(state: GraphState) -> GraphState:
         security_requirements.append(f"Node {change['node_id']}: Apply {change['changes']}")
     for rec in security_review.get("recommendations", []):
         security_requirements.append(f"{rec.get('service', 'General')}: {rec.get('recommendation', '')}")
+
+    # Check if we should split into multiple stacks
+    from scaffold_ai.services.stack_splitter import StackSplitter
+    splitter = StackSplitter()
+    use_nested_stacks = splitter.should_split(nodes)
 
     try:
         if iac_format == "cloudformation":
@@ -535,6 +541,25 @@ async def cdk_specialist_node(state: GraphState) -> GraphState:
             _write_generated_file(app_file)
             _write_generated_file(req_file)
         else:  # cdk (default)
+            # Check if we should use nested stacks
+            if use_nested_stacks and iac_format == "cdk":
+                stacks = splitter.split_by_layer(nodes, edges)
+                nested_files = splitter.generate_nested_stack_code(stacks, "cdk")
+                
+                generated_files = list(state.get("generated_files", []))
+                generated_files.extend(nested_files)
+                
+                for file in nested_files:
+                    _write_generated_file(file)
+                
+                final_response = f"**Multi-Stack CDK Code Generated!**\n\nYour architecture has been split into {len(stacks)} nested stacks: {', '.join(stacks.keys())}. This improves organization and deployment speed."
+                
+                return {
+                    **state,
+                    "generated_files": generated_files,
+                    "response": final_response,
+                }
+            
             llm = get_llm()
             prompt = CDK_GENERATOR_PROMPT.format(
                 graph_json=json.dumps(graph, indent=2),
