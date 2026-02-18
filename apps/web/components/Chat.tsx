@@ -396,6 +396,7 @@ export function Chat() {
                   onChange={({ detail }) => setIacFormat(detail.selectedOption as typeof iacFormat)}
                   options={[
                     { label: "CDK (TypeScript)", value: "cdk" },
+                    { label: "CDK (Python)", value: "python-cdk" },
                     { label: "CloudFormation (YAML)", value: "cloudformation" },
                     { label: "Terraform (HCL)", value: "terraform" },
                   ]}
