@@ -504,3 +504,205 @@ class TestReactSpecialistNode:
         state = self._state("generate_code", nodes=nodes)
         result = await react_specialist_node(state)
         assert result["generated_files"] == []
+
+
+# ---------------------------------------------------------------------------
+# SecuritySpecialistAgent.review — static fallback
+# ---------------------------------------------------------------------------
+
+from scaffold_ai.agents.security_specialist import SecuritySpecialistAgent
+
+
+def _node(node_id: str, node_type: str, label: str | None = None) -> dict:
+    return {
+        "id": node_id,
+        "type": node_type,
+        "data": {"label": label or node_type.capitalize(), "type": node_type},
+    }
+
+
+class TestSecuritySpecialistAgent:
+    @pytest.fixture
+    def agent(self):
+        return SecuritySpecialistAgent()
+
+    # ------------------------------------------------------------------
+    # Empty graph
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_empty_graph_passes_with_100(self, agent):
+        result = await agent.review({"nodes": [], "edges": []})
+        assert result["passed"] is True
+        assert result["security_score"] == 100
+        assert result["critical_issues"] == []
+        assert result["warnings"] == []
+
+    # ------------------------------------------------------------------
+    # Return shape
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_result_has_required_keys(self, agent):
+        result = await agent.review({"nodes": [_node("n1", "lambda")], "edges": []})
+        for key in ("security_score", "passed", "critical_issues", "warnings",
+                    "recommendations", "compliant_services", "security_enhancements"):
+            assert key in result
+
+    @pytest.mark.asyncio
+    async def test_score_within_bounds(self, agent):
+        nodes = [_node(f"n{i}", t) for i, t in enumerate(
+            ["storage", "api", "queue", "lambda", "database", "auth"]
+        )]
+        result = await agent.review({"nodes": nodes, "edges": []})
+        assert 0 <= result["security_score"] <= 100
+
+    # ------------------------------------------------------------------
+    # storage node
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_storage_node_produces_medium_warning(self, agent):
+        result = await agent.review({"nodes": [_node("s1", "storage", "Uploads")], "edges": []})
+        services = [w["service"] for w in result["warnings"]]
+        assert "S3" in services
+
+    @pytest.mark.asyncio
+    async def test_storage_node_warning_is_medium_severity(self, agent):
+        result = await agent.review({"nodes": [_node("s1", "storage")], "edges": []})
+        s3_warnings = [w for w in result["warnings"] if w["service"] == "S3"]
+        assert all(w["severity"] == "medium" for w in s3_warnings)
+
+    @pytest.mark.asyncio
+    async def test_storage_node_adds_config_change(self, agent):
+        result = await agent.review({"nodes": [_node("s1", "storage")], "edges": []})
+        changes = result["security_enhancements"]["config_changes"]
+        node_ids = [c["node_id"] for c in changes]
+        assert "s1" in node_ids
+
+    # ------------------------------------------------------------------
+    # database node
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_database_node_produces_recommendation(self, agent):
+        result = await agent.review({"nodes": [_node("db1", "database", "UserTable")], "edges": []})
+        services = [r["service"] for r in result["recommendations"]]
+        assert "DynamoDB" in services
+
+    @pytest.mark.asyncio
+    async def test_database_node_no_critical_or_high_warning(self, agent):
+        result = await agent.review({"nodes": [_node("db1", "database")], "edges": []})
+        high_or_critical = [
+            w for w in result["warnings"]
+            if w.get("severity") in ("high", "critical")
+        ]
+        assert high_or_critical == []
+
+    # ------------------------------------------------------------------
+    # api node without auth — high severity warning
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_api_without_auth_produces_high_warning(self, agent):
+        result = await agent.review({"nodes": [_node("api1", "api", "REST API")], "edges": []})
+        high_warnings = [w for w in result["warnings"] if w.get("severity") == "high"]
+        assert len(high_warnings) >= 1
+        assert any("API Gateway" in w["service"] for w in high_warnings)
+
+    @pytest.mark.asyncio
+    async def test_api_with_auth_no_high_warning(self, agent):
+        nodes = [_node("api1", "api"), _node("auth1", "auth")]
+        result = await agent.review({"nodes": nodes, "edges": []})
+        api_high = [
+            w for w in result["warnings"]
+            if w.get("severity") == "high" and "API" in w.get("service", "")
+        ]
+        assert api_high == []
+
+    # ------------------------------------------------------------------
+    # lambda node
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_lambda_node_produces_recommendations(self, agent):
+        result = await agent.review({"nodes": [_node("fn1", "lambda", "ProcessOrder")], "edges": []})
+        lambda_recs = [r for r in result["recommendations"] if r["service"] == "Lambda"]
+        assert len(lambda_recs) >= 2  # X-Ray + least-privilege
+
+    # ------------------------------------------------------------------
+    # queue node
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_queue_node_produces_medium_warning(self, agent):
+        result = await agent.review({"nodes": [_node("q1", "queue", "OrderQueue")], "edges": []})
+        sqs_warnings = [w for w in result["warnings"] if w["service"] == "SQS"]
+        assert len(sqs_warnings) >= 1
+        assert sqs_warnings[0]["severity"] == "medium"
+
+    # ------------------------------------------------------------------
+    # auth node
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_auth_node_produces_recommendation(self, agent):
+        result = await agent.review({"nodes": [_node("au1", "auth", "UserPool")], "edges": []})
+        cognito_recs = [r for r in result["recommendations"] if r["service"] == "Cognito"]
+        assert len(cognito_recs) >= 1
+
+    # ------------------------------------------------------------------
+    # Scoring arithmetic
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_high_warning_deducts_15_points(self, agent):
+        # A lone api node without auth adds exactly one high warning
+        result = await agent.review({"nodes": [_node("api1", "api")], "edges": []})
+        high_count = len([w for w in result["warnings"] if w.get("severity") == "high"])
+        medium_count = len([w for w in result["warnings"] if w.get("severity") == "medium"])
+        expected = max(0, 100 - (high_count * 15) - (medium_count * 5))
+        assert result["security_score"] == expected
+
+    @pytest.mark.asyncio
+    async def test_medium_warning_deducts_5_points(self, agent):
+        # storage alone adds medium warnings only
+        result = await agent.review({"nodes": [_node("s1", "storage")], "edges": []})
+        medium_count = len([w for w in result["warnings"] if w.get("severity") == "medium"])
+        high_count = len([w for w in result["warnings"] if w.get("severity") == "high"])
+        expected = max(0, 100 - (high_count * 15) - (medium_count * 5))
+        assert result["security_score"] == expected
+
+    @pytest.mark.asyncio
+    async def test_score_does_not_go_below_zero(self, agent):
+        # Many nodes with issues should not produce negative score
+        many_nodes = [_node(f"s{i}", "storage") for i in range(10)]
+        many_nodes += [_node(f"api{i}", "api") for i in range(10)]
+        result = await agent.review({"nodes": many_nodes, "edges": []})
+        assert result["security_score"] >= 0
+
+    # ------------------------------------------------------------------
+    # pass/fail thresholds
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_passes_with_only_medium_warnings(self, agent):
+        # storage → medium warnings only → should pass
+        result = await agent.review({"nodes": [_node("s1", "storage")], "edges": []})
+        assert result["passed"] is True
+
+    @pytest.mark.asyncio
+    async def test_passes_with_up_to_3_high_warnings(self, agent):
+        # 3 api nodes without auth = 3 high warnings → still passes
+        nodes = [_node(f"api{i}", "api") for i in range(3)]
+        result = await agent.review({"nodes": nodes, "edges": []})
+        high_count = len([w for w in result["warnings"] if w.get("severity") == "high"])
+        assert high_count == 3
+        assert result["passed"] is True
+
+    @pytest.mark.asyncio
+    async def test_fails_with_more_than_3_high_warnings(self, agent):
+        # 4 api nodes without auth = 4 high warnings → fails
+        nodes = [_node(f"api{i}", "api") for i in range(4)]
+        result = await agent.review({"nodes": nodes, "edges": []})
+        assert result["passed"] is False
