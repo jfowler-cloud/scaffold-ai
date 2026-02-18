@@ -420,36 +420,17 @@ The generated CloudFormation output uses the `AWS::Serverless` transform. Deploy
 ### Medium-term
 
 - [x] CDK deployment integration (`cdk deploy` from the UI) — **COMPLETE**
-  - Deploy button in Chat component
-  - Backend deployment service
-  - Temporary project creation
-  - Bootstrap and deploy automation
 - [x] Cost estimation per architecture — **COMPLETE**
-  - Real-time cost estimates in UI
-  - Per-service cost breakdown
-  - Optimization tips
 - [x] Security recommendation auto-apply — **COMPLETE**
-  - Automatic security fixes
-  - Adds missing auth, encryption, DLQ
-  - Security score calculation
-  - Fix Security button
 - [x] Architecture templates library — **COMPLETE**
-  - 6 pre-built templates
-  - Todo app, file upload, REST API, event-driven, queue worker, SaaS
 - [x] Python CDK support — **COMPLETE**
-  - Python CDK code generation
-  - Generates stack, app.py, requirements.txt
-  - Added to IaC format dropdown
 - [x] Multi-stack architectures — **COMPLETE**
-  - Automatic splitting for large architectures (>15 resources)
-  - Splits into logical layers: network, data, compute, frontend
-  - Nested CDK stacks
 - [x] Collaboration / sharing features — **COMPLETE**
-  - Create shareable links for architectures
-  - Hash-based unique URLs
-  - Share and retrieve architectures
+- [x] Security score history tracking — **COMPLETE**
+  - Track security improvements over time
+  - Record scores with issue counts
+  - Calculate improvement metrics and trends
 - [ ] Real-time streaming for long generation tasks
-- [ ] Security score history tracking
 
 ## Architecture Patterns
 
@@ -510,7 +491,7 @@ For AI assistant onboarding, see [`CLAUDE.md`](./CLAUDE.md).
 
 ### 1. Security Concerns
 
-#### 1.1 Command Injection in CDK Deployment Service — **Critical**
+#### 1.1 Command Injection in CDK Deployment Service — **Critical** ✅ FIXED
 
 `apps/backend/src/scaffold_ai/services/cdk_deployment.py` passes user-supplied `stack_name` directly into file paths and shell commands without sanitization:
 
@@ -521,20 +502,14 @@ with open(project_path / "lib" / f"{stack_name.lower()}-stack.ts", "w") as f:
 
 The `stack_name` comes from the `DeployRequest` Pydantic model, which only validates it as a `str`. A malicious value like `../../etc/passwd` or a name containing shell metacharacters could be exploited.
 
-**Recommendation:** Add strict validation to `DeployRequest`:
+**✅ Fixed:** Added strict validation to `DeployRequest`:
 ```python
-from pydantic import BaseModel, field_validator
-import re
-
-class DeployRequest(BaseModel):
-    stack_name: str
-
-    @field_validator("stack_name")
-    @classmethod
-    def validate_stack_name(cls, v: str) -> str:
-        if not re.match(r'^[A-Za-z][A-Za-z0-9-]{0,127}$', v):
-            raise ValueError("stack_name must be alphanumeric with hyphens, 1-128 chars")
-        return v
+@field_validator("stack_name")
+@classmethod
+def validate_stack_name(cls, v: str) -> str:
+    if not re.match(r'^[A-Za-z][A-Za-z0-9-]{0,127}$', v):
+        raise ValueError("stack_name must be alphanumeric with hyphens, start with letter, 1-128 chars")
+    return v
 ```
 
 #### 1.2 CORS Allows All Methods and Headers — **Medium**
@@ -568,11 +543,11 @@ except Exception as e:
 
 ### 2. Architecture & Design
 
-#### 2.1 LLM Client Created on Every Request — **High**
+#### 2.1 LLM Client Created on Every Request — **High** ✅ FIXED
 
 `nodes.py:13-19` creates a new `ChatBedrock` client on every call to `get_llm()`. Each node function (interpret, architect, security review, CDK generation) calls `get_llm()` independently, meaning a single request creates up to 4 client instances.
 
-**Recommendation:** Use a module-level singleton or dependency-injected client:
+**✅ Fixed:** Use `@lru_cache` for singleton pattern:
 ```python
 from functools import lru_cache
 
@@ -580,8 +555,6 @@ from functools import lru_cache
 def get_llm():
     return ChatBedrock(...)
 ```
-
-Or better, accept the LLM as a parameter for testability.
 
 #### 2.2 No Request Timeout or Cancellation — **High**
 
