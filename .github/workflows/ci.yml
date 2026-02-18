@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install uv
+        run: pip install uv
+      
+      - name: Install dependencies
+        working-directory: apps/backend
+        run: uv sync
+      
+      - name: Run tests
+        working-directory: apps/backend
+        run: uv run pytest -v --tb=short
+      
+      - name: Run linter
+        working-directory: apps/backend
+        run: uv run ruff check src tests || true
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Run frontend tests
+        working-directory: apps/web
+        run: pnpm test --run
+      
+      - name: Type check
+        working-directory: apps/web
+        run: pnpm type-check
+      
+      - name: Lint
+        run: pnpm lint || true
+
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          extra_args: --only-verified
+      
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python, javascript
+      
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
