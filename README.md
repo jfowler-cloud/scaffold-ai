@@ -1,13 +1,30 @@
-# Scaffold AI - Public Showcase
+# Scaffold AI
 
-**A LangGraph-powered AWS architecture designer showcasing rapid AI development**
+**AI-powered AWS architecture designer built with LangGraph**
 
 [![CI](https://github.com/jfowler-cloud/scaffold-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/jfowler-cloud/scaffold-ai/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
-> **Portfolio Project**: Demonstrates expertise in LangGraph orchestration, multi-agent AI systems, and rapid full-stack development. Built in 2 weeks to showcase alternatives to AWS Step Functions for complex AI workflows.
+> **Portfolio Project**: Built in 2 weeks to demonstrate rapid learning of new frameworks (LangGraph, React 19, Next.js 15) and showcase alternatives to AWS-native orchestration. Complements [Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai) by highlighting framework-agnostic development vs AWS-native approaches.
+
+## 🎯 Why This Project Exists
+
+**Rapid Capability Growth**: After building Resume Tailor AI with AWS Step Functions, I wanted to explore modern AI orchestration frameworks. This project demonstrates:
+
+- **Learning Velocity**: Mastered LangGraph, React 19, and Next.js 15 in 2 weeks
+- **Framework Diversity**: AWS-native (Step Functions) vs framework-based (LangGraph) orchestration
+- **Architectural Judgment**: Understanding when to use each approach and articulating trade-offs
+- **Production Mindset**: Security gates, rate limiting, testing, and validation from day 1
+
+**Portfolio Positioning**:
+| Project | Orchestration | Focus | State Management | Best For |
+|---------|--------------|-------|------------------|----------|
+| **Resume Tailor AI** | AWS Step Functions | Deterministic workflow | S3/DynamoDB | Predictable, AWS-native flows |
+| **Scaffold AI** | LangGraph | AI multi-agent | Built-in memory | Dynamic routing, conversational AI |
+
+Both projects showcase production patterns (validation, error handling, security, CI/CD) but with different architectural approaches.
 
 ---
 
@@ -211,6 +228,53 @@ scaffold-ai/
 - **Rate Limiting**: ✅ Per IP
 - **Security Scanning**: ✅ CodeQL + TruffleHog
 - **Approval Gates**: ✅ Deployment requires confirmation
+
+---
+
+## 🔄 Comparison: Resume Tailor AI vs Scaffold AI
+
+**Context**: These two projects showcase different orchestration approaches for different use cases.
+
+### Resume Tailor AI (AWS-Native)
+- **Orchestration**: AWS Step Functions
+- **Use Case**: Deterministic resume tailoring workflow
+- **State**: S3 + DynamoDB
+- **Testing**: AWS SDK mocking (moto, localstack)
+- **Deployment**: AWS-native (Lambda, Step Functions)
+- **Strengths**: Predictable flows, AWS-integrated, production-proven
+- **Development Time**: 3 weeks
+
+### Scaffold AI (Framework-Based)
+- **Orchestration**: LangGraph
+- **Use Case**: Dynamic AI multi-agent conversations
+- **State**: Built-in memory + checkpointing
+- **Testing**: Pure Python (no AWS mocking needed)
+- **Deployment**: Framework-agnostic (can run anywhere)
+- **Strengths**: Dynamic routing, faster local dev, conversational AI
+- **Development Time**: 2 weeks
+
+### Shared Patterns (Production Mindset)
+Both projects demonstrate:
+- ✅ Validation-first handler pattern
+- ✅ Robust error handling with fallbacks
+- ✅ Pre-commit hooks (secrets detection)
+- ✅ CI/CD with security scanning
+- ✅ Rate limiting and cost controls
+- ✅ Comprehensive testing
+- ✅ Type safety (TypeScript + Python type hints)
+
+### When to Use Each
+| Scenario | Choose |
+|----------|--------|
+| Deterministic workflow with fixed steps | Step Functions |
+| Dynamic routing based on LLM responses | LangGraph |
+| AWS-native integration required | Step Functions |
+| Framework-agnostic, portable solution | LangGraph |
+| Need visual workflow editor in AWS Console | Step Functions |
+| Rapid local development and debugging | LangGraph |
+| Cost-sensitive at scale (>1,500 executions/month) | LangGraph |
+
+**Portfolio Message**: "I can evaluate trade-offs and choose the right orchestration approach based on requirements, not just default to one solution."
 
 ---
 

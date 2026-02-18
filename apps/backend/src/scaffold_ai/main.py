@@ -29,12 +29,6 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Request size limit (1MB)
-app.add_middleware(
-    lambda app: app,
-    max_request_size=1024 * 1024
-)
-
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

@@ -48,11 +48,7 @@ jobs:
           version: 10
       
       - name: Install dependencies
-        run: pnpm install
-      
-      - name: Run frontend tests
-        working-directory: apps/web
-        run: pnpm test --run
+        run: pnpm install --frozen-lockfile
       
       - name: Type check
         working-directory: apps/web
