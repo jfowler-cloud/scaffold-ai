@@ -39,7 +39,8 @@ class SecurityAutoFix:
             if not queue.get("data", {}).get("config", {}).get("has_dlq"):
                 queue["data"]["config"] = queue["data"].get("config", {})
                 queue["data"]["config"]["has_dlq"] = True
-                changes.append(f"✅ Enabled DLQ for queue '{queue['data']['label']}'")
+                label = queue.get("data", {}).get("label", queue.get("id", "unknown"))
+                changes.append(f"✅ Enabled DLQ for queue '{label}'")
 
         # Check for encryption on storage
         storage_nodes = [n for n in nodes if n.get("data", {}).get("type") == "storage"]
@@ -48,7 +49,8 @@ class SecurityAutoFix:
             if not config.get("encryption"):
                 storage["data"]["config"] = config
                 storage["data"]["config"]["encryption"] = "AES256"
-                changes.append(f"✅ Enabled encryption for S3 bucket '{storage['data']['label']}'")
+                label = storage.get("data", {}).get("label", storage.get("id", "unknown"))
+                changes.append(f"✅ Enabled encryption for S3 bucket '{label}'")
 
         # Check for encryption on databases
         db_nodes = [n for n in nodes if n.get("data", {}).get("type") == "database"]
@@ -57,7 +59,8 @@ class SecurityAutoFix:
             if not config.get("encryption"):
                 db["data"]["config"] = config
                 db["data"]["config"]["encryption"] = True
-                changes.append(f"✅ Enabled encryption for DynamoDB table '{db['data']['label']}'")
+                label = db.get("data", {}).get("label", db.get("id", "unknown"))
+                changes.append(f"✅ Enabled encryption for DynamoDB table '{label}'")
 
         return {"nodes": nodes, "edges": edges}, changes
 

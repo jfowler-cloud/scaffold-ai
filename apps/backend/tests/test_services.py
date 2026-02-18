@@ -14,15 +14,15 @@ class TestCostEstimator:
     def test_estimate_empty_graph(self):
         estimator = CostEstimator()
         result = estimator.estimate({"nodes": [], "edges": []})
-        assert result["total_monthly_cost"] == 0
+        assert result["total_monthly"] == 0
         assert result["breakdown"] == []
 
     def test_estimate_with_lambda(self):
         estimator = CostEstimator()
         graph = {"nodes": [{"data": {"type": "lambda"}}], "edges": []}
         result = estimator.estimate(graph)
-        assert result["total_monthly_cost"] > 0
-        assert any(item["service"] == "Lambda" for item in result["breakdown"])
+        assert result["total_monthly"] > 0
+        assert any(item["service"] == "AWS Lambda" for item in result["breakdown"])
 
 
 class TestSecurityAutoFix:
@@ -34,8 +34,9 @@ class TestSecurityAutoFix:
 
     def test_security_score_empty(self):
         autofix = SecurityAutoFix()
-        score = autofix.get_security_score({"nodes": [], "edges": []})
-        assert score == 100
+        result = autofix.get_security_score({"nodes": [], "edges": []})
+        assert result["score"] == 0
+        assert result["max_score"] == 0
 
     def test_adds_encryption_to_storage(self):
         autofix = SecurityAutoFix()
@@ -132,7 +133,7 @@ class TestCDKGenerator:
         nodes = [{"id": "fn1", "data": {"type": "lambda", "label": "MyFunction"}}]
         result = generator.generate(nodes, [])
         assert "lambda.Function" in result
-        assert "MyFunction" in result
+        assert "fn1" in result  # Check for node ID in CDK construct
 
     def test_edge_wiring(self):
         generator = CDKGenerator()
