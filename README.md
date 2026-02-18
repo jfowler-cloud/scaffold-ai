@@ -30,9 +30,9 @@ Generative UI platform for designing full-stack AWS serverless applications usin
 | Chat → canvas architecture | Working | Falls back to rule-based if Bedrock unavailable |
 | Security gate | Working | LLM review with static fallback |
 | CDK (TypeScript) generation | Working | LLM-powered + static fallback |
-| CloudFormation generation | Partial | Static template only; node type mapping bug (see [Known Issues](#known-issues)) |
-| Terraform generation | Partial | Static template only; node type mapping bug (see [Known Issues](#known-issues)) |
-| React/Cloudscape component generation | Stub | `react_specialist_node` returns unchanged state |
+| CloudFormation generation | Working | Static template; all 12 node types mapped correctly |
+| Terraform generation | Working | Static template; all 12 node types mapped correctly |
+| React/Cloudscape component generation | Partial | Generates layout.tsx + page.tsx for `frontend` nodes; static template only |
 | Canvas layout algorithms | Working | Horizontal, vertical, grid, circular |
 | Generated code viewer | Working | Tabbed modal via Side Navigation → Generated Code |
 | CDK deployment integration | Not started | |
@@ -238,19 +238,17 @@ When the LLM is unavailable, `SecuritySpecialistAgent` provides a rule-based sta
 | Canvas type | AWS Service | CDK | CloudFormation | Terraform |
 |-------------|------------|:---:|:--------------:|:---------:|
 | `frontend` | S3 + CloudFront | ✅ | — | — |
-| `auth` | Cognito | ✅ | — | — |
-| `api` | API Gateway | ✅ | — | — |
+| `auth` | Cognito | ✅ | ✅ | ✅ |
+| `api` | API Gateway | ✅ | ✅ | ✅ |
 | `lambda` | Lambda | ✅ | ✅ | ✅ |
-| `database` | DynamoDB | ✅ | — | — |
-| `storage` | S3 | ✅ | — | — |
-| `queue` | SQS | ✅ | — | — |
-| `events` | EventBridge | ✅ | — | — |
-| `notification` | SNS | ✅ | — | — |
-| `workflow` | Step Functions | ✅ | — | — |
+| `database` | DynamoDB | ✅ | ✅ | ✅ |
+| `storage` | S3 | ✅ | ✅ | ✅ |
+| `queue` | SQS + DLQ | ✅ | ✅ | ✅ |
+| `events` | EventBridge | ✅ | ✅ | ✅ |
+| `notification` | SNS | ✅ | ✅ | ✅ |
+| `workflow` | Step Functions | ✅ | ✅ | ✅ |
 | `cdn` | CloudFront | ✅ (commented) | — | — |
-| `stream` | Kinesis | ✅ | — | — |
-
-> CloudFormation and Terraform specialists have a node type key mismatch — see [Known Issues](#known-issues). Only `lambda` nodes produce output correctly in those formats today.
+| `stream` | Kinesis | ✅ | ✅ | ✅ |
 
 ## Development
 
@@ -345,8 +343,8 @@ The following areas have no automated coverage and should be prioritized:
 - **`generate_node_positions`** — pure function; test column assignment per node type and row stacking for duplicate types
 - **`SecuritySpecialistAgent.review`** — unit test every node-type branch (storage, database, api, lambda, queue, auth) independently; verify scoring arithmetic
 - **`cdk_specialist.py` `_generate_stack`** — assert correct CDK constructs emitted for every node type; verify deduplication of imports
-- **`CloudFormationSpecialistAgent.generate`** — will currently show empty resources for most node types (the bug); a failing test documents this clearly and will verify the fix
-- **`TerraformSpecialistAgent.generate`** — same as above
+- **`CloudFormationSpecialistAgent.generate`** — assert all 12 node types produce the expected resource types in `Resources`; verify DLQ is created alongside queue; verify Outputs only reference ARN-capable resource types
+- **`TerraformSpecialistAgent.generate`** — assert all 12 node types produce valid HCL blocks; verify `slug` variable generates correct resource names; verify outputs section
 - **`cdk_specialist_node`** — test all three IaC format branches (cdk / cloudformation / terraform) with a mock graph
 - **`security_gate` router function** — unit test both "passed" and "failed" return values directly
 
@@ -369,42 +367,36 @@ Recommended: Vitest + @testing-library/react.
 
 ## Known Issues
 
-### CloudFormation and Terraform node type mismatch
-
-The canvas uses these node type keys: `database`, `api`, `auth`, `storage`, `queue`.
-
-The CloudFormation specialist (`cloudformation_specialist.py`) matches against: `dynamodb`, `apigateway`, `cognito`, `s3`, `sqs`.
-The Terraform specialist (`terraform_specialist.py`) matches the same mismatched keys.
-
-**Effect:** For most architectures, CF and TF templates are generated with empty `Resources` sections. Only `lambda` nodes produce output in those formats today.
-
-**Fix:** Update both specialists to match the canvas node type keys, or introduce a translation map at the dispatch point in `nodes.py`.
-
-### `react_specialist_node` is a stub
-
-The node function returns state unchanged and is a no-op in the workflow. IaC-only generation works; no Cloudscape React components are generated from the canvas.
-
 ### CORS allows only localhost:3000
 
-`apps/backend/src/scaffold_ai/main.py` hard-codes `allow_origins=["http://localhost:3000"]`. Any non-local deployment requires updating this value.
+`apps/backend/src/scaffold_ai/main.py` hard-codes `allow_origins=["http://localhost:3000"]`. Any non-local deployment requires updating this value or making it configurable via an environment variable.
 
 ### Generated files are not persisted to disk
 
 Generated files are returned in the API response and kept in client-side Zustand state only. Refreshing the browser clears them. The `packages/generated/` directory has placeholder `.gitkeep` files but nothing writes there at runtime.
 
-### Python dependency `yaml` not declared
+### React component generation is static template only
 
-`cloudformation_specialist.py` imports `yaml` at call time (`import yaml`). The `PyYAML` package is not listed in `pyproject.toml` under `[project.dependencies]`, which will cause an `ImportError` on a clean `uv sync`. Add `pyyaml>=6.0` to `pyproject.toml`.
+`react_specialist_node` calls `ReactSpecialistAgent.generate()` which produces a generic Cloudscape `layout.tsx` + `page.tsx` regardless of the specific architecture. It only fires when there is a `frontend` node; other node types do not yet influence the generated components. True LLM-driven, architecture-aware component generation is not yet implemented.
+
+### CDK fallback template uses inline Lambda code
+
+The static CDK fallback in `generate_secure_cdk_template` uses `lambda.Code.fromInline(...)`. This is appropriate for scaffolding but not for real deployments — generated stacks need to be updated to reference actual handler code before deploying.
+
+### CloudFormation SAM template requires SAM CLI for deploy
+
+The generated CloudFormation output uses the `AWS::Serverless` transform. Deploying requires `sam deploy` (not `aws cloudformation deploy` directly).
 
 ## Roadmap
 
 ### Near-term
 
-- [ ] Fix CloudFormation and Terraform node type key mismatch
-- [ ] Add `pyyaml` to `pyproject.toml` dependencies
 - [ ] Add frontend unit test suite (Vitest + Testing Library)
-- [ ] Add backend unit tests for node functions with mocked LLM
-- [ ] Implement `react_specialist_node` for Cloudscape component generation
+- [ ] Add backend unit tests for node functions with mocked LLM (no AWS credentials needed)
+- [ ] Make CORS origins configurable via environment variable
+- [ ] LLM-driven React component generation (architecture-aware Cloudscape components)
+- [ ] Persist generated files to `packages/generated/` on disk at generation time
+- [ ] CDK CloudFront (`cdn`) node — currently generates a comment placeholder only
 
 ### Medium-term
 

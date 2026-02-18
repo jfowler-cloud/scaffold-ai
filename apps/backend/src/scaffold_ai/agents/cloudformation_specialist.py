@@ -98,37 +98,71 @@ class CloudFormationSpecialistAgent:
                     },
                 }
 
-            elif node_type == "dynamodb":
+            elif node_type == "database":
                 template["Resources"][f"{node_id}Table"] = {
                     "Type": "AWS::DynamoDB::Table",
                     "Properties": {
                         "BillingMode": "PAY_PER_REQUEST",
                         "AttributeDefinitions": [
-                            {"AttributeName": "id", "AttributeType": "S"}
+                            {"AttributeName": "pk", "AttributeType": "S"},
+                            {"AttributeName": "sk", "AttributeType": "S"},
                         ],
-                        "KeySchema": [{"AttributeName": "id", "KeyType": "HASH"}],
+                        "KeySchema": [
+                            {"AttributeName": "pk", "KeyType": "HASH"},
+                            {"AttributeName": "sk", "KeyType": "RANGE"},
+                        ],
                         "PointInTimeRecoverySpecification": {
                             "PointInTimeRecoveryEnabled": True
                         },
+                        "SSESpecification": {"SSEEnabled": True},
                     },
                 }
 
-            elif node_type == "apigateway":
+            elif node_type == "api":
                 template["Resources"][f"{node_id}Api"] = {
                     "Type": "AWS::Serverless::Api",
-                    "Properties": {"StageName": "prod", "Description": label},
+                    "Properties": {
+                        "StageName": "prod",
+                        "Description": label,
+                        "TracingEnabled": True,
+                        "MethodSettings": [
+                            {
+                                "ResourcePath": "/*",
+                                "HttpMethod": "*",
+                                "LoggingLevel": "INFO",
+                                "MetricsEnabled": True,
+                            }
+                        ],
+                    },
                 }
 
-            elif node_type == "cognito":
+            elif node_type == "auth":
                 template["Resources"][f"{node_id}UserPool"] = {
                     "Type": "AWS::Cognito::UserPool",
                     "Properties": {
                         "UserPoolName": label,
                         "MfaConfiguration": "OPTIONAL",
+                        "Policies": {
+                            "PasswordPolicy": {
+                                "MinimumLength": 12,
+                                "RequireLowercase": True,
+                                "RequireUppercase": True,
+                                "RequireNumbers": True,
+                                "RequireSymbols": True,
+                            }
+                        },
+                    },
+                }
+                template["Resources"][f"{node_id}UserPoolClient"] = {
+                    "Type": "AWS::Cognito::UserPoolClient",
+                    "Properties": {
+                        "UserPoolId": {"Ref": f"{node_id}UserPool"},
+                        "ClientName": f"{label}WebClient",
+                        "ExplicitAuthFlows": ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"],
                     },
                 }
 
-            elif node_type == "s3":
+            elif node_type == "storage":
                 template["Resources"][f"{node_id}Bucket"] = {
                     "Type": "AWS::S3::Bucket",
                     "Properties": {
@@ -136,22 +170,94 @@ class CloudFormationSpecialistAgent:
                             "ServerSideEncryptionConfiguration": [
                                 {"ServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}
                             ]
-                        }
+                        },
+                        "VersioningConfiguration": {"Status": "Enabled"},
+                        "PublicAccessBlockConfiguration": {
+                            "BlockPublicAcls": True,
+                            "BlockPublicPolicy": True,
+                            "IgnorePublicAcls": True,
+                            "RestrictPublicBuckets": True,
+                        },
                     },
                 }
 
-            elif node_type == "sqs":
+            elif node_type == "queue":
+                dlq_id = f"{node_id}DLQ"
+                template["Resources"][dlq_id] = {
+                    "Type": "AWS::SQS::Queue",
+                    "Properties": {
+                        "QueueName": f"{label}-dlq",
+                        "MessageRetentionPeriod": 1209600,
+                        "SqsManagedSseEnabled": True,
+                    },
+                }
                 template["Resources"][f"{node_id}Queue"] = {
                     "Type": "AWS::SQS::Queue",
-                    "Properties": {"QueueName": label},
+                    "Properties": {
+                        "QueueName": label,
+                        "SqsManagedSseEnabled": True,
+                        "RedrivePolicy": {
+                            "deadLetterTargetArn": {"Fn::GetAtt": [dlq_id, "Arn"]},
+                            "maxReceiveCount": 3,
+                        },
+                    },
                 }
 
-        # Add outputs
-        for resource_name in template["Resources"].keys():
-            template["Outputs"][f"{resource_name}Arn"] = {
-                "Value": {"Fn::GetAtt": [resource_name, "Arn"]},
-                "Description": f"ARN of {resource_name}",
-            }
+            elif node_type == "notification":
+                template["Resources"][f"{node_id}Topic"] = {
+                    "Type": "AWS::SNS::Topic",
+                    "Properties": {"DisplayName": label},
+                }
+
+            elif node_type == "events":
+                template["Resources"][f"{node_id}EventBus"] = {
+                    "Type": "AWS::Events::EventBus",
+                    "Properties": {"Name": f"{label.lower().replace(' ', '-')}-bus"},
+                }
+
+            elif node_type == "stream":
+                template["Resources"][f"{node_id}Stream"] = {
+                    "Type": "AWS::Kinesis::Stream",
+                    "Properties": {
+                        "ShardCount": 1,
+                        "StreamEncryption": {
+                            "EncryptionType": "KMS",
+                            "KeyId": "alias/aws/kinesis",
+                        },
+                    },
+                }
+
+            elif node_type == "workflow":
+                template["Resources"][f"{node_id}StateMachine"] = {
+                    "Type": "AWS::StepFunctions::StateMachine",
+                    "Properties": {
+                        "StateMachineType": "EXPRESS",
+                        "TracingConfiguration": {"Enabled": True},
+                        "Definition": {
+                            "Comment": label,
+                            "StartAt": "Start",
+                            "States": {"Start": {"Type": "Pass", "End": True}},
+                        },
+                    },
+                }
+
+        # Add outputs for resources that expose an Arn attribute
+        arn_types = {
+            "AWS::Serverless::Function",
+            "AWS::DynamoDB::Table",
+            "AWS::Cognito::UserPool",
+            "AWS::S3::Bucket",
+            "AWS::SNS::Topic",
+            "AWS::Kinesis::Stream",
+            "AWS::StepFunctions::StateMachine",
+            "AWS::SQS::Queue",
+        }
+        for resource_name, resource_def in template["Resources"].items():
+            if resource_def.get("Type") in arn_types:
+                template["Outputs"][f"{resource_name}Arn"] = {
+                    "Value": {"Fn::GetAtt": [resource_name, "Arn"]},
+                    "Description": f"ARN of {resource_name}",
+                }
 
         import yaml
 

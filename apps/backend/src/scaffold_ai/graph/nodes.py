@@ -757,10 +757,29 @@ export class ScaffoldAiStack extends cdk.Stack {{
 
 
 async def react_specialist_node(state: GraphState) -> GraphState:
-    """React Specialist - generates React component code."""
+    """React Specialist - generates Cloudscape React component scaffolding."""
     if state["intent"] != "generate_code":
         return state
-    # Future: Generate Cloudscape React components
+
+    graph = state["graph_json"]
+    nodes = graph.get("nodes", [])
+
+    if not nodes:
+        return state
+
+    try:
+        from scaffold_ai.agents.react_specialist import ReactSpecialistAgent
+        agent = ReactSpecialistAgent()
+        react_files = await agent.generate(graph)
+
+        if react_files:
+            generated_files = list(state.get("generated_files", []))
+            generated_files.extend(react_files)
+            return {**state, "generated_files": generated_files}
+
+    except Exception as e:
+        print(f"React specialist failed: {e}")
+
     return state
 
 
