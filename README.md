@@ -7,6 +7,12 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
+![Built in 1 Day](https://img.shields.io/badge/Built%20in-1%20Day-brightgreen?style=flat-square)
+![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-purple?style=flat-square)
+![Tests](https://img.shields.io/badge/Tests-126%20Passing-success?style=flat-square)
+![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
+![LOC](https://img.shields.io/badge/Code-6.5k%20Lines-informational?style=flat-square)
+
 > **Portfolio Project**: Built in a single day to demonstrate rapid learning of new frameworks (LangGraph, React 19, Next.js 15) and showcase alternatives to AWS-native orchestration. Complements [Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai) by highlighting framework-agnostic development vs AWS-native approaches.
 
 ## 🎯 Why This Project Exists
