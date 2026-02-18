@@ -43,7 +43,7 @@ describe('useGraphStore', () => {
       });
 
       useGraphStore.getState().removeNode('1');
-      
+
       expect(useGraphStore.getState().nodes).toHaveLength(1);
       expect(useGraphStore.getState().nodes[0].id).toBe('2');
       expect(useGraphStore.getState().edges).toHaveLength(0);
@@ -85,7 +85,7 @@ describe('useGraphStore', () => {
   describe('onConnect', () => {
     it('should add an edge when connecting nodes', () => {
       const connection = { source: '1', target: '2' };
-      
+
       useGraphStore.getState().onConnect(connection);
 
       expect(useGraphStore.getState().edges).toHaveLength(1);
@@ -108,7 +108,7 @@ describe('useGraphStore', () => {
       useGraphStore.getState().applyLayout('horizontal');
 
       const nodes = useGraphStore.getState().nodes;
-      
+
       // Frontend (col 0) should be leftmost
       expect(nodes.find(n => n.id === '1')?.position.x).toBe(50);
       // Auth (col 1) should be next
@@ -126,7 +126,7 @@ describe('useGraphStore', () => {
       useGraphStore.getState().applyLayout('vertical');
 
       const nodes = useGraphStore.getState().nodes;
-      
+
       // Frontend (row 0) should be topmost
       expect(nodes.find(n => n.id === '1')?.position.y).toBe(50);
       // Auth (row 1) should be next
@@ -140,7 +140,7 @@ describe('useGraphStore', () => {
       useGraphStore.getState().applyLayout('grid');
 
       const nodes = useGraphStore.getState().nodes;
-      
+
       // 5 nodes = 3 cols (ceil(sqrt(5)))
       expect(nodes[0].position).toEqual({ x: 50, y: 50 });
       expect(nodes[1].position).toEqual({ x: 400, y: 50 });
@@ -154,7 +154,7 @@ describe('useGraphStore', () => {
       useGraphStore.getState().applyLayout('circular');
 
       const nodes = useGraphStore.getState().nodes;
-      
+
       // All nodes should be roughly equidistant from center (400, 300)
       nodes.forEach(node => {
         const dx = node.position.x - 400;
@@ -167,7 +167,7 @@ describe('useGraphStore', () => {
     it('should handle empty nodes array', () => {
       useGraphStore.setState({ nodes: [], edges: [] });
       useGraphStore.getState().applyLayout('horizontal');
-      
+
       expect(useGraphStore.getState().nodes).toHaveLength(0);
     });
 
@@ -177,12 +177,12 @@ describe('useGraphStore', () => {
         { id: '2', type: 'default', position: { x: 0, y: 0 }, data: { label: 'Lambda 2', type: 'lambda' } },
         { id: '3', type: 'default', position: { x: 0, y: 0 }, data: { label: 'Lambda 3', type: 'lambda' } },
       ];
-      
+
       useGraphStore.setState({ nodes, edges: [] });
       useGraphStore.getState().applyLayout('horizontal');
 
       const updatedNodes = useGraphStore.getState().nodes;
-      
+
       // All lambdas should be in same column (x), different rows (y)
       expect(updatedNodes[0].position.x).toBe(updatedNodes[1].position.x);
       expect(updatedNodes[1].position.x).toBe(updatedNodes[2].position.x);
@@ -201,9 +201,9 @@ describe('useChatStore', () => {
   describe('addMessage', () => {
     it('should add a message to the store', () => {
       const message = { id: '1', role: 'user' as const, content: 'Hello' };
-      
+
       useChatStore.getState().addMessage(message);
-      
+
       expect(useChatStore.getState().messages).toHaveLength(1);
       expect(useChatStore.getState().messages[0]).toEqual(message);
     });
@@ -211,7 +211,7 @@ describe('useChatStore', () => {
     it('should append messages in order', () => {
       useChatStore.getState().addMessage({ id: '1', role: 'user', content: 'First' });
       useChatStore.getState().addMessage({ id: '2', role: 'assistant', content: 'Second' });
-      
+
       const messages = useChatStore.getState().messages;
       expect(messages).toHaveLength(2);
       expect(messages[0].content).toBe('First');
@@ -235,9 +235,9 @@ describe('useChatStore', () => {
         { path: 'lib/stack.ts', content: 'export class Stack {}' },
         { path: 'bin/app.ts', content: 'new Stack()' },
       ];
-      
+
       useChatStore.getState().setGeneratedFiles(files);
-      
+
       expect(useChatStore.getState().generatedFiles).toEqual(files);
     });
   });
@@ -246,9 +246,9 @@ describe('useChatStore', () => {
     it('should clear all messages', () => {
       useChatStore.getState().addMessage({ id: '1', role: 'user', content: 'Test' });
       useChatStore.getState().addMessage({ id: '2', role: 'assistant', content: 'Response' });
-      
+
       useChatStore.getState().clearMessages();
-      
+
       expect(useChatStore.getState().messages).toHaveLength(0);
     });
   });

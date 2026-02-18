@@ -94,14 +94,14 @@ Example flow:
 handler(event) {
   tenantId = event.requestContext.authorizer.tenantId
   userRoles = event.requestContext.authorizer.roles
-  
+
   if (!hasRequiredRole(userRoles, 'admin')) {
     return 403 Forbidden
   }
-  
+
   // All DB queries use tenantId prefix
   result = db.get(pk: `${tenantId}#User#${userId}`)
-  
+
   return 200 OK
 }
 ```

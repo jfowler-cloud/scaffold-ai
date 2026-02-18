@@ -102,7 +102,7 @@ variable "aws_region" {
             node_id = node.get("id", "").replace("-", "_")
             label = node.get("data", {}).get("label", node_type)
 
-            slug = label.lower().replace(' ', '-')
+            slug = label.lower().replace(" ", "-")
 
             if node_type == "lambda":
                 tf_code.append(

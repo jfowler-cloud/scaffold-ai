@@ -397,10 +397,9 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 👤 Author
 
-**Your Name**
+**James Fowler**
 - GitHub: [@jfowler-cloud](https://github.com/jfowler-cloud)
-- LinkedIn: [Your LinkedIn](https://linkedin.com/in/yourprofile)
-- Portfolio: [Your Portfolio](https://yourportfolio.com)
+- LinkedIn: [James Fowler - AWS Cloud Architect & DevOps Professional](https://www.linkedin.com/in/james-fowler-aws-cloud-architect-dev-ops-professional/)
 
 ---
 

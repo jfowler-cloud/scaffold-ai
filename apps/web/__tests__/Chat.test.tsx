@@ -15,14 +15,14 @@ describe('Chat', () => {
 
   it('should render chat input and send button', () => {
     render(<Chat />);
-    
+
     expect(screen.getByPlaceholderText(/describe your application architecture/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
   });
 
   it('should disable Generate Code button when no nodes exist', () => {
     render(<Chat />);
-    
+
     const generateButton = screen.getByRole('button', { name: /generate code/i });
     expect(generateButton).toBeDisabled();
   });
@@ -37,7 +37,7 @@ describe('Chat', () => {
     });
 
     render(<Chat />);
-    
+
     const generateButton = screen.getByRole('button', { name: /generate code/i });
     expect(generateButton).not.toBeDisabled();
   });
@@ -49,7 +49,7 @@ describe('Chat', () => {
     });
 
     render(<Chat />);
-    
+
     const input = screen.getByPlaceholderText(/describe your application architecture/i);
     fireEvent.change(input, { target: { value: 'Create a Lambda function' } });
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
@@ -63,7 +63,7 @@ describe('Chat', () => {
     (global.fetch as any).mockRejectedValueOnce(new TypeError('Network error'));
 
     render(<Chat />);
-    
+
     const input = screen.getByPlaceholderText(/describe your application architecture/i);
     fireEvent.change(input, { target: { value: 'Test message' } });
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
@@ -80,7 +80,7 @@ describe('Chat', () => {
     });
 
     render(<Chat />);
-    
+
     const input = screen.getByPlaceholderText(/describe your application architecture/i);
     fireEvent.change(input, { target: { value: 'Test message' } });
     fireEvent.click(screen.getByRole('button', { name: /send/i }));
@@ -91,7 +91,7 @@ describe('Chat', () => {
   });
 
   it('should show loading spinner while processing', async () => {
-    (global.fetch as any).mockImplementationOnce(() => 
+    (global.fetch as any).mockImplementationOnce(() =>
       new Promise(resolve => setTimeout(() => resolve({
         ok: true,
         json: async () => ({ message: 'Done', updated_graph: null, generated_files: [] }),
@@ -99,7 +99,7 @@ describe('Chat', () => {
     );
 
     render(<Chat />);
-    
+
     const input = screen.getByPlaceholderText(/describe your application architecture/i);
     fireEvent.change(input, { target: { value: 'Test' } });
     fireEvent.click(screen.getByRole('button', { name: /send/i }));

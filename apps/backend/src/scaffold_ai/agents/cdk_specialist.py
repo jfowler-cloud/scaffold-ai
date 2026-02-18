@@ -265,6 +265,6 @@ class CDKSpecialistAgent:
     def _generate_stack(self, nodes: list) -> str:
         """Generate a CDK stack from nodes using unified generator."""
         from scaffold_ai.services.cdk_generator import CDKGenerator
+
         generator = CDKGenerator()
         return generator.generate(nodes, [])
-

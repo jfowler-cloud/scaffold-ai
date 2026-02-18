@@ -242,7 +242,7 @@ At scale (100K workflows/month):
 - Much cheaper at high volume
 ```
 
-**Cost Winner**: 
+**Cost Winner**:
 - Low volume (<1,500/month): Step Functions
 - High volume (>1,500/month): LangGraph
 
@@ -261,19 +261,19 @@ from moto import mock_stepfunctions, mock_lambda
 def test_workflow():
     # Create mock Step Functions
     sfn = boto3.client('stepfunctions', region_name='us-east-1')
-    
+
     # Create mock Lambdas
     lambda_client = boto3.client('lambda', region_name='us-east-1')
-    
+
     # Define state machine
     definition = {...}  # 50+ lines of JSON
-    
+
     # Create execution
     response = sfn.start_execution(
         stateMachineArn='arn:...',
         input='{"user_input": "test"}'
     )
-    
+
     # Wait for completion
     # Check results
     # Complex and slow
@@ -298,7 +298,7 @@ async def test_workflow():
         "graph_json": {"nodes": [], "edges": []},
         "iac_format": "cdk"
     })
-    
+
     assert result["intent"] == "new_feature"
     assert len(result["generated_files"]) > 0
     assert result["security_score"] >= 70

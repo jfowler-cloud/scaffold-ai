@@ -156,4 +156,3 @@ Response to User:
    • Prevents security incidents
    • Reduces remediation work
    • Optimizes resource configuration
-

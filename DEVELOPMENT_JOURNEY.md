@@ -1,6 +1,6 @@
 # Development Journey - Scaffold AI
 
-**Timeline**: Single day (Feb 18, 2026)  
+**Timeline**: Single day (Feb 18, 2026)
 **Purpose**: Rapid learning of LangGraph, React 19, and Next.js 15 as alternative to AWS Step Functions
 
 ---
@@ -66,19 +66,19 @@ Built complete multi-agent AI platform with production patterns in one intensive
 ## 💡 Challenges Solved
 
 ### LLM Reliability
-**Problem**: Bedrock API can be unavailable or slow  
+**Problem**: Bedrock API can be unavailable or slow
 **Solution**: Static fallback templates, 60-second timeouts, graceful error handling
 
 ### JSON Parsing
-**Problem**: LLMs return JSON wrapped in markdown code fences  
+**Problem**: LLMs return JSON wrapped in markdown code fences
 **Solution**: Robust extraction with multiple fallback strategies
 
 ### Security Validation
-**Problem**: Need to prevent insecure architectures  
+**Problem**: Need to prevent insecure architectures
 **Solution**: Automated scoring system with configurable threshold
 
 ### Multi-Format IaC
-**Problem**: Different IaC formats have different syntax  
+**Problem**: Different IaC formats have different syntax
 **Solution**: Unified generator with format-specific renderers
 
 ---

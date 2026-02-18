@@ -14,7 +14,7 @@ class SharingService:
     def create_share_link(self, graph: Dict, title: str = "Shared Architecture") -> str:
         """Create a shareable link for an architecture."""
         from datetime import datetime
-        
+
         # Generate unique ID from graph content
         graph_json = json.dumps(graph, sort_keys=True)
         share_id = hashlib.sha256(graph_json.encode()).hexdigest()[:12]

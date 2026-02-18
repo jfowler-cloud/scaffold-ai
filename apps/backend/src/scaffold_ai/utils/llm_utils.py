@@ -4,7 +4,7 @@
 def strip_code_fences(text: str) -> str:
     """
     Strip markdown code fences from LLM response text.
-    
+
     Handles common fence types: ```json, ```typescript, ```python, ```
     """
     for fence in ("```json", "```typescript", "```python", "```"):

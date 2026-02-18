@@ -52,7 +52,7 @@ class GitOperatorTool:
         """
         if not files:
             return {"success": False, "error": "files parameter is required"}
-        
+
         try:
             self.repo.index.add(files)
             commit = self.repo.index.commit(message)

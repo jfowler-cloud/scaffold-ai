@@ -61,25 +61,25 @@ class SynthesizerTool:
             dict with valid status and any errors
         """
         import tempfile
-        
+
         try:
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.ts', delete=False) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".ts", delete=False) as f:
                 f.write(code)
                 temp_path = f.name
-            
+
             result = subprocess.run(
                 ["npx", "tsc", "--noEmit", temp_path],
                 capture_output=True,
                 text=True,
-                timeout=10
+                timeout=10,
             )
-            
+
             Path(temp_path).unlink()
-            
+
             if result.returncode == 0:
                 return {"valid": True, "errors": []}
             else:
-                return {"valid": False, "errors": result.stderr.split('\n')}
-                
+                return {"valid": False, "errors": result.stderr.split("\n")}
+
         except Exception as e:
             return {"valid": False, "errors": [str(e)]}

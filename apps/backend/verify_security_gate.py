@@ -70,7 +70,10 @@ def verify_workflow_structure():
 
     # Check 6: Security gate conditional routing
     print("\n✓ Checking security gate conditional routing...")
-    if "security_gate," in workflow_code and '"passed": "cdk_specialist"' in workflow_code:
+    if (
+        "security_gate," in workflow_code
+        and '"passed": "cdk_specialist"' in workflow_code
+    ):
         print("  ✅ Security gate routes to cdk_specialist on pass")
         checks.append(True)
     else:
