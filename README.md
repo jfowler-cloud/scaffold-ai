@@ -15,7 +15,7 @@ Describe your application in natural language and Scaffold AI designs the AWS se
 
 ## Why This Project
 
-After building [Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai) with AWS Step Functions, I wanted to explore modern AI orchestration beyond AWS-native tooling. I picked up LangGraph, React 19, Next.js 15, and AWS Cloudscape -- all frameworks I had no prior experience with -- and built this full-stack multi-agent platform in a single day.
+After building [Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai) with AWS Step Functions, I wanted to explore modern AI orchestration beyond AWS-native tooling. I picked up LangGraph -- a framework I had no prior experience with -- and built this full-stack multi-agent platform in a single day.
 
 The goal was to demonstrate:
 
