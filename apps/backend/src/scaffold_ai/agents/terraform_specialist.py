@@ -102,11 +102,13 @@ variable "aws_region" {
             node_id = node.get("id", "").replace("-", "_")
             label = node.get("data", {}).get("label", node_type)
 
+            slug = label.lower().replace(' ', '-')
+
             if node_type == "lambda":
                 tf_code.append(
                     f"""
 resource "aws_lambda_function" "{node_id}" {{
-  function_name = "{label.lower().replace(' ', '-')}"
+  function_name = "{slug}"
   runtime       = "nodejs20.x"
   handler       = "index.handler"
   filename      = "function.zip"
@@ -124,7 +126,7 @@ resource "aws_lambda_function" "{node_id}" {{
 }}
 
 resource "aws_iam_role" "{node_id}_role" {{
-  name = "{label.lower().replace(' ', '-')}-role"
+  name = "{slug}-role"
 
   assume_role_policy = jsonencode({{
     Version = "2012-10-17"
@@ -145,16 +147,22 @@ resource "aws_iam_role_policy_attachment" "{node_id}_basic" {{
 """
                 )
 
-            elif node_type == "dynamodb":
+            elif node_type == "database":
                 tf_code.append(
                     f"""
 resource "aws_dynamodb_table" "{node_id}" {{
-  name         = "{label.lower().replace(' ', '-')}"
+  name         = "{slug}"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "id"
+  hash_key     = "pk"
+  range_key    = "sk"
 
   attribute {{
-    name = "id"
+    name = "pk"
+    type = "S"
+  }}
+
+  attribute {{
+    name = "sk"
     type = "S"
   }}
 
@@ -173,11 +181,11 @@ resource "aws_dynamodb_table" "{node_id}" {{
 """
                 )
 
-            elif node_type == "apigateway":
+            elif node_type == "api":
                 tf_code.append(
                     f"""
 resource "aws_apigatewayv2_api" "{node_id}" {{
-  name          = "{label.lower().replace(' ', '-')}"
+  name          = "{slug}"
   protocol_type = "HTTP"
   description   = "{label}"
 }}
@@ -186,42 +194,68 @@ resource "aws_apigatewayv2_stage" "{node_id}_stage" {{
   api_id      = aws_apigatewayv2_api.{node_id}.id
   name        = "prod"
   auto_deploy = true
+
+  access_log_settings {{
+    destination_arn = aws_cloudwatch_log_group.{node_id}_logs.arn
+  }}
+}}
+
+resource "aws_cloudwatch_log_group" "{node_id}_logs" {{
+  name              = "/aws/apigateway/{slug}"
+  retention_in_days = 30
 }}
 """
                 )
 
-            elif node_type == "cognito":
+            elif node_type == "auth":
                 tf_code.append(
                     f"""
 resource "aws_cognito_user_pool" "{node_id}" {{
-  name = "{label.lower().replace(' ', '-')}"
+  name = "{slug}"
 
   mfa_configuration = "OPTIONAL"
 
   password_policy {{
-    minimum_length    = 8
+    minimum_length    = 12
     require_lowercase = true
     require_uppercase = true
     require_numbers   = true
     require_symbols   = true
   }}
+
+  account_recovery_setting {{
+    recovery_mechanism {{
+      name     = "verified_email"
+      priority = 1
+    }}
+  }}
 }}
 
 resource "aws_cognito_user_pool_client" "{node_id}_client" {{
-  name         = "{label.lower().replace(' ', '-')}-client"
+  name         = "{slug}-client"
   user_pool_id = aws_cognito_user_pool.{node_id}.id
+
+  explicit_auth_flows = ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
 }}
 """
                 )
 
-            elif node_type == "s3":
+            elif node_type == "storage":
                 tf_code.append(
                     f"""
 resource "aws_s3_bucket" "{node_id}" {{
-  bucket = "{label.lower().replace(' ', '-')}"
+  bucket = "{slug}"
 
   tags = {{
     Name = "{label}"
+  }}
+}}
+
+resource "aws_s3_bucket_versioning" "{node_id}_versioning" {{
+  bucket = aws_s3_bucket.{node_id}.id
+
+  versioning_configuration {{
+    status = "Enabled"
   }}
 }}
 
@@ -246,15 +280,125 @@ resource "aws_s3_bucket_public_access_block" "{node_id}_public_access" {{
 """
                 )
 
-            elif node_type == "sqs":
+            elif node_type == "queue":
                 tf_code.append(
                     f"""
+resource "aws_sqs_queue" "{node_id}_dlq" {{
+  name                      = "{slug}-dlq"
+  message_retention_seconds = 1209600
+  sqs_managed_sse_enabled   = true
+}}
+
 resource "aws_sqs_queue" "{node_id}" {{
-  name = "{label.lower().replace(' ', '-')}"
+  name                    = "{slug}"
+  sqs_managed_sse_enabled = true
+
+  redrive_policy = jsonencode({{
+    deadLetterTargetArn = aws_sqs_queue.{node_id}_dlq.arn
+    maxReceiveCount     = 3
+  }})
 
   tags = {{
     Name = "{label}"
   }}
+}}
+"""
+                )
+
+            elif node_type == "notification":
+                tf_code.append(
+                    f"""
+resource "aws_sns_topic" "{node_id}" {{
+  name         = "{slug}"
+  display_name = "{label}"
+
+  tags = {{
+    Name = "{label}"
+  }}
+}}
+"""
+                )
+
+            elif node_type == "events":
+                tf_code.append(
+                    f"""
+resource "aws_cloudwatch_event_bus" "{node_id}" {{
+  name = "{slug}-bus"
+
+  tags = {{
+    Name = "{label}"
+  }}
+}}
+"""
+                )
+
+            elif node_type == "stream":
+                tf_code.append(
+                    f"""
+resource "aws_kinesis_stream" "{node_id}" {{
+  name             = "{slug}"
+  stream_mode_details {{
+    stream_mode = "ON_DEMAND"
+  }}
+
+  encryption_type = "KMS"
+  kms_key_id      = "alias/aws/kinesis"
+
+  tags = {{
+    Name = "{label}"
+  }}
+}}
+"""
+                )
+
+            elif node_type == "workflow":
+                tf_code.append(
+                    f"""
+resource "aws_sfn_state_machine" "{node_id}" {{
+  name     = "{slug}"
+  type     = "EXPRESS"
+  role_arn = aws_iam_role.{node_id}_sfn_role.arn
+
+  definition = jsonencode({{
+    Comment = "{label}"
+    StartAt = "Start"
+    States = {{
+      Start = {{
+        Type = "Pass"
+        End  = true
+      }}
+    }}
+  }})
+
+  logging_configuration {{
+    log_destination        = "${{aws_cloudwatch_log_group.{node_id}_sfn_logs.arn}}:*"
+    include_execution_data = true
+    level                  = "ALL"
+  }}
+
+  tracing_configuration {{
+    enabled = true
+  }}
+}}
+
+resource "aws_cloudwatch_log_group" "{node_id}_sfn_logs" {{
+  name              = "/aws/states/{slug}"
+  retention_in_days = 30
+}}
+
+resource "aws_iam_role" "{node_id}_sfn_role" {{
+  name = "{slug}-sfn-role"
+
+  assume_role_policy = jsonencode({{
+    Version = "2012-10-17"
+    Statement = [{{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {{
+        Service = "states.amazonaws.com"
+      }}
+    }}]
+  }})
 }}
 """
                 )
@@ -274,12 +418,39 @@ output "{node_id}_arn" {{
 }}
 """
                 )
-            elif node_type == "dynamodb":
+            elif node_type == "database":
                 tf_code.append(
                     f"""
 output "{node_id}_name" {{
   value       = aws_dynamodb_table.{node_id}.name
   description = "Name of DynamoDB table"
+}}
+"""
+                )
+            elif node_type == "api":
+                tf_code.append(
+                    f"""
+output "{node_id}_endpoint" {{
+  value       = aws_apigatewayv2_api.{node_id}.api_endpoint
+  description = "API Gateway endpoint URL"
+}}
+"""
+                )
+            elif node_type == "storage":
+                tf_code.append(
+                    f"""
+output "{node_id}_bucket" {{
+  value       = aws_s3_bucket.{node_id}.bucket
+  description = "S3 bucket name"
+}}
+"""
+                )
+            elif node_type == "auth":
+                tf_code.append(
+                    f"""
+output "{node_id}_user_pool_id" {{
+  value       = aws_cognito_user_pool.{node_id}.id
+  description = "Cognito User Pool ID"
 }}
 """
                 )
