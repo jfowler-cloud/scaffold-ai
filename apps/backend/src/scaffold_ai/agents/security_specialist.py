@@ -212,7 +212,7 @@ class SecuritySpecialistAgent:
         Returns security review results with recommendations.
         """
         nodes = graph.get("nodes", [])
-        edges = graph.get("edges", [])
+        _ = graph.get("edges", [])
 
         if not nodes:
             return {

@@ -68,7 +68,7 @@ class TerraformSpecialistAgent:
     async def generate(self, graph: dict) -> str:
         """Generate Terraform configuration from graph."""
         nodes = graph.get("nodes", [])
-        edges = graph.get("edges", [])
+        _ = graph.get("edges", [])
 
         tf_code = []
 
