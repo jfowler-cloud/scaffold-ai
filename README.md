@@ -424,13 +424,22 @@ The generated CloudFormation output uses the `AWS::Serverless` transform. Deploy
   - Backend deployment service
   - Temporary project creation
   - Bootstrap and deploy automation
+- [x] Cost estimation per architecture — **COMPLETE**
+  - Real-time cost estimates in UI
+  - Per-service cost breakdown
+  - Optimization tips
+- [x] Security recommendation auto-apply — **COMPLETE**
+  - Automatic security fixes
+  - Adds missing auth, encryption, DLQ
+  - Security score calculation
+  - Fix Security button
+- [x] Architecture templates library — **COMPLETE**
+  - 6 pre-built templates
+  - Todo app, file upload, REST API, event-driven, queue worker, SaaS
 - [ ] Python CDK support
 - [ ] Multi-stack architectures (split large graphs into nested stacks)
-- [ ] Architecture templates library (pre-built patterns)
-- [ ] Cost estimation per architecture
 - [ ] Collaboration / sharing features
 - [ ] Real-time streaming for long generation tasks
-- [ ] Security recommendation auto-apply (add missing nodes/config automatically)
 - [ ] Security score history tracking
 
 ## Architecture Patterns
