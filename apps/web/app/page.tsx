@@ -12,6 +12,7 @@ import HelpPanel from "@cloudscape-design/components/help-panel";
 import Box from "@cloudscape-design/components/box";
 import Link from "@cloudscape-design/components/link";
 import SpaceBetween from "@cloudscape-design/components/space-between";
+import { applyMode, Mode } from "@cloudscape-design/global-styles";
 
 export default function Home() {
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -20,10 +21,26 @@ export default function Home() {
   const [splitPanelSize, setSplitPanelSize] = useState(420);
   const [mounted, setMounted] = useState(false);
   const [codeModalVisible, setCodeModalVisible] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    // Load theme preference from localStorage
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark") {
+      setDarkMode(true);
+      applyMode(Mode.Dark);
+    } else {
+      applyMode(Mode.Light);
+    }
   }, []);
+
+  const toggleTheme = () => {
+    const newMode = !darkMode;
+    setDarkMode(newMode);
+    applyMode(newMode ? Mode.Dark : Mode.Light);
+    localStorage.setItem("theme", newMode ? "dark" : "light");
+  };
 
   if (!mounted) return null;
 
@@ -41,6 +58,12 @@ export default function Home() {
             },
           }}
           utilities={[
+            {
+              type: "button",
+              text: darkMode ? "Light Mode" : "Dark Mode",
+              iconName: darkMode ? "view-full" : "view-full",
+              onClick: toggleTheme,
+            },
             {
               type: "button",
               text: "Documentation",
