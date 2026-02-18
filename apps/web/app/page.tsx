@@ -42,7 +42,21 @@ export default function Home() {
     localStorage.setItem("theme", newMode ? "dark" : "light");
   };
 
-  if (!mounted) return null;
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return (
+      <div style={{ 
+        width: '100vw', 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        backgroundColor: '#0f1419'
+      }}>
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <>
