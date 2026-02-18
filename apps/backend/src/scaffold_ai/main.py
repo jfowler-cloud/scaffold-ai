@@ -1,25 +1,25 @@
 """FastAPI application for Scaffold AI backend."""
 
 import os
+
 from dotenv import load_dotenv
-
-load_dotenv()
-
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
-from .graph.workflow import run_workflow
 from .graph.state import GraphState
+from .graph.workflow import run_workflow
 from .services.cdk_deployment import CDKDeploymentService
 from .services.cost_estimator import CostEstimator
 from .services.security_autofix import SecurityAutoFix
-from .services.templates import ArchitectureTemplates
-from .services.sharing import SharingService
 from .services.security_history import SecurityHistoryService
+from .services.sharing import SharingService
+from .services.templates import ArchitectureTemplates
+
+load_dotenv()
 
 # Rate limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -163,7 +163,7 @@ async def health() -> dict:
     try:
         from .graph.nodes import get_llm
 
-        llm = get_llm()
+        get_llm()  # Just check if it initializes
         health_status["services"]["bedrock"] = "available"
     except Exception:
         health_status["services"]["bedrock"] = "unavailable"

@@ -70,7 +70,7 @@ class CloudFormationSpecialistAgent:
     async def generate(self, graph: dict) -> str:
         """Generate CloudFormation template from graph."""
         nodes = graph.get("nodes", [])
-        edges = graph.get("edges", [])
+        _ = graph.get("edges", [])
 
         template = {
             "AWSTemplateFormatVersion": "2010-09-09",
