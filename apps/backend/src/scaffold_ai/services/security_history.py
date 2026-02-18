@@ -12,12 +12,14 @@ class SecurityHistoryService:
 
     def record_score(self, architecture_id: str, score: int, issues: List[Dict]) -> None:
         """Record a security score for an architecture."""
+        from datetime import datetime
+        
         if architecture_id not in self._history:
             self._history[architecture_id] = []
 
         self._history[architecture_id].append({
             "score": score,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.utcnow().isoformat() + "Z",
             "critical_count": sum(1 for i in issues if i.get("severity") == "critical"),
             "high_count": sum(1 for i in issues if i.get("severity") == "high"),
             "medium_count": sum(1 for i in issues if i.get("severity") == "medium"),
