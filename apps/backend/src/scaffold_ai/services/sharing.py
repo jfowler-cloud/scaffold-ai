@@ -13,6 +13,8 @@ class SharingService:
 
     def create_share_link(self, graph: Dict, title: str = "Shared Architecture") -> str:
         """Create a shareable link for an architecture."""
+        from datetime import datetime
+        
         # Generate unique ID from graph content
         graph_json = json.dumps(graph, sort_keys=True)
         share_id = hashlib.sha256(graph_json.encode()).hexdigest()[:12]
@@ -21,7 +23,7 @@ class SharingService:
         self._shared_architectures[share_id] = {
             "graph": graph,
             "title": title,
-            "created_at": "2026-02-18T09:07:12Z",  # Use actual timestamp in production
+            "created_at": datetime.utcnow().isoformat() + "Z",
         }
 
         return share_id
