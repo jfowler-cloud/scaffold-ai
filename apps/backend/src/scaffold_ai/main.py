@@ -29,6 +29,12 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# Request size limit (1MB)
+app.add_middleware(
+    lambda app: app,
+    max_request_size=1024 * 1024
+)
+
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -60,6 +66,16 @@ class ChatRequest(BaseModel):
     user_input: str
     graph_json: dict | None = None
     iac_format: str = "cdk"  # cdk, cloudformation, terraform, or python-cdk
+
+    @field_validator("user_input")
+    @classmethod
+    def validate_user_input(cls, v: str) -> str:
+        """Validate user input length."""
+        if len(v) > 5000:
+            raise ValueError("user_input must be 5000 characters or less")
+        if not v.strip():
+            raise ValueError("user_input cannot be empty")
+        return v
 
     @field_validator("iac_format")
     @classmethod
@@ -127,15 +143,31 @@ class DeployResponse(BaseModel):
 
 
 @app.get("/")
-async def root():
-    """Health check endpoint."""
-    return {"status": "ok", "service": "scaffold-ai-backend"}
+async def root() -> dict:
+    """Root endpoint with API information."""
+    return {"status": "ok", "service": "scaffold-ai-backend", "version": "0.1.0"}
 
 
 @app.get("/health")
-async def health():
-    """Health check endpoint."""
-    return {"status": "healthy"}
+async def health() -> dict:
+    """
+    Health check endpoint with service status.
+    
+    Returns:
+        dict: Health status including Bedrock availability
+    """
+    health_status = {"status": "healthy", "services": {}}
+    
+    # Check Bedrock connectivity
+    try:
+        from .graph.nodes import get_llm
+        llm = get_llm()
+        health_status["services"]["bedrock"] = "available"
+    except Exception:
+        health_status["services"]["bedrock"] = "unavailable"
+        health_status["status"] = "degraded"
+    
+    return health_status
 
 
 @app.post("/api/chat", response_model=ChatResponse)
