@@ -20,10 +20,10 @@ def get_llm():
     """Get the Bedrock LLM client (cached singleton)."""
     return ChatBedrock(
         model_id=os.getenv(
-            "BEDROCK_MODEL_ID", "anthropic.claude-3-5-sonnet-20241022-v2:0"
+            "BEDROCK_MODEL_ID", "anthropic.claude-opus-4-5-20251101-v1:0"
         ),
         region_name=os.getenv("AWS_REGION", "us-east-1"),
-        model_kwargs={"temperature": 0.7, "max_tokens": 8192},
+        model_kwargs={"temperature": 0.7, "max_tokens": 16384},
     )
 
 
