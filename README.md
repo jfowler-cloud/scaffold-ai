@@ -134,7 +134,7 @@ pnpm dev
 # Backend (.env)
 AWS_PROFILE=your-profile
 AWS_REGION=us-east-1
-BEDROCK_MODEL_ID=us.anthropic.claude-3-haiku-20240307-v1:0
+BEDROCK_MODEL_ID=us.anthropic.claude-opus-4-5-20250514-v1:0
 ALLOWED_ORIGINS=http://localhost:3000
 
 # Frontend (.env.local)
