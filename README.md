@@ -333,9 +333,9 @@ cd apps/web && pnpm dev
 - **[TESTING_SUMMARY.md](TESTING_SUMMARY.md)** - Test coverage and strategy
 
 ### Quality & Security
-- **[CRITICAL_REVIEW.md](CRITICAL_REVIEW.md)** - Self-assessment and improvements
+- **[SECURITY_AUDIT.md](SECURITY_AUDIT.md)** - Security review and improvements
+- **[CRITICAL_REVIEW.md](CRITICAL_REVIEW.md)** - Self-assessment and roadmap
 - **[CRITICAL_REVIEW_SUMMARY.md](CRITICAL_REVIEW_SUMMARY.md)** - Executive summary
-- **[ROUND_3_FINDINGS.md](ROUND_3_FINDINGS.md)** - Security audit results
 
 ---
 
