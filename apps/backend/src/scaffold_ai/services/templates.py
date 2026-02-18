@@ -22,16 +22,25 @@ class ArchitectureTemplates:
                 {"source": "auth-1", "target": "api-1"},
                 {"source": "api-1", "target": "lambda-1"},
                 {"source": "lambda-1", "target": "db-1"},
-            ]
+            ],
         },
         "file-upload": {
             "name": "File Upload Service",
             "description": "Secure file upload with S3 and processing pipeline",
             "nodes": [
-                {"id": "frontend-1", "data": {"type": "frontend", "label": "Upload UI"}},
+                {
+                    "id": "frontend-1",
+                    "data": {"type": "frontend", "label": "Upload UI"},
+                },
                 {"id": "api-1", "data": {"type": "api", "label": "Upload API"}},
-                {"id": "lambda-1", "data": {"type": "lambda", "label": "Presigned URL"}},
-                {"id": "storage-1", "data": {"type": "storage", "label": "Files Bucket"}},
+                {
+                    "id": "lambda-1",
+                    "data": {"type": "lambda", "label": "Presigned URL"},
+                },
+                {
+                    "id": "storage-1",
+                    "data": {"type": "storage", "label": "Files Bucket"},
+                },
                 {"id": "lambda-2", "data": {"type": "lambda", "label": "Process File"}},
                 {"id": "db-1", "data": {"type": "database", "label": "Metadata"}},
             ],
@@ -41,7 +50,7 @@ class ArchitectureTemplates:
                 {"source": "lambda-1", "target": "storage-1"},
                 {"source": "storage-1", "target": "lambda-2"},
                 {"source": "lambda-2", "target": "db-1"},
-            ]
+            ],
         },
         "rest-api": {
             "name": "REST API with Database",
@@ -54,7 +63,7 @@ class ArchitectureTemplates:
             "edges": [
                 {"source": "api-1", "target": "lambda-1"},
                 {"source": "lambda-1", "target": "db-1"},
-            ]
+            ],
         },
         "event-driven": {
             "name": "Event-Driven Architecture",
@@ -74,7 +83,7 @@ class ArchitectureTemplates:
                 {"source": "events-1", "target": "lambda-3"},
                 {"source": "lambda-2", "target": "db-1"},
                 {"source": "lambda-3", "target": "db-1"},
-            ]
+            ],
         },
         "queue-worker": {
             "name": "Queue-Based Worker",
@@ -91,7 +100,7 @@ class ArchitectureTemplates:
                 {"source": "lambda-1", "target": "queue-1"},
                 {"source": "queue-1", "target": "lambda-2"},
                 {"source": "lambda-2", "target": "db-1"},
-            ]
+            ],
         },
         "saas-app": {
             "name": "Multi-Tenant SaaS",
@@ -102,7 +111,10 @@ class ArchitectureTemplates:
                 {"id": "auth-1", "data": {"type": "auth", "label": "User Auth"}},
                 {"id": "api-1", "data": {"type": "api", "label": "API Gateway"}},
                 {"id": "lambda-1", "data": {"type": "lambda", "label": "Authorizer"}},
-                {"id": "lambda-2", "data": {"type": "lambda", "label": "Business Logic"}},
+                {
+                    "id": "lambda-2",
+                    "data": {"type": "lambda", "label": "Business Logic"},
+                },
                 {"id": "db-1", "data": {"type": "database", "label": "Tenant Data"}},
                 {"id": "storage-1", "data": {"type": "storage", "label": "Assets"}},
             ],
@@ -114,7 +126,7 @@ class ArchitectureTemplates:
                 {"source": "lambda-1", "target": "lambda-2"},
                 {"source": "lambda-2", "target": "db-1"},
                 {"source": "lambda-2", "target": "storage-1"},
-            ]
+            ],
         },
     }
 
@@ -136,9 +148,10 @@ class ArchitectureTemplates:
             raise ValueError(f"Template '{template_id}' not found")
 
         template = self.TEMPLATES[template_id]
-        
+
         # Add positions to nodes
         from ..graph.nodes import generate_node_positions
+
         nodes_with_positions = generate_node_positions(template["nodes"], [])
 
         return {
@@ -146,10 +159,7 @@ class ArchitectureTemplates:
             "description": template["description"],
             "nodes": nodes_with_positions,
             "edges": [
-                {
-                    "id": f"e-{edge['source']}-{edge['target']}",
-                    **edge
-                }
+                {"id": f"e-{edge['source']}-{edge['target']}", **edge}
                 for edge in template["edges"]
-            ]
+            ],
         }

@@ -1,5 +1,5 @@
---- 
-inclusion: always 
+---
+inclusion: always
 ---
 
 # SaaS Architecture Principles

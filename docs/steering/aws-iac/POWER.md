@@ -326,5 +326,3 @@ See the [Onboarding](#onboarding) section for AWS credentials setup. Only the `t
 ## Security Considerations
 
 ⚠️ **Privacy Notice**: This MCP server executes AWS API calls using your credentials and shares the response data with your third-party AI model provider (e.g., Amazon Q, Claude Desktop, Cursor, VS Code). Users are responsible for understanding your AI provider's data handling practices and ensuring compliance with your organization's security and privacy requirements when using this tool with AWS resources.
-
-

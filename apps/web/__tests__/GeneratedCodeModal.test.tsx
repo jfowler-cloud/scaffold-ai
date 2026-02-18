@@ -12,7 +12,7 @@ describe('GeneratedCodeModal', () => {
 
   it('should show empty state when no files generated', () => {
     render(<GeneratedCodeModal visible={true} onDismiss={mockOnDismiss} />);
-    
+
     expect(screen.getByText(/no code generated yet/i)).toBeInTheDocument();
     expect(screen.getByText(/click the "generate code" button/i)).toBeInTheDocument();
   });
@@ -28,7 +28,7 @@ describe('GeneratedCodeModal', () => {
     });
 
     render(<GeneratedCodeModal visible={true} onDismiss={mockOnDismiss} />);
-    
+
     expect(screen.getByText('stack.ts')).toBeInTheDocument();
     expect(screen.getByText('app.ts')).toBeInTheDocument();
   });
@@ -44,7 +44,7 @@ describe('GeneratedCodeModal', () => {
     });
 
     render(<GeneratedCodeModal visible={true} onDismiss={mockOnDismiss} />);
-    
+
     expect(screen.getByText(content)).toBeInTheDocument();
   });
 
@@ -58,7 +58,7 @@ describe('GeneratedCodeModal', () => {
     });
 
     render(<GeneratedCodeModal visible={true} onDismiss={mockOnDismiss} />);
-    
+
     expect(screen.getByText('packages/infrastructure/lib/stack.ts')).toBeInTheDocument();
   });
 
@@ -72,7 +72,7 @@ describe('GeneratedCodeModal', () => {
     });
 
     const { container } = render(<GeneratedCodeModal visible={false} onDismiss={mockOnDismiss} />);
-    
+
     // Modal should not be visible in DOM when visible=false
     expect(container.querySelector('[role="dialog"]')).not.toBeInTheDocument();
   });

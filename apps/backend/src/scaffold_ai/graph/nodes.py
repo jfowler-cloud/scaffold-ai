@@ -8,17 +8,20 @@ from functools import lru_cache
 from langchain_aws import ChatBedrock
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from .state import GraphState, Intent, SecurityReview
+from .state import GraphState, Intent
 from ..agents.security_specialist import SecuritySpecialistAgent
 
 logger = logging.getLogger(__name__)
+
 
 # Initialize Bedrock client (singleton)
 @lru_cache(maxsize=1)
 def get_llm():
     """Get the Bedrock LLM client (cached singleton)."""
     return ChatBedrock(
-        model_id=os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-haiku-20240307-v1:0"),
+        model_id=os.getenv(
+            "BEDROCK_MODEL_ID", "us.anthropic.claude-3-haiku-20240307-v1:0"
+        ),
         region_name=os.getenv("AWS_REGION", "us-east-1"),
         model_kwargs={"temperature": 0.7, "max_tokens": 4096},
     )
@@ -173,19 +176,21 @@ def generate_node_positions(nodes: list, existing_nodes: list) -> list:
         row = column_counts[col]
         column_counts[col] += 1
 
-        positioned_nodes.append({
-            "id": node["id"],
-            "type": node_type,
-            "position": {
-                "x": START_X + col * COLUMN_WIDTH,
-                "y": START_Y + row * ROW_HEIGHT
-            },
-            "data": {
-                "label": node.get("label", "Component"),
+        positioned_nodes.append(
+            {
+                "id": node["id"],
                 "type": node_type,
-                "description": node.get("description", ""),
+                "position": {
+                    "x": START_X + col * COLUMN_WIDTH,
+                    "y": START_Y + row * ROW_HEIGHT,
+                },
+                "data": {
+                    "label": node.get("label", "Component"),
+                    "type": node_type,
+                    "description": node.get("description", ""),
+                },
             }
-        })
+        )
 
     return positioned_nodes
 
@@ -212,9 +217,15 @@ async def interpret_intent(state: GraphState) -> GraphState:
     except Exception as e:
         logger.warning(f"LLM intent classification failed: {e}")
         user_input = state["user_input"].lower()
-        if any(word in user_input for word in ["generate", "code", "deploy", "build", "cdk"]):
+        if any(
+            word in user_input
+            for word in ["generate", "code", "deploy", "build", "cdk"]
+        ):
             intent = "generate_code"
-        elif any(word in user_input for word in ["explain", "what is", "how does", "describe"]):
+        elif any(
+            word in user_input
+            for word in ["explain", "what is", "how does", "describe"]
+        ):
             intent = "explain"
         elif any(word in user_input for word in ["remove", "delete", "disconnect"]):
             intent = "modify_graph"
@@ -237,10 +248,17 @@ async def architect_node(state: GraphState) -> GraphState:
         current_graph = state["graph_json"]
         current_nodes_summary = "Empty - no components yet"
         if current_graph.get("nodes"):
-            current_nodes_summary = json.dumps([
-                {"id": n["id"], "type": n.get("data", {}).get("type"), "label": n.get("data", {}).get("label")}
-                for n in current_graph["nodes"]
-            ], indent=2)
+            current_nodes_summary = json.dumps(
+                [
+                    {
+                        "id": n["id"],
+                        "type": n.get("data", {}).get("type"),
+                        "label": n.get("data", {}).get("label"),
+                    }
+                    for n in current_graph["nodes"]
+                ],
+                indent=2,
+            )
 
         prompt = ARCHITECT_PROMPT.format(
             current_graph=current_nodes_summary,
@@ -248,13 +266,16 @@ async def architect_node(state: GraphState) -> GraphState:
         )
 
         messages = [
-            SystemMessage(content="You are an AWS solutions architect. Always respond with valid JSON only."),
+            SystemMessage(
+                content="You are an AWS solutions architect. Always respond with valid JSON only."
+            ),
             HumanMessage(content=prompt),
         ]
         response = await llm.ainvoke(messages)
         response_text = response.content.strip()
 
         from scaffold_ai.utils.llm_utils import strip_code_fences
+
         response_text = strip_code_fences(response_text)
 
         result = json.loads(response_text)
@@ -265,19 +286,23 @@ async def architect_node(state: GraphState) -> GraphState:
 
         new_nodes = result.get("nodes", [])
         positioned_new_nodes = generate_node_positions(new_nodes, existing_nodes)
-        positioned_new_nodes = [n for n in positioned_new_nodes if n["id"] not in existing_node_ids]
+        positioned_new_nodes = [
+            n for n in positioned_new_nodes if n["id"] not in existing_node_ids
+        ]
 
         all_nodes = existing_nodes + positioned_new_nodes
 
         new_edges = []
         for edge in result.get("edges", []):
             edge_id = f"e-{edge['source']}-{edge['target']}"
-            new_edges.append({
-                "id": edge_id,
-                "source": edge["source"],
-                "target": edge["target"],
-                "label": edge.get("label", ""),
-            })
+            new_edges.append(
+                {
+                    "id": edge_id,
+                    "source": edge["source"],
+                    "target": edge["target"],
+                    "label": edge.get("label", ""),
+                }
+            )
 
         existing_edge_ids = {e["id"] for e in existing_edges}
         new_edges = [e for e in new_edges if e["id"] not in existing_edge_ids]
@@ -288,7 +313,9 @@ async def architect_node(state: GraphState) -> GraphState:
             "edges": all_edges,
         }
 
-        explanation = result.get("explanation", "I've updated your architecture based on your requirements.")
+        explanation = result.get(
+            "explanation", "I've updated your architecture based on your requirements."
+        )
 
         return {
             **state,
@@ -306,7 +333,7 @@ async def architect_node(state: GraphState) -> GraphState:
         logger.exception(f"LLM architect call failed: {e}")
         return {
             **state,
-            "response": f"I encountered an error while designing the architecture. Please try again.",
+            "response": "I encountered an error while designing the architecture. Please try again.",
         }
 
 
@@ -348,7 +375,9 @@ Provide a clear explanation of:
 
     except Exception as e:
         logger.exception(f"Explain failed: {e}")
-        node_list = ", ".join([n.get("data", {}).get("label", "Unknown") for n in nodes])
+        node_list = ", ".join(
+            [n.get("data", {}).get("label", "Unknown") for n in nodes]
+        )
         return {
             **state,
             "response": f"Your architecture has {len(nodes)} components: {node_list}.",
@@ -383,20 +412,26 @@ async def security_review_node(state: GraphState) -> GraphState:
         )
 
         messages = [
-            SystemMessage(content="You are an AWS security specialist. Respond with JSON only."),
+            SystemMessage(
+                content="You are an AWS security specialist. Respond with JSON only."
+            ),
             HumanMessage(content=prompt),
         ]
         response = await llm.ainvoke(messages)
         response_text = response.content.strip()
 
         from scaffold_ai.utils.llm_utils import strip_code_fences
+
         response_text = strip_code_fences(response_text)
 
         review_result = json.loads(response_text)
 
     except Exception as e:
         import logging
-        logging.getLogger(__name__).warning(f"Security review LLM failed, using fallback: {e}")
+
+        logging.getLogger(__name__).warning(
+            f"Security review LLM failed, using fallback: {e}"
+        )
         # Use the fallback security specialist
         security_agent = SecuritySpecialistAgent()
         review_result = await security_agent.review(graph)
@@ -416,12 +451,16 @@ async def security_review_node(state: GraphState) -> GraphState:
         if warnings:
             response_parts.append(f"**{len(warnings)} warnings to address:**")
             for w in warnings[:3]:
-                response_parts.append(f"- {w.get('service', 'Unknown')}: {w.get('issue', 'Unknown issue')}")
+                response_parts.append(
+                    f"- {w.get('service', 'Unknown')}: {w.get('issue', 'Unknown issue')}"
+                )
         if recommendations:
             response_parts.append("")
-            response_parts.append(f"**Recommendations:**")
+            response_parts.append("**Recommendations:**")
             for r in recommendations[:3]:
-                response_parts.append(f"- {r.get('service', 'Unknown')}: {r.get('recommendation', 'Unknown')}")
+                response_parts.append(
+                    f"- {r.get('service', 'Unknown')}: {r.get('recommendation', 'Unknown')}"
+                )
         response_parts.append("")
         response_parts.append("Proceeding with code generation...")
     else:
@@ -434,13 +473,17 @@ async def security_review_node(state: GraphState) -> GraphState:
         if critical:
             response_parts.append("**Critical Issues (must fix):**")
             for c in critical:
-                response_parts.append(f"- {c.get('service', 'Unknown')}: {c.get('issue', 'Unknown issue')}")
+                response_parts.append(
+                    f"- {c.get('service', 'Unknown')}: {c.get('issue', 'Unknown issue')}"
+                )
                 response_parts.append(f"  Fix: {c.get('recommendation', 'Unknown')}")
         if warnings:
             response_parts.append("")
             response_parts.append("**Warnings:**")
             for w in warnings[:5]:
-                response_parts.append(f"- {w.get('service', 'Unknown')}: {w.get('issue', 'Unknown issue')}")
+                response_parts.append(
+                    f"- {w.get('service', 'Unknown')}: {w.get('issue', 'Unknown issue')}"
+                )
         response_parts.append("")
         response_parts.append("Please address these issues and try again.")
 
@@ -505,39 +548,57 @@ async def cdk_specialist_node(state: GraphState) -> GraphState:
 
     # Build security requirements from review
     security_requirements = []
-    for change in security_review.get("security_enhancements", {}).get("config_changes", []):
-        security_requirements.append(f"Node {change['node_id']}: Apply {change['changes']}")
+    for change in security_review.get("security_enhancements", {}).get(
+        "config_changes", []
+    ):
+        security_requirements.append(
+            f"Node {change['node_id']}: Apply {change['changes']}"
+        )
     for rec in security_review.get("recommendations", []):
-        security_requirements.append(f"{rec.get('service', 'General')}: {rec.get('recommendation', '')}")
+        security_requirements.append(
+            f"{rec.get('service', 'General')}: {rec.get('recommendation', '')}"
+        )
 
     # Check if we should split into multiple stacks
     from scaffold_ai.services.stack_splitter import StackSplitter
+
     splitter = StackSplitter()
     use_nested_stacks = splitter.should_split(nodes)
 
     try:
         if iac_format == "cloudformation":
-            from scaffold_ai.agents.cloudformation_specialist import CloudFormationSpecialistAgent
+            from scaffold_ai.agents.cloudformation_specialist import (
+                CloudFormationSpecialistAgent,
+            )
+
             agent = CloudFormationSpecialistAgent()
             code = await agent.generate(graph)
             file_path = "packages/generated/infrastructure/template.yaml"
             format_name = "CloudFormation"
         elif iac_format == "terraform":
             from scaffold_ai.agents.terraform_specialist import TerraformSpecialistAgent
+
             agent = TerraformSpecialistAgent()
             code = await agent.generate(graph)
             file_path = "packages/generated/infrastructure/main.tf"
             format_name = "Terraform"
         elif iac_format == "python-cdk":
             from scaffold_ai.agents.python_cdk_specialist import PythonCDKSpecialist
+
             specialist = PythonCDKSpecialist()
             code = specialist.generate_stack(nodes, graph.get("edges", []))
             file_path = "packages/generated/infrastructure/mystack_stack.py"
             format_name = "Python CDK"
-            
+
             # Also generate app.py and requirements.txt
-            app_file = {"path": "packages/generated/infrastructure/app.py", "content": specialist.generate_app()}
-            req_file = {"path": "packages/generated/infrastructure/requirements.txt", "content": specialist.generate_requirements()}
+            app_file = {
+                "path": "packages/generated/infrastructure/app.py",
+                "content": specialist.generate_app(),
+            }
+            req_file = {
+                "path": "packages/generated/infrastructure/requirements.txt",
+                "content": specialist.generate_requirements(),
+            }
             generated_files = list(state.get("generated_files", []))
             generated_files.extend([app_file, req_file])
             _write_generated_file(app_file)
@@ -547,28 +608,32 @@ async def cdk_specialist_node(state: GraphState) -> GraphState:
             if use_nested_stacks and iac_format == "cdk":
                 stacks = splitter.split_by_layer(nodes, edges)
                 nested_files = splitter.generate_nested_stack_code(stacks, "cdk")
-                
+
                 generated_files = list(state.get("generated_files", []))
                 generated_files.extend(nested_files)
-                
+
                 for file in nested_files:
                     _write_generated_file(file)
-                
+
                 final_response = f"**Multi-Stack CDK Code Generated!**\n\nYour architecture has been split into {len(stacks)} nested stacks: {', '.join(stacks.keys())}. This improves organization and deployment speed."
-                
+
                 return {
                     **state,
                     "generated_files": generated_files,
                     "response": final_response,
                 }
-            
+
             llm = get_llm()
             prompt = CDK_GENERATOR_PROMPT.format(
                 graph_json=json.dumps(graph, indent=2),
-                security_requirements="\n".join(security_requirements) if security_requirements else "Standard security best practices",
+                security_requirements="\n".join(security_requirements)
+                if security_requirements
+                else "Standard security best practices",
             )
             messages = [
-                SystemMessage(content="You are an AWS CDK expert. Output only valid TypeScript code with security best practices."),
+                SystemMessage(
+                    content="You are an AWS CDK expert. Output only valid TypeScript code with security best practices."
+                ),
                 HumanMessage(content=prompt),
             ]
             response = await llm.ainvoke(messages)
@@ -627,6 +692,7 @@ def _write_generated_file(file: dict) -> None:
 def generate_secure_cdk_template(nodes: list, security_review: dict) -> str:
     """Generate secure CDK code from nodes (fallback using unified generator)."""
     from scaffold_ai.services.cdk_generator import CDKGenerator
+
     generator = CDKGenerator()
     return generator.generate(nodes, [])
 
@@ -644,6 +710,7 @@ async def react_specialist_node(state: GraphState) -> GraphState:
 
     try:
         from scaffold_ai.agents.react_specialist import ReactSpecialistAgent
+
         agent = ReactSpecialistAgent()
         react_files = await agent.generate(graph)
 
@@ -656,6 +723,7 @@ async def react_specialist_node(state: GraphState) -> GraphState:
         logger.exception(f"React specialist failed: {e}")
 
     return state
+
 
 def should_generate_code(state: GraphState) -> str:
     """Router function to determine if we should generate code."""

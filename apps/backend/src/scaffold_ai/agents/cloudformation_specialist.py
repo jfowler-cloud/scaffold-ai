@@ -158,7 +158,10 @@ class CloudFormationSpecialistAgent:
                     "Properties": {
                         "UserPoolId": {"Ref": f"{node_id}UserPool"},
                         "ClientName": f"{label}WebClient",
-                        "ExplicitAuthFlows": ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"],
+                        "ExplicitAuthFlows": [
+                            "ALLOW_USER_SRP_AUTH",
+                            "ALLOW_REFRESH_TOKEN_AUTH",
+                        ],
                     },
                 }
 
@@ -168,7 +171,11 @@ class CloudFormationSpecialistAgent:
                     "Properties": {
                         "BucketEncryption": {
                             "ServerSideEncryptionConfiguration": [
-                                {"ServerSideEncryptionByDefault": {"SSEAlgorithm": "AES256"}}
+                                {
+                                    "ServerSideEncryptionByDefault": {
+                                        "SSEAlgorithm": "AES256"
+                                    }
+                                }
                             ]
                         },
                         "VersioningConfiguration": {"Status": "Enabled"},

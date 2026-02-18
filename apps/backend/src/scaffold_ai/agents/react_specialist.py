@@ -198,60 +198,78 @@ class ReactSpecialistAgent:
         files = []
 
         # Check for frontend node to generate appropriate components
-        frontend_nodes = [n for n in nodes if n.get("data", {}).get("type") == "frontend"]
+        frontend_nodes = [
+            n for n in nodes if n.get("data", {}).get("type") == "frontend"
+        ]
 
         if frontend_nodes:
             # Analyze architecture to determine what to generate
             has_auth = any(n.get("data", {}).get("type") == "auth" for n in nodes)
             has_api = any(n.get("data", {}).get("type") == "api" for n in nodes)
-            has_database = any(n.get("data", {}).get("type") == "database" for n in nodes)
+            has_database = any(
+                n.get("data", {}).get("type") == "database" for n in nodes
+            )
             has_storage = any(n.get("data", {}).get("type") == "storage" for n in nodes)
 
             # Generate root layout with Cloudscape
-            files.append({
-                "path": "packages/generated/web/app/layout.tsx",
-                "content": self._generate_root_layout(),
-            })
+            files.append(
+                {
+                    "path": "packages/generated/web/app/layout.tsx",
+                    "content": self._generate_root_layout(),
+                }
+            )
 
             # Generate main page based on architecture
-            files.append({
-                "path": "packages/generated/web/app/page.tsx",
-                "content": self._generate_main_page(nodes, has_auth, has_api, has_database, has_storage),
-            })
+            files.append(
+                {
+                    "path": "packages/generated/web/app/page.tsx",
+                    "content": self._generate_main_page(
+                        nodes, has_auth, has_api, has_database, has_storage
+                    ),
+                }
+            )
 
             # Generate auth components if auth exists
             if has_auth:
-                files.append({
-                    "path": "packages/generated/web/components/AuthProvider.tsx",
-                    "content": self._generate_auth_provider(),
-                })
+                files.append(
+                    {
+                        "path": "packages/generated/web/components/AuthProvider.tsx",
+                        "content": self._generate_auth_provider(),
+                    }
+                )
 
             # Generate API hooks if API exists
             if has_api:
-                files.append({
-                    "path": "packages/generated/web/lib/api.ts",
-                    "content": self._generate_api_hooks(nodes),
-                })
+                files.append(
+                    {
+                        "path": "packages/generated/web/lib/api.ts",
+                        "content": self._generate_api_hooks(nodes),
+                    }
+                )
 
             # Generate data table if database exists
             if has_database:
-                files.append({
-                    "path": "packages/generated/web/components/DataTable.tsx",
-                    "content": self._generate_data_table(),
-                })
+                files.append(
+                    {
+                        "path": "packages/generated/web/components/DataTable.tsx",
+                        "content": self._generate_data_table(),
+                    }
+                )
 
             # Generate file upload if storage exists
             if has_storage:
-                files.append({
-                    "path": "packages/generated/web/components/FileUpload.tsx",
-                    "content": self._generate_file_upload(),
-                })
+                files.append(
+                    {
+                        "path": "packages/generated/web/components/FileUpload.tsx",
+                        "content": self._generate_file_upload(),
+                    }
+                )
 
         return files
 
     def _generate_root_layout(self) -> str:
         """Generate root layout with Cloudscape global styles."""
-        return '''import '@cloudscape-design/global-styles/index.css';
+        return """import '@cloudscape-design/global-styles/index.css';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -270,60 +288,82 @@ export default function RootLayout({
     </html>
   );
 }
-'''
+"""
 
-    def _generate_main_page(self, nodes: list, has_auth: bool, has_api: bool, has_database: bool, has_storage: bool) -> str:
+    def _generate_main_page(
+        self,
+        nodes: list,
+        has_auth: bool,
+        has_api: bool,
+        has_database: bool,
+        has_storage: bool,
+    ) -> str:
         """Generate main page with Cloudscape AppLayout based on architecture."""
         imports = ["useState"]
         if has_auth:
             imports.append("useEffect")
-        
+
         components = [
-            "AppLayout", "Container", "Header", "SpaceBetween", 
-            "ContentLayout", "SideNavigation", "BreadcrumbGroup"
+            "AppLayout",
+            "Container",
+            "Header",
+            "SpaceBetween",
+            "ContentLayout",
+            "SideNavigation",
+            "BreadcrumbGroup",
         ]
-        
+
         if has_database:
             components.append("Button")
-        
+
         nav_items = [
             "{ type: 'link', text: 'Dashboard', href: '/' }",
         ]
-        
+
         if has_database:
             nav_items.append("{ type: 'link', text: 'Data', href: '/data' }")
         if has_storage:
             nav_items.append("{ type: 'link', text: 'Files', href: '/files' }")
-        
+
         content_sections = []
-        
+
         if has_auth:
-            content_sections.append("""            <Container header={<Header variant="h2">Authentication</Header>}>
+            content_sections.append(
+                """            <Container header={<Header variant="h2">Authentication</Header>}>
               <p>User authentication is configured with AWS Cognito.</p>
-            </Container>""")
-        
+            </Container>"""
+            )
+
         if has_api:
-            content_sections.append("""            <Container header={<Header variant="h2">API</Header>}>
+            content_sections.append(
+                """            <Container header={<Header variant="h2">API</Header>}>
               <p>REST API is available via AWS API Gateway.</p>
-            </Container>""")
-        
+            </Container>"""
+            )
+
         if has_database:
-            content_sections.append("""            <Container header={<Header variant="h2">Database</Header>}>
+            content_sections.append(
+                """            <Container header={<Header variant="h2">Database</Header>}>
               <p>Data is stored in AWS DynamoDB.</p>
               <Button onClick={() => console.log('Load data')}>Load Data</Button>
-            </Container>""")
-        
-        if has_storage:
-            content_sections.append("""            <Container header={<Header variant="h2">Storage</Header>}>
-              <p>Files are stored in AWS S3.</p>
-            </Container>""")
-        
-        if not content_sections:
-            content_sections.append("""            <Container header={<Header variant="h2">Overview</Header>}>
-              <p>Welcome to your generated application.</p>
-            </Container>""")
+            </Container>"""
+            )
 
-        return f'''\"use client\";
+        if has_storage:
+            content_sections.append(
+                """            <Container header={<Header variant="h2">Storage</Header>}>
+              <p>Files are stored in AWS S3.</p>
+            </Container>"""
+            )
+
+        if not content_sections:
+            content_sections.append(
+                """            <Container header={<Header variant="h2">Overview</Header>}>
+              <p>Welcome to your generated application.</p>
+            </Container>"""
+            )
+
+        return f"""\"use client\";
 
 import {{ {", ".join(imports)} }} from 'react';
 {chr(10).join(f"import {comp} from '@cloudscape-design/components/{comp.lower().replace('breadcrumbgroup', 'breadcrumb-group').replace('sidenavigation', 'side-navigation').replace('contentlayout', 'content-layout').replace('spacebetween', 'space-between').replace('applayout', 'app-layout')}';" for comp in components)}
@@ -363,12 +403,11 @@ export default function Home() {{
     />
   );
 }}
-'''
-
+"""
 
     def _generate_auth_provider(self) -> str:
         """Generate auth provider component for Cognito."""
-        return '''\"use client\";
+        return """\"use client\";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
@@ -425,14 +464,16 @@ export function useAuth() {
   }
   return context;
 }
-'''
+"""
 
     def _generate_api_hooks(self, nodes: list) -> str:
         """Generate API hooks for data fetching."""
         api_nodes = [n for n in nodes if n.get("data", {}).get("type") == "api"]
-        api_name = api_nodes[0].get("data", {}).get("label", "API") if api_nodes else "API"
-        
-        return f'''const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        api_name = (
+            api_nodes[0].get("data", {}).get("label", "API") if api_nodes else "API"
+        )
+
+        return f"""const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export async function fetchData<T>(endpoint: string): Promise<T> {{
   const response = await fetch(`${{API_URL}}${{endpoint}}`);
@@ -462,11 +503,11 @@ export async function deleteData(endpoint: string): Promise<void> {{
     throw new Error(`{api_name} error: ${{response.status}}`);
   }}
 }}
-'''
+"""
 
     def _generate_data_table(self) -> str:
         """Generate data table component for DynamoDB data."""
-        return '''\"use client\";
+        return """\"use client\";
 
 import { useState } from 'react';
 import Table from '@cloudscape-design/components/table';
@@ -534,11 +575,11 @@ export function DataTable() {
     />
   );
 }
-'''
+"""
 
     def _generate_file_upload(self) -> str:
         """Generate file upload component for S3."""
-        return '''\"use client\";
+        return """\"use client\";
 
 import { useState } from 'react';
 import Container from '@cloudscape-design/components/container';
@@ -570,13 +611,13 @@ export function FileUpload() {
 
     try {
       const { uploadUrl, key } = await fetchData('/api/upload-url');
-      
+
       await fetch(uploadUrl, {{
         method: 'PUT',
         body: file,
         headers: {{ 'Content-Type': file.type }}
       }});
-      
+
       setProgress(100);
     } catch (err) {
       setError('Upload failed. Please try again.');
@@ -589,7 +630,7 @@ export function FileUpload() {
     <Container header={<Header variant="h2">Upload File</Header>}>
       <SpaceBetween size="m">
         {error && <Alert type="error">{error}</Alert>}
-        
+
         <input
           type="file"
           onChange={handleFileChange}
@@ -616,4 +657,4 @@ export function FileUpload() {
     </Container>
   );
 }
-'''
+"""

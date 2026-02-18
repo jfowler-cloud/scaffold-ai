@@ -241,81 +241,98 @@ class SecuritySpecialistAgent:
 
             if node_type == "storage":
                 # S3 security checks
-                warnings.append({
-                    "service": "S3",
-                    "issue": f"Bucket '{label}' should have encryption, versioning, and block public access enabled",
-                    "severity": "medium",
-                    "recommendation": "Add blockPublicAccess: BLOCK_ALL, encryption: S3_MANAGED, versioned: true",
-                })
-                config_changes.append({
-                    "node_id": node_id,
-                    "changes": {
-                        "blockPublicAccess": True,
-                        "encryption": "S3_MANAGED",
-                        "versioning": True,
-                    },
-                })
+                warnings.append(
+                    {
+                        "service": "S3",
+                        "issue": f"Bucket '{label}' should have encryption, versioning, and block public access enabled",
+                        "severity": "medium",
+                        "recommendation": "Add blockPublicAccess: BLOCK_ALL, encryption: S3_MANAGED, versioned: true",
+                    }
+                )
+                config_changes.append(
+                    {
+                        "node_id": node_id,
+                        "changes": {
+                            "blockPublicAccess": True,
+                            "encryption": "S3_MANAGED",
+                            "versioning": True,
+                        },
+                    }
+                )
 
             elif node_type == "database":
                 # DynamoDB security checks
-                recommendations.append({
-                    "service": "DynamoDB",
-                    "recommendation": f"Enable point-in-time recovery for '{label}' table for data protection",
-                })
-                config_changes.append({
-                    "node_id": node_id,
-                    "changes": {
-                        "pointInTimeRecovery": True,
-                    },
-                })
+                recommendations.append(
+                    {
+                        "service": "DynamoDB",
+                        "recommendation": f"Enable point-in-time recovery for '{label}' table for data protection",
+                    }
+                )
+                config_changes.append(
+                    {
+                        "node_id": node_id,
+                        "changes": {
+                            "pointInTimeRecovery": True,
+                        },
+                    }
+                )
 
             elif node_type == "api":
                 # API Gateway security checks
-                has_auth = any(
-                    n.get("data", {}).get("type") == "auth"
-                    for n in nodes
-                )
+                has_auth = any(n.get("data", {}).get("type") == "auth" for n in nodes)
                 if not has_auth:
-                    warnings.append({
-                        "service": "API Gateway",
-                        "issue": f"API '{label}' has no authentication configured",
-                        "severity": "high",
-                        "recommendation": "Add Cognito, IAM, or Lambda authorizer for authentication",
-                    })
+                    warnings.append(
+                        {
+                            "service": "API Gateway",
+                            "issue": f"API '{label}' has no authentication configured",
+                            "severity": "high",
+                            "recommendation": "Add Cognito, IAM, or Lambda authorizer for authentication",
+                        }
+                    )
 
             elif node_type == "lambda":
                 # Lambda security checks
-                recommendations.append({
-                    "service": "Lambda",
-                    "recommendation": f"Enable X-Ray tracing on '{label}' for debugging and monitoring",
-                })
-                recommendations.append({
-                    "service": "Lambda",
-                    "recommendation": f"Use least-privilege IAM grants (grantRead vs grantReadWrite) for '{label}'",
-                })
+                recommendations.append(
+                    {
+                        "service": "Lambda",
+                        "recommendation": f"Enable X-Ray tracing on '{label}' for debugging and monitoring",
+                    }
+                )
+                recommendations.append(
+                    {
+                        "service": "Lambda",
+                        "recommendation": f"Use least-privilege IAM grants (grantRead vs grantReadWrite) for '{label}'",
+                    }
+                )
 
             elif node_type == "queue":
                 # SQS security checks
-                warnings.append({
-                    "service": "SQS",
-                    "issue": f"Queue '{label}' should have encryption enabled for sensitive data",
-                    "severity": "medium",
-                    "recommendation": "Add encryption: sqs.QueueEncryption.KMS",
-                })
-                config_changes.append({
-                    "node_id": node_id,
-                    "changes": {
-                        "encryption": "KMS",
-                        "deadLetterQueue": True,
-                    },
-                })
+                warnings.append(
+                    {
+                        "service": "SQS",
+                        "issue": f"Queue '{label}' should have encryption enabled for sensitive data",
+                        "severity": "medium",
+                        "recommendation": "Add encryption: sqs.QueueEncryption.KMS",
+                    }
+                )
+                config_changes.append(
+                    {
+                        "node_id": node_id,
+                        "changes": {
+                            "encryption": "KMS",
+                            "deadLetterQueue": True,
+                        },
+                    }
+                )
 
             elif node_type == "auth":
                 # Cognito security checks
-                recommendations.append({
-                    "service": "Cognito",
-                    "recommendation": f"Consider enabling MFA for '{label}' user pool for enhanced security",
-                })
+                recommendations.append(
+                    {
+                        "service": "Cognito",
+                        "recommendation": f"Consider enabling MFA for '{label}' user pool for enhanced security",
+                    }
+                )
 
         # Calculate security score
         critical_count = len([i for i in issues if i.get("severity") == "critical"])

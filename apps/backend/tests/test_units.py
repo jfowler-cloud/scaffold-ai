@@ -6,7 +6,7 @@ LLM-dependent node functions are tested via keyword-fallback paths only.
 """
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 # ---------------------------------------------------------------------------
 # generate_node_positions
@@ -81,8 +81,18 @@ class TestGenerateNodePositions:
 
     def test_all_twelve_node_types_produce_positions(self):
         all_types = [
-            "frontend", "cdn", "auth", "api", "lambda", "workflow",
-            "queue", "events", "notification", "stream", "database", "storage",
+            "frontend",
+            "cdn",
+            "auth",
+            "api",
+            "lambda",
+            "workflow",
+            "queue",
+            "events",
+            "notification",
+            "stream",
+            "database",
+            "storage",
         ]
         nodes = [_make_node(f"n{i}", t) for i, t in enumerate(all_types)]
         result = generate_node_positions(nodes, [])
@@ -320,14 +330,24 @@ class TestCloudFormationSpecialist:
         result = await agent.generate(_graph("auth"))
         # Outputs section should reference UserPool Arn but not client
         lines = result.split("\n")
-        output_section = "\n".join(lines[lines.index("Outputs:"):]) if "Outputs:" in lines else ""
+        output_section = (
+            "\n".join(lines[lines.index("Outputs:") :]) if "Outputs:" in lines else ""
+        )
         assert "UserPoolClientArn" not in output_section
 
     @pytest.mark.asyncio
     async def test_all_node_types_no_error(self, agent):
         all_types = [
-            "lambda", "database", "api", "auth", "storage", "queue",
-            "notification", "events", "stream", "workflow",
+            "lambda",
+            "database",
+            "api",
+            "auth",
+            "storage",
+            "queue",
+            "notification",
+            "events",
+            "stream",
+            "workflow",
         ]
         result = await agent.generate(_graph(*all_types))
         assert "AWSTemplateFormatVersion" in result
@@ -349,7 +369,7 @@ class TestTerraformSpecialist:
     @pytest.mark.asyncio
     async def test_empty_graph_returns_provider_block(self, agent):
         result = await agent.generate({"nodes": [], "edges": []})
-        assert 'required_providers' in result
+        assert "required_providers" in result
         assert 'provider "aws"' in result
 
     @pytest.mark.asyncio
@@ -357,14 +377,14 @@ class TestTerraformSpecialist:
         result = await agent.generate(_graph("lambda"))
         assert 'resource "aws_lambda_function"' in result
         assert 'resource "aws_iam_role"' in result
-        assert 'tracing_config' in result
+        assert "tracing_config" in result
 
     @pytest.mark.asyncio
     async def test_database_node(self, agent):
         result = await agent.generate(_graph("database"))
         assert 'resource "aws_dynamodb_table"' in result
-        assert 'point_in_time_recovery' in result
-        assert 'server_side_encryption' in result
+        assert "point_in_time_recovery" in result
+        assert "server_side_encryption" in result
 
     @pytest.mark.asyncio
     async def test_api_node(self, agent):
@@ -411,7 +431,7 @@ class TestTerraformSpecialist:
         result = await agent.generate(_graph("workflow"))
         assert 'resource "aws_sfn_state_machine"' in result
         assert 'resource "aws_iam_role"' in result
-        assert 'tracing_configuration' in result
+        assert "tracing_configuration" in result
 
     @pytest.mark.asyncio
     async def test_slug_in_resource_name(self, agent):
@@ -437,8 +457,16 @@ class TestTerraformSpecialist:
     @pytest.mark.asyncio
     async def test_all_node_types_no_error(self, agent):
         all_types = [
-            "lambda", "database", "api", "auth", "storage", "queue",
-            "notification", "events", "stream", "workflow",
+            "lambda",
+            "database",
+            "api",
+            "auth",
+            "storage",
+            "queue",
+            "notification",
+            "events",
+            "stream",
+            "workflow",
         ]
         result = await agent.generate(_graph(*all_types))
         assert 'provider "aws"' in result
@@ -495,7 +523,11 @@ class TestReactSpecialistNode:
     @pytest.mark.asyncio
     async def test_frontend_with_auth_adds_auth_provider(self):
         nodes = [
-            {"id": "fe-1", "type": "frontend", "data": {"label": "Frontend", "type": "frontend"}},
+            {
+                "id": "fe-1",
+                "type": "frontend",
+                "data": {"label": "Frontend", "type": "frontend"},
+            },
             {"id": "auth-1", "type": "auth", "data": {"label": "Auth", "type": "auth"}},
         ]
         state = self._state("generate_code", nodes=nodes)
@@ -506,7 +538,11 @@ class TestReactSpecialistNode:
     @pytest.mark.asyncio
     async def test_frontend_with_api_adds_api_hooks(self):
         nodes = [
-            {"id": "fe-1", "type": "frontend", "data": {"label": "Frontend", "type": "frontend"}},
+            {
+                "id": "fe-1",
+                "type": "frontend",
+                "data": {"label": "Frontend", "type": "frontend"},
+            },
             {"id": "api-1", "type": "api", "data": {"label": "API", "type": "api"}},
         ]
         state = self._state("generate_code", nodes=nodes)
@@ -517,8 +553,16 @@ class TestReactSpecialistNode:
     @pytest.mark.asyncio
     async def test_frontend_with_database_adds_data_table(self):
         nodes = [
-            {"id": "fe-1", "type": "frontend", "data": {"label": "Frontend", "type": "frontend"}},
-            {"id": "db-1", "type": "database", "data": {"label": "DB", "type": "database"}},
+            {
+                "id": "fe-1",
+                "type": "frontend",
+                "data": {"label": "Frontend", "type": "frontend"},
+            },
+            {
+                "id": "db-1",
+                "type": "database",
+                "data": {"label": "DB", "type": "database"},
+            },
         ]
         state = self._state("generate_code", nodes=nodes)
         result = await react_specialist_node(state)
@@ -528,8 +572,16 @@ class TestReactSpecialistNode:
     @pytest.mark.asyncio
     async def test_frontend_with_storage_adds_file_upload(self):
         nodes = [
-            {"id": "fe-1", "type": "frontend", "data": {"label": "Frontend", "type": "frontend"}},
-            {"id": "s3-1", "type": "storage", "data": {"label": "S3", "type": "storage"}},
+            {
+                "id": "fe-1",
+                "type": "frontend",
+                "data": {"label": "Frontend", "type": "frontend"},
+            },
+            {
+                "id": "s3-1",
+                "type": "storage",
+                "data": {"label": "S3", "type": "storage"},
+            },
         ]
         state = self._state("generate_code", nodes=nodes)
         result = await react_specialist_node(state)
@@ -589,15 +641,25 @@ class TestSecuritySpecialistAgent:
     @pytest.mark.asyncio
     async def test_result_has_required_keys(self, agent):
         result = await agent.review({"nodes": [_node("n1", "lambda")], "edges": []})
-        for key in ("security_score", "passed", "critical_issues", "warnings",
-                    "recommendations", "compliant_services", "security_enhancements"):
+        for key in (
+            "security_score",
+            "passed",
+            "critical_issues",
+            "warnings",
+            "recommendations",
+            "compliant_services",
+            "security_enhancements",
+        ):
             assert key in result
 
     @pytest.mark.asyncio
     async def test_score_within_bounds(self, agent):
-        nodes = [_node(f"n{i}", t) for i, t in enumerate(
-            ["storage", "api", "queue", "lambda", "database", "auth"]
-        )]
+        nodes = [
+            _node(f"n{i}", t)
+            for i, t in enumerate(
+                ["storage", "api", "queue", "lambda", "database", "auth"]
+            )
+        ]
         result = await agent.review({"nodes": nodes, "edges": []})
         assert 0 <= result["security_score"] <= 100
 
@@ -607,7 +669,9 @@ class TestSecuritySpecialistAgent:
 
     @pytest.mark.asyncio
     async def test_storage_node_produces_medium_warning(self, agent):
-        result = await agent.review({"nodes": [_node("s1", "storage", "Uploads")], "edges": []})
+        result = await agent.review(
+            {"nodes": [_node("s1", "storage", "Uploads")], "edges": []}
+        )
         services = [w["service"] for w in result["warnings"]]
         assert "S3" in services
 
@@ -630,7 +694,9 @@ class TestSecuritySpecialistAgent:
 
     @pytest.mark.asyncio
     async def test_database_node_produces_recommendation(self, agent):
-        result = await agent.review({"nodes": [_node("db1", "database", "UserTable")], "edges": []})
+        result = await agent.review(
+            {"nodes": [_node("db1", "database", "UserTable")], "edges": []}
+        )
         services = [r["service"] for r in result["recommendations"]]
         assert "DynamoDB" in services
 
@@ -638,8 +704,7 @@ class TestSecuritySpecialistAgent:
     async def test_database_node_no_critical_or_high_warning(self, agent):
         result = await agent.review({"nodes": [_node("db1", "database")], "edges": []})
         high_or_critical = [
-            w for w in result["warnings"]
-            if w.get("severity") in ("high", "critical")
+            w for w in result["warnings"] if w.get("severity") in ("high", "critical")
         ]
         assert high_or_critical == []
 
@@ -649,7 +714,9 @@ class TestSecuritySpecialistAgent:
 
     @pytest.mark.asyncio
     async def test_api_without_auth_produces_high_warning(self, agent):
-        result = await agent.review({"nodes": [_node("api1", "api", "REST API")], "edges": []})
+        result = await agent.review(
+            {"nodes": [_node("api1", "api", "REST API")], "edges": []}
+        )
         high_warnings = [w for w in result["warnings"] if w.get("severity") == "high"]
         assert len(high_warnings) >= 1
         assert any("API Gateway" in w["service"] for w in high_warnings)
@@ -659,7 +726,8 @@ class TestSecuritySpecialistAgent:
         nodes = [_node("api1", "api"), _node("auth1", "auth")]
         result = await agent.review({"nodes": nodes, "edges": []})
         api_high = [
-            w for w in result["warnings"]
+            w
+            for w in result["warnings"]
             if w.get("severity") == "high" and "API" in w.get("service", "")
         ]
         assert api_high == []
@@ -670,7 +738,9 @@ class TestSecuritySpecialistAgent:
 
     @pytest.mark.asyncio
     async def test_lambda_node_produces_recommendations(self, agent):
-        result = await agent.review({"nodes": [_node("fn1", "lambda", "ProcessOrder")], "edges": []})
+        result = await agent.review(
+            {"nodes": [_node("fn1", "lambda", "ProcessOrder")], "edges": []}
+        )
         lambda_recs = [r for r in result["recommendations"] if r["service"] == "Lambda"]
         assert len(lambda_recs) >= 2  # X-Ray + least-privilege
 
@@ -680,7 +750,9 @@ class TestSecuritySpecialistAgent:
 
     @pytest.mark.asyncio
     async def test_queue_node_produces_medium_warning(self, agent):
-        result = await agent.review({"nodes": [_node("q1", "queue", "OrderQueue")], "edges": []})
+        result = await agent.review(
+            {"nodes": [_node("q1", "queue", "OrderQueue")], "edges": []}
+        )
         sqs_warnings = [w for w in result["warnings"] if w["service"] == "SQS"]
         assert len(sqs_warnings) >= 1
         assert sqs_warnings[0]["severity"] == "medium"
@@ -691,8 +763,12 @@ class TestSecuritySpecialistAgent:
 
     @pytest.mark.asyncio
     async def test_auth_node_produces_recommendation(self, agent):
-        result = await agent.review({"nodes": [_node("au1", "auth", "UserPool")], "edges": []})
-        cognito_recs = [r for r in result["recommendations"] if r["service"] == "Cognito"]
+        result = await agent.review(
+            {"nodes": [_node("au1", "auth", "UserPool")], "edges": []}
+        )
+        cognito_recs = [
+            r for r in result["recommendations"] if r["service"] == "Cognito"
+        ]
         assert len(cognito_recs) >= 1
 
     # ------------------------------------------------------------------
@@ -704,7 +780,9 @@ class TestSecuritySpecialistAgent:
         # A lone api node without auth adds exactly one high warning
         result = await agent.review({"nodes": [_node("api1", "api")], "edges": []})
         high_count = len([w for w in result["warnings"] if w.get("severity") == "high"])
-        medium_count = len([w for w in result["warnings"] if w.get("severity") == "medium"])
+        medium_count = len(
+            [w for w in result["warnings"] if w.get("severity") == "medium"]
+        )
         expected = max(0, 100 - (high_count * 15) - (medium_count * 5))
         assert result["security_score"] == expected
 
@@ -712,7 +790,9 @@ class TestSecuritySpecialistAgent:
     async def test_medium_warning_deducts_5_points(self, agent):
         # storage alone adds medium warnings only
         result = await agent.review({"nodes": [_node("s1", "storage")], "edges": []})
-        medium_count = len([w for w in result["warnings"] if w.get("severity") == "medium"])
+        medium_count = len(
+            [w for w in result["warnings"] if w.get("severity") == "medium"]
+        )
         high_count = len([w for w in result["warnings"] if w.get("severity") == "high"])
         expected = max(0, 100 - (high_count * 15) - (medium_count * 5))
         assert result["security_score"] == expected

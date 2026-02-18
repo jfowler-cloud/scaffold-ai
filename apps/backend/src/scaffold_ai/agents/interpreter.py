@@ -36,13 +36,25 @@ class InterpreterAgent:
         """
         user_input_lower = user_input.lower()
 
-        if any(word in user_input_lower for word in ["add", "create", "new", "include", "need"]):
+        if any(
+            word in user_input_lower
+            for word in ["add", "create", "new", "include", "need"]
+        ):
             return "new_feature"
-        elif any(word in user_input_lower for word in ["change", "modify", "update", "remove", "delete", "connect"]):
+        elif any(
+            word in user_input_lower
+            for word in ["change", "modify", "update", "remove", "delete", "connect"]
+        ):
             return "modify_graph"
-        elif any(word in user_input_lower for word in ["generate", "code", "deploy", "build", "cdk", "export"]):
+        elif any(
+            word in user_input_lower
+            for word in ["generate", "code", "deploy", "build", "cdk", "export"]
+        ):
             return "generate_code"
-        elif any(word in user_input_lower for word in ["explain", "what", "how", "why", "help", "?"]):
+        elif any(
+            word in user_input_lower
+            for word in ["explain", "what", "how", "why", "help", "?"]
+        ):
             return "explain"
         else:
             return "new_feature"

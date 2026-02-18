@@ -69,7 +69,7 @@ class TestSharing:
         service = SharingService()
         graph = {"nodes": [{"id": "1"}], "edges": []}
         share_id = service.create_share_link(graph, "Test")
-        
+
         retrieved = service.get_shared_architecture(share_id)
         assert retrieved is not None
         assert retrieved["graph"] == graph
@@ -85,7 +85,7 @@ class TestSecurityHistory:
     def test_record_and_retrieve(self):
         service = SecurityHistoryService()
         service.record_score("arch1", 75, [])
-        
+
         history = service.get_history("arch1")
         assert len(history) == 1
         assert history[0]["score"] == 75
@@ -94,7 +94,7 @@ class TestSecurityHistory:
         service = SecurityHistoryService()
         service.record_score("arch1", 60, [])
         service.record_score("arch1", 80, [])
-        
+
         improvement = service.get_improvement("arch1")
         assert improvement["improvement"] == 20
         assert improvement["trend"] == "improving"

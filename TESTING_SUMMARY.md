@@ -11,7 +11,7 @@ All frontend tests are now passing (34 tests total):
   - applyLayout (horizontal, vertical, grid, circular)
   - Node stacking for same types
   - Empty nodes handling
-  
+
 - ✅ useChatStore
   - addMessage, setLoading
   - setGeneratedFiles, clearMessages

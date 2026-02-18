@@ -1,9 +1,8 @@
 """Tests for architect_node JSON recovery and error handling."""
 
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
-from scaffold_ai.graph.nodes import architect_node, get_llm
-from scaffold_ai.graph.state import GraphState
+from unittest.mock import AsyncMock, patch
+from scaffold_ai.graph.nodes import architect_node
 
 
 @pytest.fixture
@@ -56,7 +55,7 @@ class TestArchitectNodeJSONRecovery:
         base_state["intent"] = "explain"
         base_state["graph_json"] = {
             "nodes": [{"id": "api-1", "data": {"type": "api", "label": "API"}}],
-            "edges": []
+            "edges": [],
         }
 
         result = await architect_node(base_state)

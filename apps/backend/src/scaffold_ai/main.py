@@ -2,6 +2,7 @@
 
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request
@@ -12,7 +13,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 from .graph.workflow import run_workflow
-from .graph.state import GraphState, Intent
+from .graph.state import GraphState
 from .services.cdk_deployment import CDKDeploymentService
 from .services.cost_estimator import CostEstimator
 from .services.security_autofix import SecurityAutoFix
@@ -104,24 +105,30 @@ class DeployRequest(BaseModel):
     def validate_stack_name(cls, v: str) -> str:
         """Validate stack name to prevent command injection."""
         import re
-        if not re.match(r'^[A-Za-z][A-Za-z0-9-]{0,127}$', v):
-            raise ValueError("stack_name must be alphanumeric with hyphens, start with letter, 1-128 chars")
+
+        if not re.match(r"^[A-Za-z][A-Za-z0-9-]{0,127}$", v):
+            raise ValueError(
+                "stack_name must be alphanumeric with hyphens, start with letter, 1-128 chars"
+            )
         return v
 
 
 class GraphRequest(BaseModel):
     """Request model for graph-based endpoints."""
+
     graph: dict
 
 
 class ShareRequest(BaseModel):
     """Request model for sharing endpoint."""
+
     graph: dict
     title: str = "Shared Architecture"
 
 
 class SecurityHistoryRequest(BaseModel):
     """Request model for security history."""
+
     architecture_id: str
     score: int
     issues: list[dict] = []
@@ -146,21 +153,22 @@ async def root() -> dict:
 async def health() -> dict:
     """
     Health check endpoint with service status.
-    
+
     Returns:
         dict: Health status including Bedrock availability
     """
     health_status = {"status": "healthy", "services": {}}
-    
+
     # Check Bedrock connectivity
     try:
         from .graph.nodes import get_llm
+
         llm = get_llm()
         health_status["services"]["bedrock"] = "available"
     except Exception:
         health_status["services"]["bedrock"] = "unavailable"
         health_status["status"] = "degraded"
-    
+
     return health_status
 
 
@@ -177,9 +185,9 @@ async def chat(request: Request, body: ChatRequest):
     """
     import asyncio
     import logging
-    
+
     logger = logging.getLogger(__name__)
-    
+
     try:
         # Initialize state
         initial_state: GraphState = {
@@ -205,8 +213,10 @@ async def chat(request: Request, body: ChatRequest):
 
     except asyncio.TimeoutError:
         logger.error("Workflow timeout after 60 seconds")
-        raise HTTPException(status_code=504, detail="Request timeout - operation took too long")
-    except Exception as e:
+        raise HTTPException(
+            status_code=504, detail="Request timeout - operation took too long"
+        )
+    except Exception:
         logger.exception("Chat endpoint error")
         raise HTTPException(status_code=500, detail="An internal error occurred")
 
@@ -247,7 +257,7 @@ async def get_sample_graph():
 async def deploy_stack(http_request: Request, request: DeployRequest):
     """
     Deploy a CDK stack to AWS.
-    
+
     This endpoint:
     1. Creates a temporary CDK project
     2. Installs dependencies
@@ -262,16 +272,13 @@ async def deploy_stack(http_request: Request, request: DeployRequest):
             app_code=request.app_code,
             region=request.region,
             profile=request.profile,
-            require_approval=request.require_approval
+            require_approval=request.require_approval,
         )
-        
+
         return DeployResponse(**result)
-    
+
     except Exception as e:
-        return DeployResponse(
-            success=False,
-            error=f"Deployment error: {str(e)}"
-        )
+        return DeployResponse(success=False, error=f"Deployment error: {str(e)}")
 
 
 @app.get("/api/deploy/status")
@@ -279,7 +286,7 @@ async def deployment_status():
     """Check if CDK CLI is available."""
     return {
         "cdk_available": deployment_service.cdk_version is not None,
-        "cdk_version": deployment_service.cdk_version
+        "cdk_version": deployment_service.cdk_version,
     }
 
 
@@ -288,21 +295,19 @@ async def deployment_status():
 async def estimate_cost(request: Request, body: GraphRequest):
     """
     Estimate monthly AWS costs for an architecture.
-    
+
     Returns cost breakdown by service and optimization tips.
     """
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     try:
         estimate = cost_estimator.estimate(body.graph)
         tips = cost_estimator.get_optimization_tips(body.graph)
-        
-        return {
-            **estimate,
-            "optimization_tips": tips
-        }
-    except Exception as e:
+
+        return {**estimate, "optimization_tips": tips}
+    except Exception:
         logger.exception("Cost estimation error")
         raise HTTPException(status_code=500, detail="Cost estimation failed")
 
@@ -312,22 +317,23 @@ async def estimate_cost(request: Request, body: GraphRequest):
 async def security_autofix_endpoint(request: Request, body: GraphRequest):
     """
     Automatically fix security issues in architecture.
-    
+
     Returns updated graph with security improvements applied.
     """
     import logging
+
     logger = logging.getLogger(__name__)
-    
+
     try:
         updated_graph, changes = security_autofix.analyze_and_fix(body.graph)
         score = security_autofix.get_security_score(updated_graph)
-        
+
         return {
             "updated_graph": updated_graph,
             "changes": changes,
-            "security_score": score
+            "security_score": score,
         }
-    except Exception as e:
+    except Exception:
         logger.exception("Security autofix error")
         raise HTTPException(status_code=500, detail="Security autofix failed")
 
@@ -362,10 +368,10 @@ async def create_share(request: Request, body: ShareRequest):
 async def get_shared(request: Request, share_id: str):
     """Get a shared architecture by ID."""
     architecture = sharing_service.get_shared_architecture(share_id)
-    
+
     if not architecture:
         raise HTTPException(status_code=404, detail="Shared architecture not found")
-    
+
     return architecture
 
 
@@ -383,9 +389,5 @@ async def get_security_history(request: Request, architecture_id: str):
     """Get security score history for an architecture."""
     history = security_history.get_history(architecture_id)
     improvement = security_history.get_improvement(architecture_id)
-    
-    return {
-        "history": history,
-        "improvement": improvement
-    }
 
+    return {"history": history, "improvement": improvement}

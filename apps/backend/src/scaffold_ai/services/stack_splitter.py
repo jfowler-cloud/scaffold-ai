@@ -1,6 +1,6 @@
 """Multi-stack architecture splitter for large deployments."""
 
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 
 class StackSplitter:
@@ -56,25 +56,31 @@ class StackSplitter:
         # Remove empty stacks
         return {k: v for k, v in stacks.items() if v["nodes"]}
 
-    def generate_nested_stack_code(self, stacks: Dict[str, Dict], format: str = "cdk") -> List[Dict]:
+    def generate_nested_stack_code(
+        self, stacks: Dict[str, Dict], format: str = "cdk"
+    ) -> List[Dict]:
         """Generate code for nested stacks."""
         files = []
 
         if format == "cdk":
             # Generate main stack that imports nested stacks
             main_stack = self._generate_main_stack_cdk(stacks)
-            files.append({
-                "path": "packages/generated/infrastructure/lib/main-stack.ts",
-                "content": main_stack
-            })
+            files.append(
+                {
+                    "path": "packages/generated/infrastructure/lib/main-stack.ts",
+                    "content": main_stack,
+                }
+            )
 
             # Generate each nested stack
             for stack_name, stack_data in stacks.items():
                 nested_code = self._generate_nested_stack_cdk(stack_name, stack_data)
-                files.append({
-                    "path": f"packages/generated/infrastructure/lib/{stack_name}-stack.ts",
-                    "content": nested_code
-                })
+                files.append(
+                    {
+                        "path": f"packages/generated/infrastructure/lib/{stack_name}-stack.ts",
+                        "content": nested_code,
+                    }
+                )
 
         return files
 
@@ -88,17 +94,21 @@ class StackSplitter:
 
     def _generate_main_stack_cdk(self, stacks: Dict[str, Dict]) -> str:
         """Generate main CDK stack that orchestrates nested stacks."""
-        imports = "\n".join([
-            f"import {{ {name.capitalize()}Stack }} from './{name}-stack';"
-            for name in stacks.keys()
-        ])
+        imports = "\n".join(
+            [
+                f"import {{ {name.capitalize()}Stack }} from './{name}-stack';"
+                for name in stacks.keys()
+            ]
+        )
 
-        nested_stacks = "\n    ".join([
-            f"const {name}Stack = new {name.capitalize()}Stack(this, '{name.capitalize()}Stack');"
-            for name in stacks.keys()
-        ])
+        nested_stacks = "\n    ".join(
+            [
+                f"const {name}Stack = new {name.capitalize()}Stack(this, '{name.capitalize()}Stack');"
+                for name in stacks.keys()
+            ]
+        )
 
-        return f'''import * as cdk from 'aws-cdk-lib';
+        return f"""import * as cdk from 'aws-cdk-lib';
 import {{ Construct }} from 'constructs';
 {imports}
 
@@ -109,20 +119,20 @@ export class MainStack extends cdk.Stack {{
     {nested_stacks}
   }}
 }}
-'''
+"""
 
     def _generate_nested_stack_cdk(self, stack_name: str, stack_data: Dict) -> str:
         """Generate a nested CDK stack with actual constructs."""
         from scaffold_ai.services.cdk_generator import CDKGenerator
-        
+
         nodes = stack_data["nodes"]
         edges = stack_data["edges"]
-        
+
         # Use CDK generator for actual constructs
         generator = CDKGenerator()
         constructs = generator._generate_constructs(nodes, edges)
 
-        return f'''import * as cdk from 'aws-cdk-lib';
+        return f"""import * as cdk from 'aws-cdk-lib';
 import {{ Construct }} from 'constructs';
 {generator._get_imports(nodes)}
 
@@ -133,4 +143,4 @@ export class {stack_name.capitalize()}Stack extends cdk.NestedStack {{
 {constructs}
   }}
 }}
-'''
+"""

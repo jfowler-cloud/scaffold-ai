@@ -148,7 +148,7 @@ export function Chat() {
       if (iacFormat.value === "cloudformation") {
         // CloudFormation deployment
         const templateFile = generatedFiles.find(f => f.path.includes("template.yaml"));
-        
+
         if (!templateFile) {
           throw new Error("CloudFormation template not found. Generate code first.");
         }
@@ -222,7 +222,7 @@ export function Chat() {
 
       // Generate zip file
       const blob = await zip.generateAsync({ type: 'blob' });
-      
+
       // Create download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

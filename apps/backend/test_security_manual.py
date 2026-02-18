@@ -2,7 +2,6 @@
 """Manual test script for security gate workflow."""
 
 import asyncio
-import json
 import sys
 from pathlib import Path
 
@@ -54,7 +53,10 @@ async def test_insecure_architecture():
         print(f"✓ Critical Issues: {len(review.get('critical_issues', []))}")
         print(f"✓ Code Generated: {len(result.get('generated_files', []))} files")
 
-        if not review.get("passed", False) and len(result.get("generated_files", [])) == 0:
+        if (
+            not review.get("passed", False)
+            and len(result.get("generated_files", [])) == 0
+        ):
             print("\n✅ TEST PASSED: Security gate blocked insecure architecture")
             return True
         else:

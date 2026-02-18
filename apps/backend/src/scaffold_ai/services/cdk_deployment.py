@@ -18,10 +18,7 @@ class CDKDeploymentService:
         """Get installed CDK version."""
         try:
             result = subprocess.run(
-                ["cdk", "--version"],
-                capture_output=True,
-                text=True,
-                timeout=5
+                ["cdk", "--version"], capture_output=True, text=True, timeout=5
             )
             return result.stdout.strip() if result.returncode == 0 else None
         except (subprocess.TimeoutExpired, FileNotFoundError):
@@ -34,11 +31,11 @@ class CDKDeploymentService:
         app_code: str,
         region: str = "us-east-1",
         profile: Optional[str] = None,
-        require_approval: bool = True
+        require_approval: bool = True,
     ) -> Dict[str, any]:
         """
         Deploy a CDK stack.
-        
+
         Args:
             stack_name: Name of the stack to deploy
             cdk_code: CDK stack code (lib/stack.ts)
@@ -46,14 +43,14 @@ class CDKDeploymentService:
             region: AWS region
             profile: AWS profile name
             require_approval: Whether to require manual approval (default: True)
-            
+
         Returns:
             Dict with deployment status and outputs
         """
         if not self.cdk_version:
             return {
                 "success": False,
-                "error": "CDK CLI not installed. Install with: npm install -g aws-cdk"
+                "error": "CDK CLI not installed. Install with: npm install -g aws-cdk",
             }
 
         temp_dir = None
@@ -67,14 +64,12 @@ class CDKDeploymentService:
 
             # Install dependencies
             install_result = self._run_command(
-                ["npm", "install"],
-                cwd=project_path,
-                timeout=120
+                ["npm", "install"], cwd=project_path, timeout=120
             )
             if install_result["returncode"] != 0:
                 return {
                     "success": False,
-                    "error": f"npm install failed: {install_result['stderr']}"
+                    "error": f"npm install failed: {install_result['stderr']}",
                 }
 
             # Bootstrap CDK (if needed)
@@ -83,26 +78,21 @@ class CDKDeploymentService:
                 return bootstrap_result
 
             # Deploy stack
-            deploy_result = self._deploy_stack(project_path, region, profile, require_approval)
-            
+            deploy_result = self._deploy_stack(
+                project_path, region, profile, require_approval
+            )
+
             return deploy_result
 
         except Exception as e:
-            return {
-                "success": False,
-                "error": f"Deployment failed: {str(e)}"
-            }
+            return {"success": False, "error": f"Deployment failed: {str(e)}"}
         finally:
             # Cleanup temp directory
             if temp_dir and os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir, ignore_errors=True)
 
     def _create_cdk_project(
-        self,
-        project_path: Path,
-        stack_name: str,
-        cdk_code: str,
-        app_code: str
+        self, project_path: Path, stack_name: str, cdk_code: str, app_code: str
     ):
         """Create CDK project structure."""
         # Create directories
@@ -114,23 +104,18 @@ class CDKDeploymentService:
             "name": stack_name.lower().replace(" ", "-"),
             "version": "0.1.0",
             "bin": {"app": "bin/app.js"},
-            "scripts": {
-                "build": "tsc",
-                "cdk": "cdk"
-            },
+            "scripts": {"build": "tsc", "cdk": "cdk"},
             "devDependencies": {
                 "@types/node": "^22.0.0",
                 "aws-cdk": "^2.0.0",
-                "typescript": "^5.0.0"
+                "typescript": "^5.0.0",
             },
-            "dependencies": {
-                "aws-cdk-lib": "^2.0.0",
-                "constructs": "^10.0.0"
-            }
+            "dependencies": {"aws-cdk-lib": "^2.0.0", "constructs": "^10.0.0"},
         }
-        
+
         with open(project_path / "package.json", "w") as f:
             import json
+
             json.dump(package_json, f, indent=2)
 
         # Write tsconfig.json
@@ -153,13 +138,14 @@ class CDKDeploymentService:
                 "inlineSources": True,
                 "experimentalDecorators": True,
                 "strictPropertyInitialization": False,
-                "typeRoots": ["./node_modules/@types"]
+                "typeRoots": ["./node_modules/@types"],
             },
-            "exclude": ["node_modules", "cdk.out"]
+            "exclude": ["node_modules", "cdk.out"],
         }
-        
+
         with open(project_path / "tsconfig.json", "w") as f:
             import json
+
             json.dump(tsconfig, f, indent=2)
 
         # Write cdk.json
@@ -169,12 +155,13 @@ class CDKDeploymentService:
             "requireApproval": approval_level,
             "context": {
                 "@aws-cdk/core:enableStackNameDuplicates": True,
-                "aws-cdk:enableDiffNoFail": True
-            }
+                "aws-cdk:enableDiffNoFail": True,
+            },
         }
-        
+
         with open(project_path / "cdk.json", "w") as f:
             import json
+
             json.dump(cdk_json, f, indent=2)
 
         # Write stack code
@@ -186,53 +173,58 @@ class CDKDeploymentService:
             f.write(app_code)
 
     def _bootstrap_cdk(
-        self,
-        project_path: Path,
-        region: str,
-        profile: Optional[str]
+        self, project_path: Path, region: str, profile: Optional[str]
     ) -> Dict[str, any]:
         """Bootstrap CDK in the target account/region."""
         cmd = ["npx", "cdk", "bootstrap"]
-        
+
         env = os.environ.copy()
         env["AWS_REGION"] = region
         if profile:
             env["AWS_PROFILE"] = profile
 
         result = self._run_command(cmd, cwd=project_path, env=env, timeout=300)
-        
+
         # Bootstrap might already be done, which is fine
-        if result["returncode"] == 0 or "already bootstrapped" in result["stdout"].lower():
+        if (
+            result["returncode"] == 0
+            or "already bootstrapped" in result["stdout"].lower()
+        ):
             return {"success": True}
-        
-        return {
-            "success": False,
-            "error": f"Bootstrap failed: {result['stderr']}"
-        }
+
+        return {"success": False, "error": f"Bootstrap failed: {result['stderr']}"}
 
     def _deploy_stack(
         self,
         project_path: Path,
         region: str,
         profile: Optional[str],
-        require_approval: bool
+        require_approval: bool,
     ) -> Dict[str, any]:
         """Deploy the CDK stack."""
         approval_flag = "never" if not require_approval else "broadening"
-        cmd = ["npx", "cdk", "deploy", "--require-approval", approval_flag, "--outputs-file", "outputs.json"]
-        
+        cmd = [
+            "npx",
+            "cdk",
+            "deploy",
+            "--require-approval",
+            approval_flag,
+            "--outputs-file",
+            "outputs.json",
+        ]
+
         env = os.environ.copy()
         env["AWS_REGION"] = region
         if profile:
             env["AWS_PROFILE"] = profile
 
         result = self._run_command(cmd, cwd=project_path, env=env, timeout=600)
-        
+
         if result["returncode"] != 0:
             return {
                 "success": False,
                 "error": f"Deployment failed: {result['stderr']}",
-                "stdout": result["stdout"]
+                "stdout": result["stdout"],
             }
 
         # Read outputs
@@ -240,6 +232,7 @@ class CDKDeploymentService:
         outputs_file = project_path / "outputs.json"
         if outputs_file.exists():
             import json
+
             with open(outputs_file) as f:
                 outputs = json.load(f)
 
@@ -247,15 +240,11 @@ class CDKDeploymentService:
             "success": True,
             "message": "Stack deployed successfully",
             "outputs": outputs,
-            "stdout": result["stdout"]
+            "stdout": result["stdout"],
         }
 
     def _run_command(
-        self,
-        cmd: List[str],
-        cwd: Path,
-        env: Optional[Dict] = None,
-        timeout: int = 60
+        self, cmd: List[str], cwd: Path, env: Optional[Dict] = None, timeout: int = 60
     ) -> Dict[str, any]:
         """Run a shell command and return result."""
         try:
@@ -265,36 +254,29 @@ class CDKDeploymentService:
                 env=env or os.environ.copy(),
                 capture_output=True,
                 text=True,
-                timeout=timeout
+                timeout=timeout,
             )
             return {
                 "returncode": result.returncode,
                 "stdout": result.stdout,
-                "stderr": result.stderr
+                "stderr": result.stderr,
             }
         except subprocess.TimeoutExpired:
             return {
                 "returncode": -1,
                 "stdout": "",
-                "stderr": f"Command timed out after {timeout} seconds"
+                "stderr": f"Command timed out after {timeout} seconds",
             }
         except Exception as e:
-            return {
-                "returncode": -1,
-                "stdout": "",
-                "stderr": str(e)
-            }
+            return {"returncode": -1, "stdout": "", "stderr": str(e)}
 
     def destroy(
-        self,
-        stack_name: str,
-        region: str = "us-east-1",
-        profile: Optional[str] = None
+        self, stack_name: str, region: str = "us-east-1", profile: Optional[str] = None
     ) -> Dict[str, any]:
         """Destroy a deployed stack."""
         # This would require storing the CDK project or using CloudFormation directly
         # For now, return a message
         return {
             "success": False,
-            "error": "Stack destruction not yet implemented. Use AWS Console or CDK CLI directly."
+            "error": "Stack destruction not yet implemented. Use AWS Console or CDK CLI directly.",
         }

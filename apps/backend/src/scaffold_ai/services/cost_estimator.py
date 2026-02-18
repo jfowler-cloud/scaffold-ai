@@ -65,21 +65,21 @@ class CostEstimator:
     def estimate(self, graph: Dict) -> Dict:
         """
         Estimate monthly cost for an architecture.
-        
+
         Args:
             graph: Architecture graph with nodes and edges
-            
+
         Returns:
             Dict with cost breakdown and total
         """
         nodes = graph.get("nodes", [])
-        
+
         if not nodes:
             return {
                 "total_monthly": 0,
                 "breakdown": [],
                 "assumptions": [],
-                "disclaimer": "No services to estimate"
+                "disclaimer": "No services to estimate",
             }
 
         breakdown = []
@@ -88,7 +88,7 @@ class CostEstimator:
             "Estimates based on typical small-to-medium application usage",
             "Actual costs vary based on traffic, data volume, and usage patterns",
             "Free tier benefits not included",
-            "Costs are approximate and for planning purposes only"
+            "Costs are approximate and for planning purposes only",
         ]
 
         # Count service types
@@ -103,32 +103,36 @@ class CostEstimator:
             if service_type in self.BASE_COSTS:
                 cost_info = self.BASE_COSTS[service_type]
                 monthly_cost = cost_info["typical_monthly"] * count
-                
-                breakdown.append({
-                    "service": self._service_name(service_type),
-                    "count": count,
-                    "monthly_cost": monthly_cost,
-                    "details": self._get_cost_details(service_type, count)
-                })
-                
+
+                breakdown.append(
+                    {
+                        "service": self._service_name(service_type),
+                        "count": count,
+                        "monthly_cost": monthly_cost,
+                        "details": self._get_cost_details(service_type, count),
+                    }
+                )
+
                 total += monthly_cost
 
         # Add data transfer costs (rough estimate)
         if len(nodes) > 3:
             data_transfer = 5.00  # Base data transfer between services
-            breakdown.append({
-                "service": "Data Transfer",
-                "count": 1,
-                "monthly_cost": data_transfer,
-                "details": "Inter-service data transfer (estimated)"
-            })
+            breakdown.append(
+                {
+                    "service": "Data Transfer",
+                    "count": 1,
+                    "monthly_cost": data_transfer,
+                    "details": "Inter-service data transfer (estimated)",
+                }
+            )
             total += data_transfer
 
         return {
             "total_monthly": round(total, 2),
             "breakdown": breakdown,
             "assumptions": assumptions,
-            "disclaimer": "These are estimates only. Actual AWS costs may vary significantly based on usage patterns, data volume, and region. Always use AWS Pricing Calculator for detailed estimates."
+            "disclaimer": "These are estimates only. Actual AWS costs may vary significantly based on usage patterns, data volume, and region. Always use AWS Pricing Calculator for detailed estimates.",
         }
 
     def _service_name(self, service_type: str) -> str:
@@ -145,7 +149,7 @@ class CostEstimator:
             "workflow": "Step Functions",
             "stream": "Kinesis",
             "cdn": "CloudFront",
-            "frontend": "S3 + CloudFront"
+            "frontend": "S3 + CloudFront",
         }
         return names.get(service_type, service_type.title())
 
@@ -163,7 +167,7 @@ class CostEstimator:
             "workflow": f"{count} state machine(s) with typical executions",
             "stream": f"{count} stream(s) with 1 shard each",
             "cdn": f"{count} distribution(s) with typical traffic",
-            "frontend": f"{count} frontend(s) with static hosting"
+            "frontend": f"{count} frontend(s) with static hosting",
         }
         return details.get(service_type, f"{count} instance(s)")
 
@@ -176,15 +180,21 @@ class CostEstimator:
 
         if "lambda" in service_types:
             tips.append("💡 Use Lambda reserved concurrency to control costs")
-            tips.append("💡 Optimize Lambda memory settings for cost/performance balance")
+            tips.append(
+                "💡 Optimize Lambda memory settings for cost/performance balance"
+            )
 
         if "database" in service_types:
-            tips.append("💡 Consider DynamoDB reserved capacity for predictable workloads")
+            tips.append(
+                "💡 Consider DynamoDB reserved capacity for predictable workloads"
+            )
             tips.append("💡 Use DynamoDB TTL to automatically delete old data")
 
         if "storage" in service_types:
             tips.append("💡 Use S3 Intelligent-Tiering for automatic cost optimization")
-            tips.append("💡 Set lifecycle policies to move old data to cheaper storage classes")
+            tips.append(
+                "💡 Set lifecycle policies to move old data to cheaper storage classes"
+            )
 
         if "api" in service_types:
             tips.append("💡 Enable API Gateway caching to reduce backend calls")
