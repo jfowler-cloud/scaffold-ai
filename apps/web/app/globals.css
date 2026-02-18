@@ -1,3 +1,52 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Fix TopNavigation title truncation - expand the identity container */
+[class*="awsui_identity"] {
+  max-width: none !important;
+  min-width: 200px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Ensure title text doesn't truncate */
+[class*="awsui_identity"] [class*="awsui_title"] {
+  max-width: none !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* Also fix the link wrapper */
+[class*="awsui_identity"] a {
+  max-width: none !important;
+}
+
+/* Dark mode enhancements */
+.awsui-dark-mode {
+  --awsui-color-background-layout-main: #0f1419;
+  --awsui-color-background-container-content: #16191f;
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* Canvas dark mode styling */
+.react-flow__node {
+  transition: all 0.2s ease;
+}
+
+/* Code modal dark mode */
+.awsui-dark-mode [class*="awsui_code"] {
+  background-color: #1e2228 !important;
+  color: #e8eaed !important;
+}
+
+/* Chat messages dark mode */
+.awsui-dark-mode [class*="awsui_message"] {
+  background-color: #16191f !important;
+  border-color: #2d3139 !important;
+}
+
