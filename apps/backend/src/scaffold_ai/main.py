@@ -6,7 +6,7 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from .graph.workflow import run_workflow
 from .graph.state import GraphState, Intent
@@ -15,6 +15,7 @@ from .services.cost_estimator import CostEstimator
 from .services.security_autofix import SecurityAutoFix
 from .services.templates import ArchitectureTemplates
 from .services.sharing import SharingService
+from .services.security_history import SecurityHistoryService
 
 app = FastAPI(
     title="Scaffold AI Backend",
@@ -41,6 +42,7 @@ cost_estimator = CostEstimator()
 security_autofix = SecurityAutoFix()
 templates = ArchitectureTemplates()
 sharing_service = SharingService()
+security_history = SecurityHistoryService()
 
 
 class ChatRequest(BaseModel):
@@ -67,6 +69,15 @@ class DeployRequest(BaseModel):
     app_code: str
     region: str = "us-east-1"
     profile: str | None = None
+
+    @field_validator("stack_name")
+    @classmethod
+    def validate_stack_name(cls, v: str) -> str:
+        """Validate stack name to prevent command injection."""
+        import re
+        if not re.match(r'^[A-Za-z][A-Za-z0-9-]{0,127}$', v):
+            raise ValueError("stack_name must be alphanumeric with hyphens, start with letter, 1-128 chars")
+        return v
 
 
 class DeployResponse(BaseModel):
@@ -272,4 +283,30 @@ async def get_shared(share_id: str):
         raise HTTPException(status_code=404, detail="Shared architecture not found")
     
     return architecture
+
+
+@app.post("/api/security/history")
+async def record_security_score(data: dict):
+    """Record a security score for history tracking."""
+    arch_id = data.get("architecture_id")
+    score = data.get("score")
+    issues = data.get("issues", [])
+    
+    if not arch_id or score is None:
+        raise HTTPException(status_code=400, detail="architecture_id and score required")
+    
+    security_history.record_score(arch_id, score, issues)
+    return {"status": "recorded"}
+
+
+@app.get("/api/security/history/{architecture_id}")
+async def get_security_history(architecture_id: str):
+    """Get security score history for an architecture."""
+    history = security_history.get_history(architecture_id)
+    improvement = security_history.get_improvement(architecture_id)
+    
+    return {
+        "history": history,
+        "improvement": improvement
+    }
 

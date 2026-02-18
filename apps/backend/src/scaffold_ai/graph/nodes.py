@@ -3,15 +3,17 @@
 import os
 import json
 import pathlib
+from functools import lru_cache
 from langchain_aws import ChatBedrock
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from .state import GraphState, Intent, SecurityReview
 from ..agents.security_specialist import SecuritySpecialistAgent
 
-# Initialize Bedrock client
+# Initialize Bedrock client (singleton)
+@lru_cache(maxsize=1)
 def get_llm():
-    """Get the Bedrock LLM client."""
+    """Get the Bedrock LLM client (cached singleton)."""
     return ChatBedrock(
         model_id=os.getenv("BEDROCK_MODEL_ID", "us.anthropic.claude-3-haiku-20240307-v1:0"),
         region_name=os.getenv("AWS_REGION", "us-east-1"),
