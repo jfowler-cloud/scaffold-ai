@@ -96,27 +96,52 @@ constructs>=10.0.0
             self, "{node_id}",
             partition_key=dynamodb.Attribute(name="id", type=dynamodb.AttributeType.STRING),
             billing_mode=dynamodb.BillingMode.PAY_PER_REQUEST,
+            encryption=dynamodb.TableEncryption.AWS_MANAGED,
+            point_in_time_recovery=True,
             removal_policy=RemovalPolicy.DESTROY
         )''')
             
             elif node_type == "storage":
                 constructs.append(f'''        {var_name} = s3.Bucket(
             self, "{node_id}",
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
+            enforce_ssl=True,
+            versioned=True,
             removal_policy=RemovalPolicy.DESTROY,
             auto_delete_objects=True
         )''')
             
             elif node_type == "queue":
-                constructs.append(f'''        {var_name} = sqs.Queue(
+                constructs.append(f'''        {var_name}_dlq = sqs.Queue(
+            self, "{node_id}Dlq",
+            encryption=sqs.QueueEncryption.SQS_MANAGED
+        )
+        
+        {var_name} = sqs.Queue(
             self, "{node_id}",
-            visibility_timeout=Duration.seconds(300)
+            encryption=sqs.QueueEncryption.SQS_MANAGED,
+            visibility_timeout=Duration.seconds(300),
+            dead_letter_queue=sqs.DeadLetterQueue(
+                queue={var_name}_dlq,
+                max_receive_count=3
+            )
         )''')
             
             elif node_type == "auth":
                 constructs.append(f'''        {var_name} = cognito.UserPool(
             self, "{node_id}",
             self_sign_up_enabled=True,
-            sign_in_aliases=cognito.SignInAliases(email=True)
+            sign_in_aliases=cognito.SignInAliases(email=True),
+            password_policy=cognito.PasswordPolicy(
+                min_length=12,
+                require_lowercase=True,
+                require_uppercase=True,
+                require_digits=True,
+                require_symbols=True
+            ),
+            mfa=cognito.Mfa.OPTIONAL,
+            advanced_security_mode=cognito.AdvancedSecurityMode.ENFORCED
         )''')
         
         return "\n\n".join(constructs)

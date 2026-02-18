@@ -112,23 +112,25 @@ export class MainStack extends cdk.Stack {{
 '''
 
     def _generate_nested_stack_cdk(self, stack_name: str, stack_data: Dict) -> str:
-        """Generate a nested CDK stack."""
-        nodes = stack_data["nodes"]
+        """Generate a nested CDK stack with actual constructs."""
+        from scaffold_ai.services.cdk_generator import CDKGenerator
         
-        # Simple construct generation (placeholder)
-        constructs = "\n    ".join([
-            f"// {node.get('data', {}).get('label', 'Resource')}"
-            for node in nodes
-        ])
+        nodes = stack_data["nodes"]
+        edges = stack_data["edges"]
+        
+        # Use CDK generator for actual constructs
+        generator = CDKGenerator()
+        constructs = generator._generate_constructs(nodes, edges)
 
         return f'''import * as cdk from 'aws-cdk-lib';
 import {{ Construct }} from 'constructs';
+{generator._get_imports(nodes)}
 
 export class {stack_name.capitalize()}Stack extends cdk.NestedStack {{
   constructor(scope: Construct, id: string, props?: cdk.NestedStackProps) {{
     super(scope, id, props);
 
-    {constructs}
+{constructs}
   }}
 }}
 '''
