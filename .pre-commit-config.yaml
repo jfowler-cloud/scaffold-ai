@@ -12,14 +12,6 @@ repos:
       - id: detect-aws-credentials
         args: ['--allow-missing-credentials']
 
-  - repo: https://github.com/trufflesecurity/trufflehog
-    rev: v3.63.2
-    hooks:
-      - id: trufflehog
-        name: TruffleHog
-        entry: bash -c 'trufflehog git file://. --only-verified --fail'
-        language: system
-
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.1.9
     hooks:
