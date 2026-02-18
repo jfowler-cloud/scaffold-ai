@@ -520,6 +520,20 @@ async def cdk_specialist_node(state: GraphState) -> GraphState:
             code = await agent.generate(graph)
             file_path = "packages/generated/infrastructure/main.tf"
             format_name = "Terraform"
+        elif iac_format == "python-cdk":
+            from scaffold_ai.agents.python_cdk_specialist import PythonCDKSpecialist
+            specialist = PythonCDKSpecialist()
+            code = specialist.generate_stack(nodes, graph.get("edges", []))
+            file_path = "packages/generated/infrastructure/mystack_stack.py"
+            format_name = "Python CDK"
+            
+            # Also generate app.py and requirements.txt
+            app_file = {"path": "packages/generated/infrastructure/app.py", "content": specialist.generate_app()}
+            req_file = {"path": "packages/generated/infrastructure/requirements.txt", "content": specialist.generate_requirements()}
+            generated_files = list(state.get("generated_files", []))
+            generated_files.extend([app_file, req_file])
+            _write_generated_file(app_file)
+            _write_generated_file(req_file)
         else:  # cdk (default)
             llm = get_llm()
             prompt = CDK_GENERATOR_PROMPT.format(
