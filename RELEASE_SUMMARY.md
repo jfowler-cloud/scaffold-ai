@@ -9,10 +9,10 @@
 
 ### 1. Repositioned Project Narrative
 **Before**: Generic "LangGraph project"  
-**After**: "Rapid learning showcase - built in 2 weeks with unfamiliar frameworks"
+**After**: "Rapid learning showcase - built in 1 day with unfamiliar frameworks"
 
 **Key Changes**:
-- Emphasized learning velocity (2 weeks, new frameworks)
+- Emphasized learning velocity (1 day, new frameworks)
 - Highlighted framework diversity (AWS-native vs framework-based)
 - Created clear comparison with Resume Tailor AI
 - Positioned as complementary portfolio pieces
@@ -63,17 +63,17 @@
 ## 📊 Portfolio Narrative
 
 ### The Story
-"After building Resume Tailor AI with AWS Step Functions (familiar), I built Scaffold AI in 2 weeks with LangGraph, React 19, and Next.js 15 (all new frameworks). This showcases my ability to rapidly learn new technologies and choose the right orchestration approach for the use case."
+"After building Resume Tailor AI with AWS Step Functions (familiar), I built Scaffold AI in 1 day with LangGraph, React 19, and Next.js 15 (all new frameworks). This showcases my ability to rapidly learn new technologies and choose the right orchestration approach for the use case."
 
 ### Key Differentiators
-1. **Learning Velocity**: 2 weeks with unfamiliar frameworks
+1. **Learning Velocity**: 1 day with unfamiliar frameworks
 2. **Framework Diversity**: AWS-native vs framework-agnostic
 3. **Architectural Judgment**: Can articulate trade-offs
 4. **Production Mindset**: Same patterns in both projects
 5. **Self-Awareness**: Critical review shows production thinking
 
 ### Interview Talking Points
-- **Rapid learning**: How I mastered LangGraph in 2 weeks
+- **Rapid learning**: How I mastered LangGraph in 1 day
 - **Framework comparison**: When to use Step Functions vs LangGraph
 - **Production patterns**: Security gates, rate limiting, testing
 - **Trade-off analysis**: Cost, testing, development speed
