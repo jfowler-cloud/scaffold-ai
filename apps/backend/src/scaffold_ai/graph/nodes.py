@@ -2,6 +2,7 @@
 
 import os
 import json
+import pathlib
 from langchain_aws import ChatBedrock
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -546,11 +547,12 @@ async def cdk_specialist_node(state: GraphState) -> GraphState:
         file_path = "packages/generated/infrastructure/lib/scaffold-ai-stack.ts"
         format_name = "CDK"
 
-    generated_files = state.get("generated_files", [])
-    generated_files.append({
-        "path": file_path,
-        "content": code.strip(),
-    })
+    generated_files = list(state.get("generated_files", []))
+    new_file = {"path": file_path, "content": code.strip()}
+    generated_files.append(new_file)
+
+    # Persist to disk relative to the repo root (best-effort)
+    _write_generated_file(new_file)
 
     security_response = state.get("response", "")
     final_response = f"{security_response}\n\n**{format_name} Code Generated!**\n\nThe AWS infrastructure code has been generated with security best practices applied. The code is saved to `{file_path}`."
@@ -560,6 +562,25 @@ async def cdk_specialist_node(state: GraphState) -> GraphState:
         "generated_files": generated_files,
         "response": final_response,
     }
+
+
+def _write_generated_file(file: dict) -> None:
+    """Write a generated file to disk under the repo root (best-effort)."""
+    try:
+        # Resolve repo root: walk up from this file until we find package.json
+        here = pathlib.Path(__file__).resolve()
+        repo_root = here
+        for _ in range(8):
+            if (repo_root / "package.json").exists():
+                break
+            repo_root = repo_root.parent
+
+        dest = repo_root / file["path"]
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(file["content"], encoding="utf-8")
+        print(f"Generated file written to {dest}")
+    except Exception as e:
+        print(f"Could not write generated file to disk: {e}")
 
 
 def generate_secure_cdk_template(nodes: list, security_review: dict) -> str:
@@ -714,9 +735,35 @@ def generate_secure_cdk_template(nodes: list, security_review: dict) -> str:
 
         elif node_type == "cdn":
             imports.append("import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';")
+            imports.append("import * as cloudfront_origins from 'aws-cdk-lib/aws-cloudfront-origins';")
+            imports.append("import * as s3 from 'aws-cdk-lib/aws-s3';")
             constructs.append(f'''
-    // {label} - CloudFront with security headers
-    // Note: Requires an origin (S3 bucket or API Gateway)''')
+    // {label} - CloudFront distribution with S3 origin and security headers
+    const {safe_name}OriginBucket = new s3.Bucket(this, '{label}OriginBucket', {{
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+    }});
+
+    const {safe_name}Oac = new cloudfront.S3OriginAccessControl(this, '{label}OAC');
+
+    const {safe_name}Distribution = new cloudfront.Distribution(this, '{label}Distribution', {{
+      defaultBehavior: {{
+        origin: cloudfront_origins.S3BucketOrigin.withOriginAccessControl(
+          {safe_name}OriginBucket,
+          {{ originAccessControl: {safe_name}Oac }},
+        ),
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+        responseHeadersPolicy: cloudfront.ResponseHeadersPolicy.SECURITY_HEADERS,
+      }},
+      minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
+      defaultRootObject: 'index.html',
+    }});
+
+    new cdk.CfnOutput(this, '{label}DistributionUrl', {{
+      value: {safe_name}Distribution.distributionDomainName,
+    }});''')
 
         elif node_type == "stream":
             imports.append("import * as kinesis from 'aws-cdk-lib/aws-kinesis';")

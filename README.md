@@ -29,12 +29,15 @@ Generative UI platform for designing full-stack AWS serverless applications usin
 |-----------|--------|-------|
 | Chat → canvas architecture | Working | Falls back to rule-based if Bedrock unavailable |
 | Security gate | Working | LLM review with static fallback |
-| CDK (TypeScript) generation | Working | LLM-powered + static fallback |
-| CloudFormation generation | Working | Static template; all 12 node types mapped correctly |
-| Terraform generation | Working | Static template; all 12 node types mapped correctly |
+| CDK (TypeScript) generation | Working | LLM-powered + static fallback; all 12 node types |
+| CloudFormation generation | Working | Static template; all 12 node types |
+| Terraform generation | Working | Static template; all 12 node types |
 | React/Cloudscape component generation | Partial | Generates layout.tsx + page.tsx for `frontend` nodes; static template only |
 | Canvas layout algorithms | Working | Horizontal, vertical, grid, circular |
 | Generated code viewer | Working | Tabbed modal via Side Navigation → Generated Code |
+| Generated files persisted to disk | Working | Written to `packages/generated/` on each generation |
+| CORS origins | Configurable | Via `ALLOWED_ORIGINS` env var; defaults to localhost:3000 |
+| Backend unit test suite | Working | 57 tests, no AWS credentials needed |
 | CDK deployment integration | Not started | |
 | Cost estimation | Not started | |
 
@@ -139,6 +142,9 @@ AWS_REGION=us-east-1
 
 # Model (optional — defaults to Claude 3 Haiku)
 BEDROCK_MODEL_ID=us.anthropic.claude-3-haiku-20240307-v1:0
+
+# CORS (optional — comma-separated; defaults to localhost:3000)
+# ALLOWED_ORIGINS=http://localhost:3000,https://your-production-domain.com
 ```
 
 Create `apps/web/.env.local`:
@@ -331,22 +337,22 @@ Tests use `pytest-asyncio` with `asyncio_mode = "auto"`. LLM-hitting tests requi
 | Security gate — secure architecture passes | `test_security_gate.py` | ✅ |
 | Security gate — empty architecture | `test_security_gate.py` | ✅ |
 | Security gate — non-generate intent skips review | `test_security_gate.py` | ✅ |
+| `generate_node_positions` — all 12 node types, column order, row stacking | `test_units.py` | ✅ |
+| `security_gate` router — passed / failed / missing / empty review | `test_units.py` | ✅ |
+| `should_generate_code` router — all four intents | `test_units.py` | ✅ |
+| `interpret_intent` keyword fallback — all 5 branches | `test_units.py` | ✅ |
+| `CloudFormationSpecialistAgent.generate` — all 10 node types + Outputs safety | `test_units.py` | ✅ |
+| `TerraformSpecialistAgent.generate` — all 10 node types + slug + outputs | `test_units.py` | ✅ |
+| `react_specialist_node` — intent skip, no nodes, frontend, non-frontend | `test_units.py` | ✅ |
 
-### Test coverage gaps (areas needing tests)
+### Remaining coverage gaps
 
-The following areas have no automated coverage and should be prioritized:
+#### Backend
 
-#### High priority — backend unit tests
-
-- **`interpret_intent` fallback** — mock LLM failure; assert keyword-based intent classification works for each intent keyword set
-- **`architect_node` JSON parsing** — test recovery from malformed JSON, code-fenced JSON (`\`\`\`json`), and missing keys
-- **`generate_node_positions`** — pure function; test column assignment per node type and row stacking for duplicate types
-- **`SecuritySpecialistAgent.review`** — unit test every node-type branch (storage, database, api, lambda, queue, auth) independently; verify scoring arithmetic
-- **`cdk_specialist.py` `_generate_stack`** — assert correct CDK constructs emitted for every node type; verify deduplication of imports
-- **`CloudFormationSpecialistAgent.generate`** — assert all 12 node types produce the expected resource types in `Resources`; verify DLQ is created alongside queue; verify Outputs only reference ARN-capable resource types
-- **`TerraformSpecialistAgent.generate`** — assert all 12 node types produce valid HCL blocks; verify `slug` variable generates correct resource names; verify outputs section
-- **`cdk_specialist_node`** — test all three IaC format branches (cdk / cloudformation / terraform) with a mock graph
-- **`security_gate` router function** — unit test both "passed" and "failed" return values directly
+- **`SecuritySpecialistAgent.review`** — unit test every node-type branch independently; verify the `-30/-15/-5` scoring arithmetic
+- **`architect_node` JSON recovery** — test code-fenced JSON and malformed JSON fallback paths (requires mocking `ChatBedrock`)
+- **`cdk_specialist_node`** — test all three IaC format dispatch branches with a mock graph and mocked agents
+- **`generate_secure_cdk_template`** — assert correct CDK constructs and deduplication of imports for every node type
 
 #### High priority — frontend unit tests (no test suite exists yet)
 
@@ -367,14 +373,6 @@ Recommended: Vitest + @testing-library/react.
 
 ## Known Issues
 
-### CORS allows only localhost:3000
-
-`apps/backend/src/scaffold_ai/main.py` hard-codes `allow_origins=["http://localhost:3000"]`. Any non-local deployment requires updating this value or making it configurable via an environment variable.
-
-### Generated files are not persisted to disk
-
-Generated files are returned in the API response and kept in client-side Zustand state only. Refreshing the browser clears them. The `packages/generated/` directory has placeholder `.gitkeep` files but nothing writes there at runtime.
-
 ### React component generation is static template only
 
 `react_specialist_node` calls `ReactSpecialistAgent.generate()` which produces a generic Cloudscape `layout.tsx` + `page.tsx` regardless of the specific architecture. It only fires when there is a `frontend` node; other node types do not yet influence the generated components. True LLM-driven, architecture-aware component generation is not yet implemented.
@@ -392,15 +390,11 @@ The generated CloudFormation output uses the `AWS::Serverless` transform. Deploy
 ### Near-term
 
 - [ ] Add frontend unit test suite (Vitest + Testing Library)
-- [ ] Add backend unit tests for node functions with mocked LLM (no AWS credentials needed)
-- [ ] Make CORS origins configurable via environment variable
 - [ ] LLM-driven React component generation (architecture-aware Cloudscape components)
-- [ ] Persist generated files to `packages/generated/` on disk at generation time
-- [ ] CDK CloudFront (`cdn`) node — currently generates a comment placeholder only
+- [ ] `SecuritySpecialistAgent.review` unit tests — test every node-type branch independently
 
 ### Medium-term
 
-- [ ] Persist generated files to `packages/generated/` on disk
 - [ ] Python CDK support
 - [ ] Multi-stack architectures (split large graphs into nested stacks)
 - [ ] Architecture templates library (pre-built patterns)
