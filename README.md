@@ -485,373 +485,405 @@ For AI assistant onboarding, see [`CLAUDE.md`](./CLAUDE.md).
 
 ---
 
-## Code Review: Enhancements & Recommendations
+## Code Review: Enhancements & Recommendations (Round 2)
 
-> **Reviewer note:** The following is a thorough architectural and code-quality review of the Scaffold AI codebase. Items are organized by priority (critical → high → medium → low) within each category.
+> **Review date:** 2026-02-18 | **Scope:** Full codebase re-review after significant feature expansion. Cross-references best practices from the [Resume Tailor AI](../resume-tailor-ai) production project.
 
-### 1. Security Concerns
+### Previous Review — Resolution Status
 
-#### 1.1 Command Injection in CDK Deployment Service — **Critical** ✅ FIXED
+14 of 30 items from the Round 1 review have been resolved:
 
-`apps/backend/src/scaffold_ai/services/cdk_deployment.py` passes user-supplied `stack_name` directly into file paths and shell commands without sanitization:
+| # | Issue | Resolution |
+|---|-------|-----------|
+| 1.1 | Command injection in deploy service | ✅ Fixed — Pydantic regex validator on `stack_name` |
+| 1.2 | CORS wildcard methods/headers | ✅ Fixed — Restricted to `GET, POST, OPTIONS` |
+| 1.4 | Exception detail leakage | ✅ Fixed — Generic errors to client, `logger.exception()` server-side |
+| 2.1 | LLM client per-request | ✅ Fixed — `@lru_cache(maxsize=1)` singleton |
+| 2.2 | No request timeout | ✅ Fixed — `asyncio.wait_for(..., timeout=60.0)`, 504 on expiry |
+| 2.4 | No rate limiting | ✅ Fixed — `slowapi` on `/api/chat` (10/min), `/api/deploy` (3/hr) |
+| 2.5 | No `iac_format` validation | ✅ Fixed — Pydantic `field_validator` |
+| 2.6 | Missing `security_review` init | ✅ Fixed — Now initialized as `None` in `main.py:149` |
+| 3.1 | Duplicated CDK generation | ✅ Fixed — Unified `CDKGenerator` in `services/cdk_generator.py` |
+| 3.2 | Duplicated code-fence stripping | ✅ Fixed — Extracted to `utils/llm_utils.strip_code_fences()` |
+| 3.3 | `print()` instead of `logging` | ✅ Mostly fixed — `nodes.py` uses `logging.getLogger(__name__)` |
+| 7.1 | Edges ignored in static code gen | ✅ Fixed — `CDKGenerator` wires `grantReadWriteData`, `LambdaIntegration` |
+| 7.2 | Architecture templates | ✅ Fixed — 6 templates via `/api/templates` |
+| 7.4 | Export/import/sharing | ✅ Fixed — `/api/share` endpoints + unique share IDs |
+
+---
+
+### 1. Security Concerns — New Issues
+
+#### 1.1 New Endpoints Lack Rate Limiting — **High**
+
+10 new endpoints were added but only `/api/chat` and `/api/deploy` have rate limits. The following endpoints are unprotected:
+
+| Endpoint | Risk |
+|----------|------|
+| `POST /api/cost/estimate` | Compute-intensive cost calculation |
+| `POST /api/security/autofix` | Mutates graph state |
+| `POST /api/share` | Creates persistent state (DoS via storage exhaustion) |
+| `POST /api/security/history` | Creates persistent state |
+
+**Recommendation (from Resume Tailor AI):** Apply rate limits to all mutating endpoints. The resume-tailor project applies per-function rate controls via Step Functions concurrency limits.
+
+#### 1.2 New Endpoints Leak Exception Details — **Medium**
+
+Several new endpoints in `main.py` re-introduce the exception detail leakage pattern that was fixed for `/api/chat`:
 
 ```python
-# Line 178 — stack_name used in file path
-with open(project_path / "lib" / f"{stack_name.lower()}-stack.ts", "w") as f:
+# main.py:256 — cost estimate
+except Exception as e:
+    raise HTTPException(status_code=500, detail=str(e))  # Leaks internals
+
+# main.py:276 — security autofix
+except Exception as e:
+    raise HTTPException(status_code=500, detail=str(e))  # Leaks internals
 ```
 
-The `stack_name` comes from the `DeployRequest` Pydantic model, which only validates it as a `str`. A malicious value like `../../etc/passwd` or a name containing shell metacharacters could be exploited.
+**Recommendation:** Apply the same `logger.exception()` + generic message pattern used in the chat endpoint.
 
-**✅ Fixed:** Added strict validation to `DeployRequest`:
+#### 1.3 Sharing Endpoint Accepts Arbitrary `dict` Without Validation — **Medium**
+
+`POST /api/share` (`main.py:295`) accepts raw `dict` with no Pydantic model:
+
 ```python
-@field_validator("stack_name")
-@classmethod
-def validate_stack_name(cls, v: str) -> str:
-    if not re.match(r'^[A-Za-z][A-Za-z0-9-]{0,127}$', v):
-        raise ValueError("stack_name must be alphanumeric with hyphens, start with letter, 1-128 chars")
-    return v
+async def create_share(data: dict):
+    graph = data.get("graph")
 ```
 
-#### 1.2 CORS Allows All Methods and Headers — **Medium** ✅ FIXED
+An attacker can store arbitrary JSON of unlimited size. There's no size limit, schema validation, or sanitization.
 
-`apps/backend/src/scaffold_ai/main.py:27-31` uses `allow_methods=["*"]` and `allow_headers=["*"]`. While the origins are configurable, wildcard methods and headers weaken CORS protection.
+**Recommendation:** Create a `ShareRequest(BaseModel)` with validated fields and a `max_length` on the graph JSON.
 
-**✅ Fixed:** Restricted to actual methods and headers used:
-```python
-allow_methods=["GET", "POST", "OPTIONS"],
-allow_headers=["Content-Type", "Authorization"],
-```
+#### 1.4 In-Memory Services Lose State on Restart — **Medium**
 
-#### 1.3 CDK Fallback Template CORS Uses `ALL_ORIGINS` — **Medium**
+`SharingService`, `SecurityHistoryService` use in-memory dicts (`self._shared_architectures = {}`). Any shared link or security history is lost on server restart. The sharing service also has a hardcoded timestamp (`"2026-02-18T09:07:12Z"`) instead of `datetime.utcnow()`.
 
-The generated API Gateway code in both `nodes.py:657` and `cdk_specialist.py:327-329` sets `allowOrigins: apigateway.Cors.ALL_ORIGINS`. This propagates into production infrastructure.
+**Recommendation (from Resume Tailor AI):** The resume-tailor project uses DynamoDB for all persistent state with proper timestamps. At minimum:
+- Use SQLite or a file-based store for development
+- Use `datetime.utcnow().isoformat()` for timestamps
+- Document that production requires a database backend
 
-**Recommendation:** Generate a parameterized CORS origin (e.g., from a CDK context variable or stack parameter) instead of a wildcard.
+#### 1.5 `cdk_deployment.py` Still Leaks Errors — **Low**
 
-#### 1.4 Exception Detail Leakage — **Low** ✅ FIXED
+The deploy endpoint in `main.py:224-228` catches exceptions but still returns `str(e)`:
 
-`main.py:118` raises `HTTPException(status_code=500, detail=str(e))`, which can leak internal implementation details (file paths, library versions, stack traces) to API consumers.
-
-**✅ Fixed:** Log full exception server-side, return generic message:
 ```python
 except Exception as e:
-    logger.exception("Chat endpoint error")
-    raise HTTPException(status_code=500, detail="An internal error occurred")
+    return DeployResponse(success=False, error=f"Deployment error: {str(e)}")
 ```
 
 ---
 
-### 2. Architecture & Design
+### 2. Architecture & Design — New Issues
 
-#### 2.1 LLM Client Created on Every Request — **High** ✅ FIXED
+#### 2.1 Blocking `subprocess.run()` in Async Endpoint — **High** (Carried from Round 1)
 
-`nodes.py:13-19` creates a new `ChatBedrock` client on every call to `get_llm()`. Each node function (interpret, architect, security review, CDK generation) calls `get_llm()` independently, meaning a single request creates up to 4 client instances.
+`CDKDeploymentService.deploy()` still uses synchronous `subprocess.run()` inside `async def deploy_stack()`. The 120s npm install + 600s CDK deploy timeouts block the entire FastAPI event loop.
 
-**✅ Fixed:** Use `@lru_cache` for singleton pattern:
+**Recommendation:** Use `asyncio.create_subprocess_exec()` or offload to a background task via `BackgroundTasks`. Return a job ID and add `GET /api/deploy/{job_id}/status`.
+
+#### 2.2 Nested Stack Generator Produces Placeholder Code — **Medium**
+
+`StackSplitter._generate_nested_stack_cdk()` in `services/stack_splitter.py:114-134` only generates comment placeholders:
+
 ```python
-from functools import lru_cache
-
-@lru_cache(maxsize=1)
-def get_llm():
-    return ChatBedrock(...)
+constructs = "\n    ".join([
+    f"// {node.get('data', {}).get('label', 'Resource')}"  # Just comments!
+    for node in nodes
+])
 ```
 
-#### 2.2 No Request Timeout or Cancellation — **High** ✅ FIXED
+This means multi-stack generation produces empty nested stacks with no actual CDK constructs.
 
-The `/api/chat` endpoint (`main.py:86`) invokes the full LangGraph workflow with no timeout. If the LLM is slow or hangs, the request blocks indefinitely. The Next.js proxy (`route.ts`) also has no timeout on its `fetch()` call.
+**Recommendation:** Use the unified `CDKGenerator` to generate constructs within each nested stack, not just comments.
 
-**✅ Fixed:** Added `asyncio.wait_for()` with 60-second timeout:
-```python
-result = await asyncio.wait_for(run_workflow(initial_state), timeout=60.0)
-```
-Returns 504 Gateway Timeout on expiration.
+#### 2.3 Python CDK Specialist Missing Security Hardening — **Medium**
 
-#### 2.3 CDK Deployment Runs Synchronously — **High**
+`agents/python_cdk_specialist.py` generates constructs without the security best practices that the TypeScript `CDKGenerator` applies:
 
-`CDKDeploymentService.deploy()` uses blocking `subprocess.run()` calls inside an `async` endpoint. The `npm install` step alone has a 120-second timeout, and `cdk deploy` has a 600-second timeout. This blocks the FastAPI event loop.
+| Security feature | TypeScript CDK | Python CDK |
+|-----------------|:--------------:|:----------:|
+| DynamoDB encryption | ✅ `AWS_MANAGED` | ❌ Missing |
+| DynamoDB PITR | ✅ `pointInTimeRecovery: true` | ❌ Missing |
+| S3 encryption | ✅ `S3_MANAGED` | ❌ Missing |
+| S3 block public access | ✅ `BLOCK_ALL` | ❌ Missing |
+| S3 enforce SSL | ✅ `enforceSSL: true` | ❌ Missing |
+| SQS encryption | ✅ `SQS_MANAGED` | ❌ Missing |
+| SQS DLQ | ✅ With maxReceiveCount | ❌ Missing |
+| Cognito MFA | ✅ `OPTIONAL` | ❌ Missing |
+| Cognito password policy | ✅ Strong (8+ chars, symbols) | ✅ Basic (email only) |
 
-**Recommendation:** Use `asyncio.create_subprocess_exec()` or offload to a background task queue (Celery, ARQ, or FastAPI `BackgroundTasks`). Return a deployment ID and poll for status.
+**Recommendation:** Mirror the security defaults from `CDKGenerator` in the Python CDK specialist. The Resume Tailor AI project applies security hardening consistently across all deployment modes.
 
-#### 2.4 No Rate Limiting — **Medium** ✅ FIXED
+#### 2.4 Cost Estimator Ignores Edges and Architecture Complexity — **Low**
 
-There is no rate limiting on any endpoint. The `/api/chat` endpoint triggers LLM calls (which cost money), and `/api/deploy` triggers real AWS deployments.
+`CostEstimator.estimate()` multiplies `typical_monthly * count` per service type. It doesn't account for:
+- Data transfer between connected services (edges)
+- API Gateway request volume scaling with number of connected Lambdas
+- DynamoDB read/write capacity correlating with number of API endpoints
 
-**✅ Fixed:** Added rate limiting via `slowapi`:
-```python
-from slowapi import Limiter
-limiter = Limiter(key_func=get_remote_address)
-
-@app.post("/api/chat")
-@limiter.limit("10/minute")
-async def chat(...): ...
-
-@app.post("/api/deploy")
-@limiter.limit("3/hour")
-async def deploy(...): ...
-```
-
-#### 2.5 No Input Validation on `iac_format` — **Medium** ✅ FIXED
-
-`ChatRequest.iac_format` accepts any string. If an unsupported format is passed, it silently falls through to the CDK default branch in `cdk_specialist_node`.
-
-**✅ Fixed:** Added field validator:
-```python
-@field_validator("iac_format")
-@classmethod
-def validate_iac_format(cls, v: str) -> str:
-    allowed = ["cdk", "cloudformation", "terraform", "python-cdk"]
-    if v not in allowed:
-        raise ValueError(f"iac_format must be one of: {', '.join(allowed)}")
-    return v
-```
-
-#### 2.6 `security_review` Missing from `GraphState` Initialization — **Medium**
-
-In `main.py:97-106`, the initial state does not include `security_review: None`. While `TypedDict` doesn't enforce this at runtime, it means `state.get("security_review")` is the only safe access pattern, and any direct `state["security_review"]` would raise `KeyError`.
-
-**Recommendation:** Explicitly initialize `security_review: None` in the initial state dict.
+**Recommendation:** Use edge count to adjust inter-service transfer costs and scale API/Lambda estimates proportionally.
 
 ---
 
-### 3. Code Quality & Maintainability
+### 3. Code Quality — New Issues
 
-#### 3.1 Duplicated CDK Generation Logic — **High**
+#### 3.1 CDK Generation Logic Still Exists in Three Places — **High**
 
-CDK code generation exists in three places:
-1. `nodes.py:586-803` — `generate_secure_cdk_template()` (fallback)
-2. `agents/cdk_specialist.py:265-478` — `CDKSpecialistAgent._generate_stack()`
-3. LLM-generated code via `CDK_GENERATOR_PROMPT`
+While the unified `CDKGenerator` was added and the fallback in `nodes.py:627-631` now delegates to it, `CDKSpecialistAgent._generate_stack()` in `agents/cdk_specialist.py` still contains its own independent 200-line implementation that doesn't use `CDKGenerator`.
 
-The fallback in `nodes.py` and the agent in `cdk_specialist.py` have diverged — they generate different security configurations (e.g., the fallback includes encryption on SQS queues, the agent does not). The fallback includes `BlockPublicAccess.BLOCK_ALL` and `enforceSSL` on S3, the agent includes CORS.
+The CDK specialist agent and the unified generator have diverged on security defaults (the agent lacks encryption on SQS, enforceSSL on S3, etc.).
 
-**Recommendation:** Extract a single `StaticCDKGenerator` class used by both the fallback and the specialist agent. Apply the security-hardened version consistently.
+**Recommendation:** Have `CDKSpecialistAgent._generate_stack()` delegate to `CDKGenerator` instead of maintaining its own parallel implementation.
 
-#### 3.2 Duplicated JSON Code-Fence Stripping — **Medium**
+#### 3.2 Inconsistent `logging` Usage — **Medium**
 
-The pattern for stripping markdown code fences from LLM responses is duplicated in 3 locations (`nodes.py:252-255`, `nodes.py:389-392`, `nodes.py:536-539`):
+`nodes.py` uses proper `logging.getLogger(__name__)` at module level, but `security_review_node()` (line 398) creates a redundant logger inline:
+
 ```python
-if "```json" in response_text:
-    response_text = response_text.split("```json")[1].split("```")[0]
-elif "```" in response_text:
-    response_text = response_text.split("```")[1].split("```")[0]
+except Exception as e:
+    import logging  # Already imported at module level!
+    logging.getLogger(__name__).warning(...)
 ```
 
-**Recommendation:** Extract a utility function:
-```python
-def strip_code_fences(text: str) -> str:
-    """Strip markdown code fences from LLM response text."""
-    for fence in ("```json", "```typescript", "```"):
-        if fence in text:
-            return text.split(fence, 1)[1].split("```", 1)[0]
-    return text
-```
+Additionally, the new service files (`cost_estimator.py`, `security_autofix.py`, `sharing.py`, `security_history.py`, `stack_splitter.py`, `cdk_generator.py`) contain no logging at all.
 
-#### 3.3 `print()` Used Instead of `logging` — **Medium**
+**Recommendation (from Resume Tailor AI):** The resume-tailor project uses structured logging with context (job_id, user_id) in every Lambda handler. Add `logger = logging.getLogger(__name__)` to every service module and log key operations.
 
-The backend uses `print()` for all diagnostic output (`nodes.py:208,297,303,397,545,581,583,828`; `cdk_deployment.py` also lacks logging). This loses log levels, timestamps, and structured context.
+#### 3.3 No `__init__.py` in `utils/` and `services/` Packages — **Low**
 
-**Recommendation:** Replace with Python `logging`:
-```python
-import logging
-logger = logging.getLogger(__name__)
-
-logger.warning("LLM intent classification failed", exc_info=True)
-```
-
-#### 3.4 README Stale Data — **Low**
-
-Several README entries are outdated:
-- Line 40: "97 tests" vs actual 82 backend tests passing.
-- Line 79: `react_specialist.py` described as "Stub — not yet implemented" but it is fully implemented (611 lines, architecture-aware generation).
-- Line 227: `react_specialist_node` described as "[stub] future Cloudscape component generation" but it works.
-- Line 361: "86 backend tests + 34 frontend tests = 120 tests" — backend count may need updating.
-
-**Recommendation:** Audit all numeric claims and status descriptions; consider generating test counts from CI output.
+The new `utils/` and `services/` directories work due to implicit namespace packages, but explicit `__init__.py` files improve tool compatibility (IDE autocompletion, mypy, pytest discovery).
 
 ---
 
-### 4. Testing Gaps
+### 4. Testing — New & Remaining Gaps
 
-#### 4.1 No CDK Deployment Service Tests — **High**
+#### 4.1 Zero Tests for 7 New Service Modules — **Critical**
 
-`CDKDeploymentService` has zero test coverage. It executes shell commands, creates temp directories, writes files, and parses JSON outputs — all untested.
+The following new services have no test coverage:
 
-**Recommendation:** Add unit tests mocking `subprocess.run`:
-- Test project structure creation
-- Test bootstrap success/failure paths
-- Test deploy with outputs
-- Test timeout handling
-- Test cleanup of temp directories
+| Module | Lines | Complexity | Risk |
+|--------|-------|-----------|------|
+| `services/cost_estimator.py` | 200 | Medium — pricing logic | Incorrect cost estimates mislead users |
+| `services/security_autofix.py` | 148 | High — mutates graph | Could corrupt architecture state |
+| `services/templates.py` | 156 | Low — static data | Template positions could break canvas |
+| `services/sharing.py` | 44 | Low — CRUD | Share ID collisions, data loss |
+| `services/security_history.py` | 48 | Low — CRUD | Score tracking accuracy |
+| `services/stack_splitter.py` | 135 | High — code gen | Empty nested stacks (confirmed bug) |
+| `services/cdk_generator.py` | 203 | High — code gen | Incorrect CDK code, missing grants |
 
-#### 4.2 No Edge-Aware Code Generation Tests — **Medium**
+**Recommendation (from Resume Tailor AI):** The resume-tailor project achieves 96% backend coverage (121 tests) with a test per handler. Priority test targets:
+1. `cdk_generator.py` — verify edge wiring produces correct `grantReadWriteData` / `LambdaIntegration`
+2. `security_autofix.py` — verify auth node injection, encryption flagging, score calculation
+3. `cost_estimator.py` — verify per-service cost arithmetic, edge cases (empty graph, single node)
 
-The CDK generators produce constructs based on nodes but ignore edges entirely. While the LLM path considers edges in its prompt, the static fallback generators (`generate_secure_cdk_template`, `CDKSpecialistAgent._generate_stack`) do not wire up connections (e.g., Lambda → DynamoDB grants, API Gateway → Lambda integrations).
+#### 4.2 No Tests for New API Endpoints — **High**
 
-**Recommendation:** Add tests verifying that when edges connect API → Lambda → Database nodes, the generated code includes `grantReadWriteData` and `LambdaIntegration` calls.
+`test_main.py` tests only the original 4 endpoints. The 10 new endpoints (cost, autofix, templates, share, history) are untested.
 
-#### 4.3 No Frontend Integration Tests — **Medium**
+**Recommendation:** Add at minimum:
+- `test_estimate_cost()` — happy path + empty graph
+- `test_security_autofix()` — graph with missing auth → auth added
+- `test_list_templates()` + `test_get_template()`
+- `test_create_and_get_share()` — round-trip
+- `test_security_history_record_and_retrieve()`
 
-There are no tests for the `Canvas` component or the `page.tsx` AppLayout. The Canvas component handles node type registration, layout controls, and edge styling — all untested.
+#### 4.3 No CDK Deployment Service Tests — **High** (Carried from Round 1)
 
-**Recommendation:** Add Vitest tests for:
-- Canvas renders with mock nodes
-- Layout dropdown triggers `applyLayout`
-- Add Service dropdown creates nodes
-- Node selection updates state
+Still zero test coverage on `cdk_deployment.py` (296 lines of subprocess execution, temp directory management, JSON parsing).
 
-#### 4.4 No Error Path Tests for API Route — **Low**
+#### 4.4 No Canvas or Page Component Tests — **Medium** (Carried from Round 1)
 
-`apps/web/app/api/chat/route.ts` has tests for 502/503 and `TypeError`, but no test for malformed JSON responses from the backend.
-
----
-
-### 5. Performance & Scalability
-
-#### 5.1 No Response Streaming — **High**
-
-The full LangGraph workflow (interpret → architect → security → generate) must complete before any response is sent. For complex architectures, this can mean 10-30 seconds of silence.
-
-**Recommendation:** Implement Server-Sent Events (SSE) or WebSocket streaming to send incremental updates:
-- "Classifying intent..."
-- "Designing architecture..."
-- "Running security review..."
-- "Generating CDK code..."
-
-The `websockets` dependency is already declared but unused.
-
-#### 5.2 Frontend Fetches Are Not Debounced — **Low**
-
-Rapid clicking of "Generate Code" or "Send" while a request is in-flight is guarded by `isLoading`, but there's no debounce on the chat input or protection against double-submit race conditions if `setLoading(true)` hasn't propagated yet.
-
-**Recommendation:** Use an `AbortController` ref to cancel in-flight requests when a new one starts.
+Still no tests for `Canvas.tsx` (211 lines) or `page.tsx` (177 lines).
 
 ---
 
-### 6. Developer Experience
+### 5. Performance & Scalability — New Issues
 
-#### 6.1 No `docker-compose.yml` — **Medium**
+#### 5.1 No Response Streaming — **High** (Carried from Round 1)
 
-The project requires Node.js 22+, Python 3.12+, pnpm, and uv — a non-trivial setup. There's no containerized development option.
+Still no streaming. The `websockets>=14.0` dependency remains declared but unused. The expanded workflow (now including multi-stack splitting) makes this more impactful.
 
-**Recommendation:** Add a `docker-compose.yml` with web and backend services. This also helps with CI reproducibility.
+#### 5.2 Template Positions Computed on Every Request — **Low**
 
-#### 6.2 No CI/CD Configuration — **Medium**
+`templates.py:142` calls `generate_node_positions()` on every `GET /api/templates/{id}` request for the same static data.
 
-There are no GitHub Actions, CircleCI, or other CI configs. Tests pass locally but there's no automated verification on PRs.
+**Recommendation:** Pre-compute and cache positions at startup.
 
-**Recommendation:** Add a GitHub Actions workflow:
+---
+
+### 6. Developer Experience — Remaining Gaps
+
+#### 6.1 No CI/CD Configuration — **High** (Upgraded from Medium)
+
+With 7 new untested service modules, the lack of CI is now higher risk. There's no automated gate to catch regressions.
+
+**Recommendation (from Resume Tailor AI):** The resume-tailor project includes 3 GitHub Actions workflows:
+1. **`security-scan.yml`** — npm audit, TruffleHog secret scanning, CodeQL SAST
+2. **`frontend-build.yml`** — TypeScript check + build validation
+3. **`cost-estimation.yml`** — Infrastructure cost tracking
+
+Scaffold AI should implement at minimum:
 ```yaml
 # .github/workflows/ci.yml
+name: CI
+on: [push, pull_request]
 jobs:
-  backend-tests:
+  backend:
+    runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
       - run: pip install uv && cd apps/backend && uv sync && uv run pytest -v
+      - run: cd apps/backend && uv run ruff check src tests
 
-  frontend-tests:
+  frontend:
+    runs-on: ubuntu-latest
     steps:
       - uses: pnpm/action-setup@v4
-      - run: pnpm install && cd apps/web && pnpm test --run
+        with: { version: 10 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: pnpm install && cd apps/web && pnpm test --run && pnpm type-check
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/analyze@v3
 ```
 
-#### 6.3 Missing `.env.example` in `apps/web/` — **Low**
+#### 6.2 No Pre-Commit Hooks for Sensitive Data — **Medium** (Upgraded from Low)
 
-The backend has a `.env.example` but the frontend's `apps/web/.env.local` is only documented in the README, not templated.
+**From Resume Tailor AI:** The resume-tailor project includes a `scripts/pre-commit-hook.sh` that detects:
+- AWS account IDs (12-digit patterns)
+- ARN patterns with real account info
+- Cognito User Pool / Identity Pool IDs
+- Whitelists placeholder values (`XXXXXXXXXXXX`)
 
-**Recommendation:** Add `apps/web/.env.example`:
+Scaffold AI handles AWS credentials and generates CDK code that may contain account-specific values. A similar hook would prevent accidental credential commits.
+
+#### 6.3 No Docker Setup — **Medium** (Carried from Round 1)
+
+Still no `docker-compose.yml` for containerized development.
+
+#### 6.4 Missing `apps/web/.env.example` — **Low** (Carried from Round 1)
+
+---
+
+### 7. Best Practices from Resume Tailor AI
+
+The following patterns from the Resume Tailor AI production project would strengthen Scaffold AI:
+
+#### 7.1 Validation-First Handler Pattern — **High**
+
+Resume Tailor AI validates all inputs at the boundary before any processing:
+
+```python
+def handler(event, context):
+    try:
+        job_description = validate_job_description(event.get('jobDescription', ''))
+        # ... proceed only if valid
+    except ValueError as e:
+        return {'statusCode': 400, 'error': str(e)}
+```
+
+**For Scaffold AI:** The new endpoints (`/api/cost/estimate`, `/api/security/autofix`, etc.) accept raw `dict` parameters with no validation. Create Pydantic models for all request bodies.
+
+#### 7.2 Robust JSON Extraction from AI Responses — **Medium**
+
+Resume Tailor AI's `extract_json.py` uses 4 fallback strategies:
+1. Extract from ` ```json ` code blocks
+2. Extract from generic ` ``` ` blocks
+3. Brace-matching to find first valid `{}` structure
+4. Control character sanitization before parsing
+
+Scaffold AI's `strip_code_fences()` only handles strategies 1-2. If the LLM returns partial JSON or embeds control characters, parsing fails.
+
+**Recommendation:** Port the brace-matching and control character sanitization strategies from Resume Tailor AI into `llm_utils.py`.
+
+#### 7.3 Deployment Mode Configuration — **Medium**
+
+Resume Tailor AI supports dual deployment modes (PREMIUM / OPTIMIZED) that swap the LLM model per function via CDK context variables. This allows cost optimization without code changes.
+
+**For Scaffold AI:** Currently the Bedrock model ID is a single env var. Consider allowing per-agent model selection:
 ```env
-BACKEND_URL=http://localhost:8000
+BEDROCK_MODEL_ID_INTERPRET=us.anthropic.claude-3-haiku-20240307-v1:0  # Cheap for classification
+BEDROCK_MODEL_ID_ARCHITECT=us.anthropic.claude-3-5-sonnet-20241022-v2:0  # Better for design
+BEDROCK_MODEL_ID_CDK=us.anthropic.claude-3-5-sonnet-20241022-v2:0  # Better for code gen
 ```
 
-#### 6.4 No Pre-commit Hooks — **Low**
+#### 7.4 Auto-Configuration Script — **Low**
 
-No linting or formatting runs automatically before commits. Both `ruff` (Python) and `eslint` (TypeScript) are configured but not enforced.
+Resume Tailor AI includes `scripts/setup-frontend-config.sh` that reads CDK stack outputs and auto-generates the frontend `.env` file. This eliminates manual copy-paste of API URLs and resource ARNs.
 
-**Recommendation:** Add `husky` + `lint-staged` for the JS side and `pre-commit` for the Python side.
+**For Scaffold AI:** A similar script could auto-detect the backend URL and write `apps/web/.env.local`.
 
 ---
 
-### 7. Feature Enhancements
+### 8. Feature Enhancements — Remaining
 
-#### 7.1 Edge-Aware Infrastructure Wiring — **High**
+#### 8.1 Undo/Redo on Canvas — **Medium** (Carried from Round 1)
 
-The static CDK generators produce isolated constructs with no inter-service connections. When a user draws an edge from API Gateway → Lambda → DynamoDB, the generated CDK should include:
-```typescript
-api.root.addResource('items').addMethod('GET', new apigateway.LambdaIntegration(fn));
-table.grantReadWriteData(fn);
-```
+No undo/redo for canvas operations.
 
-Currently, each node generates standalone code. The edges are passed to the LLM prompt but not used by the static fallback.
+#### 8.2 Generated Code Diff View — **Low** (Carried from Round 1)
 
-**Recommendation:** Parse the `edges` array in `_generate_stack()` and emit grant/integration calls for each connection.
+No diff view when regenerating code.
 
-#### 7.2 Architecture Templates — **Medium**
+#### 8.3 Stack Destroy Capability — **Low** (Carried from Round 1)
 
-The chat is the only way to create architectures. Pre-built templates (CRUD API, file upload pipeline, event-driven microservice) would accelerate onboarding.
-
-**Recommendation:** Add a `/api/templates` endpoint and a template picker in the UI that populates the canvas with a known-good graph.
-
-#### 7.3 Undo/Redo on Canvas — **Medium**
-
-There's no undo/redo for canvas operations. A user who accidentally deletes a node after a long design session has no recourse.
-
-**Recommendation:** Add temporal state with `zustand/middleware`:
-```typescript
-import { temporal } from 'zundo';
-const useGraphStore = create<GraphState>()(temporal((set, get) => ({ ... })));
-```
-
-#### 7.4 Export/Import Architecture — **Medium**
-
-Users can't save or share their architecture designs. The graph state is ephemeral.
-
-**Recommendation:** Add "Export JSON" and "Import JSON" buttons that serialize/deserialize the graph store to a file.
-
-#### 7.5 Generated Code Diff View — **Low**
-
-When regenerating code, the previous version is silently replaced. A diff view would help users understand what changed.
-
-#### 7.6 Stack Destroy Capability — **Low**
-
-`CDKDeploymentService.destroy()` returns "not yet implemented". Users who deploy via the UI have no way to clean up.
+`CDKDeploymentService.destroy()` still returns "not yet implemented".
 
 ---
 
-### 8. Summary Matrix
+### 9. Updated Summary Matrix
 
-| # | Issue | Severity | Category | Effort |
+| # | Issue | Severity | Category | Status |
 |---|-------|----------|----------|--------|
-| 1.1 | Command injection in deploy service | Critical | Security | Small |
-| 2.1 | LLM client created per-request | High | Performance | Small |
-| 2.2 | No request timeout | High | Reliability | Small |
-| 2.3 | Blocking subprocess in async endpoint | High | Architecture | Medium |
-| 3.1 | Duplicated CDK generation logic | High | Maintainability | Medium |
-| 4.1 | No deployment service tests | High | Testing | Medium |
-| 5.1 | No response streaming | High | UX/Performance | Large |
-| 7.1 | Edges ignored in static code gen | High | Feature gap | Medium |
-| 1.2 | CORS wildcards | Medium | Security | Small |
-| 1.3 | Generated API uses ALL_ORIGINS | Medium | Security | Small |
-| 2.4 | No rate limiting | Medium | Security | Small |
-| 2.5 | No `iac_format` validation | Medium | Reliability | Small |
-| 2.6 | Missing `security_review` init | Medium | Reliability | Small |
-| 3.2 | Duplicated code-fence stripping | Medium | Maintainability | Small |
-| 3.3 | `print()` instead of `logging` | Medium | Observability | Small |
-| 4.2 | No edge-aware generation tests | Medium | Testing | Medium |
-| 4.3 | No Canvas component tests | Medium | Testing | Medium |
-| 6.1 | No Docker setup | Medium | Dev Experience | Medium |
-| 6.2 | No CI/CD | Medium | Dev Experience | Medium |
-| 7.2 | Architecture templates | Medium | Feature | Medium |
-| 7.3 | No undo/redo | Medium | Feature | Small |
-| 7.4 | No export/import | Medium | Feature | Small |
-| 1.4 | Exception detail leakage | Low | Security | Small |
-| 3.4 | README stale data | Low | Documentation | Small |
-| 4.4 | Missing API route error tests | Low | Testing | Small |
-| 5.2 | No fetch debounce | Low | Reliability | Small |
-| 6.3 | Missing web `.env.example` | Low | Dev Experience | Small |
-| 6.4 | No pre-commit hooks | Low | Dev Experience | Small |
-| 7.5 | No code diff view | Low | Feature | Medium |
-| 7.6 | Stack destroy not implemented | Low | Feature | Medium |
+| **NEW** | Zero tests for 7 new service modules | Critical | Testing | Open |
+| **NEW** | New endpoints lack rate limiting | High | Security | Open |
+| **NEW** | No tests for 10 new API endpoints | High | Testing | Open |
+| 2.3 | Blocking subprocess in deploy endpoint | High | Architecture | Open |
+| 3.1 | CDK specialist still has parallel impl | High | Maintainability | Partial |
+| 4.3 | No deployment service tests | High | Testing | Open |
+| 5.1 | No response streaming | High | UX | Open |
+| 6.1 | No CI/CD | High | Dev Experience | Open |
+| **NEW** | New endpoints leak exception details | Medium | Security | Open |
+| **NEW** | Share endpoint has no input validation | Medium | Security | Open |
+| **NEW** | In-memory services lose state on restart | Medium | Reliability | Open |
+| **NEW** | Nested stack generator produces empty code | Medium | Feature bug | Open |
+| **NEW** | Python CDK missing security hardening | Medium | Security | Open |
+| **NEW** | Inconsistent logging in new services | Medium | Observability | Open |
+| **NEW** | No pre-commit hooks for secrets | Medium | Security | Open |
+| 4.4 | No Canvas component tests | Medium | Testing | Open |
+| 6.3 | No Docker setup | Medium | Dev Experience | Open |
+| 8.1 | No undo/redo | Medium | Feature | Open |
+| **NEW** | Cost estimator ignores edges | Low | Feature | Open |
+| **NEW** | Template positions not cached | Low | Performance | Open |
+| **NEW** | Missing `__init__.py` in new packages | Low | Code quality | Open |
+| 1.5 | Deploy endpoint still leaks errors | Low | Security | Open |
+| 6.4 | Missing web `.env.example` | Low | Dev Experience | Open |
+| 8.2 | No code diff view | Low | Feature | Open |
+| 8.3 | Stack destroy not implemented | Low | Feature | Open |
+| | | | | |
+| 1.1 | Command injection | Critical | Security | ✅ Fixed |
+| 1.2 | CORS wildcards | Medium | Security | ✅ Fixed |
+| 1.4 | Exception detail leakage (chat) | Low | Security | ✅ Fixed |
+| 2.1 | LLM client per-request | High | Performance | ✅ Fixed |
+| 2.2 | No request timeout | High | Reliability | ✅ Fixed |
+| 2.4 | No rate limiting (chat/deploy) | Medium | Security | ✅ Fixed |
+| 2.5 | No `iac_format` validation | Medium | Reliability | ✅ Fixed |
+| 2.6 | Missing `security_review` init | Medium | Reliability | ✅ Fixed |
+| 3.1 | Duplicated CDK fallback | High | Maintainability | ✅ Fixed |
+| 3.2 | Duplicated code-fence stripping | Medium | Maintainability | ✅ Fixed |
+| 3.3 | `print()` instead of `logging` | Medium | Observability | ✅ Fixed |
+| 7.1 | Edges ignored in static code gen | High | Feature | ✅ Fixed |
+| 7.2 | No architecture templates | Medium | Feature | ✅ Fixed |
+| 7.4 | No export/sharing | Medium | Feature | ✅ Fixed |
 
 ---
 
