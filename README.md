@@ -8,6 +8,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
 ![Built in 1 Day](https://img.shields.io/badge/Built%20in-1%20Day-brightgreen?style=flat-square)
+![Tests: 116](https://img.shields.io/badge/Tests-116%20passing-brightgreen?style=flat-square)
 ![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-purple?style=flat-square)
 ![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
 
@@ -23,13 +24,14 @@ The goal was to demonstrate:
 - **Architectural judgment** -- Knowing when LangGraph fits better than Step Functions (and vice versa), rather than defaulting to one tool
 - **Production mindset** -- Security gates, rate limiting, input validation, and testing from the start, not bolted on later
 
-| | Resume Tailor AI | Scaffold AI |
-|---|---|---|
-| **Orchestration** | AWS Step Functions | LangGraph |
-| **Use case** | Deterministic resume tailoring | Dynamic AI multi-agent conversations |
-| **State** | S3 + DynamoDB | LangGraph built-in memory |
-| **Deployment** | AWS-native (Lambda, Step Functions) | Framework-agnostic |
-| **Development time** | 3 days | 1 day |
+| | Resume Tailor AI | Scaffold AI | Career Path Architect |
+|---|---|---|---|
+| **Purpose** | Resume optimization | AWS architecture design | Career planning |
+| **Orchestration** | AWS Step Functions | LangGraph | LangGraph |
+| **Agents** | Step Functions workflow | 4 LangGraph agents | 6 LangGraph agents |
+| **Development** | 3 days | 1 day | 2 hours |
+| **Tests** | 212 tests, 98% | 116 tests | 142 tests, 99% |
+| **Features** | Resume tailoring | Architecture generation | Roadmap + Critical Review |
 
 Both projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing) -- the difference is the orchestration approach chosen to match the problem. See [LangGraph vs Step Functions](LANGGRAPH_VS_STEP_FUNCTIONS.md) for a detailed technical comparison.
 
