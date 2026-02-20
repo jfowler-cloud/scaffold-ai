@@ -9,7 +9,7 @@
 
 ![Built in 1 Day](https://img.shields.io/badge/Built%20in-1%20Day-brightgreen?style=flat-square)
 ![Tests: 116](https://img.shields.io/badge/Tests-116%20passing-brightgreen?style=flat-square)
-![Coverage: 50%](https://img.shields.io/badge/Coverage-50%25-yellow?style=flat-square)
+![Coverage: 67%](https://img.shields.io/badge/Coverage-67%25-yellow?style=flat-square)
 ![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-purple?style=flat-square)
 ![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
 
@@ -31,7 +31,7 @@ The goal was to demonstrate:
 | **Orchestration** | AWS Step Functions | LangGraph | LangGraph |
 | **Agents** | Step Functions workflow | 4 LangGraph agents | 6 LangGraph agents |
 | **Development** | 3 days | 1 day | 2 hours |
-| **Tests** | 212 tests, 98% | 116 tests, 50% | 142 tests, 99% |
+| **Tests** | 212 tests, 98% | 116 tests, 67% | 142 tests, 99% |
 | **Features** | Resume tailoring | Architecture generation | Roadmap + Critical Review |
 
 Both projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing) -- the difference is the orchestration approach chosen to match the problem. See [LangGraph vs Step Functions](LANGGRAPH_VS_STEP_FUNCTIONS.md) for a detailed technical comparison.
