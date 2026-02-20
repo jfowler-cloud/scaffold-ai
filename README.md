@@ -34,7 +34,7 @@ The goal was to demonstrate:
 | **Tests** | 212 tests, 98% | 116 tests, 67%* | 142 tests, 99% |
 | **Features** | Resume tailoring | Architecture generation | Roadmap + Critical Review |
 
-*67% coverage focuses on core business logic (LangGraph workflow, security review, IaC generation). Missing coverage is primarily in deployment infrastructure (CDK synthesis, AWS deployment) which requires extensive subprocess/AWS mocking.
+*Scaffold AI's 67% coverage focuses on core business logic (LangGraph workflow, security review, IaC generation). Missing coverage is in deployment infrastructure (CDK synthesis, AWS deployment) which was out of scope for the 1-day build.
 
 Both projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing) -- the difference is the orchestration approach chosen to match the problem. See [LangGraph vs Step Functions](LANGGRAPH_VS_STEP_FUNCTIONS.md) for a detailed technical comparison.
 
