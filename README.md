@@ -245,6 +245,60 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
+## 🚀 Recent Updates
+
+### v1.4.0 - AI Model Upgrade & Polish (Feb 2026)
+- ✨ Upgraded to Claude Opus 4.5 with cross-region inference profile
+- ✨ Added portfolio context and capability badges to README
+- 🐛 Fixed hydration mismatch with loading state
+- 🐛 Resolved jszip module not found error
+- 📝 Polished README for public release
+- 🔧 Made type check and security scan non-blocking in CI
+- 📦 **Dependency Updates:**
+  - @cloudscape-design/components and chat-components to latest
+  - @eslint/js from 9.39.2 to 10.0.1
+  - Bumped actions/checkout from 4 to 6, actions/setup-node from 4 to 6, actions/setup-python from 5 to 6
+
+### v1.3.0 - Dark Mode & UX Enhancements (Feb 2026)
+- ✨ Added dark mode toggle with enhanced CSS patterns
+- ✨ Added Scaffold AI logo
+- ✨ Added Download ZIP button for generated files
+- ✨ Styled Select dropdowns for dark mode
+- 🐛 Fixed canvas toolbar container in dark mode
+- 🐛 Fixed Deploy button for CloudFormation with manual instructions
+- 🐛 Used dynamic timestamps in sharing and history services
+- 🔧 Added GitHub Actions CI workflow
+
+### v1.2.0 - Security & Reliability (Feb 2026)
+- ✨ Added rate limiting, request timeout, and security hardening
+- ✨ Added security history tracking
+- ✨ Added architecture sharing and collaboration
+- ✨ Added multi-stack architecture support
+- ✨ Added Python CDK support
+- ✨ Added architecture templates library
+- ✨ Added security auto-fix capabilities
+- ✨ Added cost estimation feature
+- 🔒 Critical security fixes and hardening
+- 📝 Updated roadmap — 7/9 medium-term items complete
+
+### v1.1.0 - Testing & Quality (Feb 2026)
+- ✨ Added frontend unit test suite with Vitest
+- ✨ Added SecuritySpecialistAgent unit tests (19 tests)
+- ✨ Added configurable CORS and CDK CloudFront support
+- ✨ Added security gate and multi-format IaC generation
+- 🐛 Fixed CF/TF node type mismatch
+- 🐛 Resolved all test failures — mock paths, key names, and missing labels
+- 📝 Added comprehensive CLAUDE.md for AI assistant onboarding
+
+### v1.0.0 - Initial Release (Feb 2026)
+- 🎉 Serverless-first architecture with 12 node types
+- 🎉 LangGraph multi-agent workflow with security specialist
+- 🎉 Interactive drag-and-drop architecture canvas
+- 🎉 CloudFormation and Terraform IaC generation
+- 🎉 Real-time AI chat for architecture guidance
+
+---
+
 ## License
 
 MIT License -- see [LICENSE](LICENSE) for details.
