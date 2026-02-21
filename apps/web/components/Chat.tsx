@@ -40,7 +40,7 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       >
         <SpaceBetween direction="horizontal" size="xs">
           {!isUser && <Icon name="contact" />}
-          <Box variant="p" color={isUser ? "inherit" : "text-body-default"}>
+          <Box variant="p">
             {message.content}
           </Box>
           {isUser && <Icon name="user-profile" />}
@@ -99,7 +99,7 @@ function WelcomeMessage() {
   );
 }
 
-export function Chat() {
+export function Chat({ plannerData }: { plannerData?: any }) {
   const [input, setInput] = useState("");
   const [iacFormat, setIacFormat] = useState({ label: "CDK (TypeScript)", value: "cdk" });
   const [deploying, setDeploying] = useState(false);
@@ -107,6 +107,23 @@ export function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isLoading, addMessage, setLoading, setGeneratedFiles, generatedFiles } = useChatStore();
   const { getGraphJSON, setGraph, nodes } = useGraphStore();
+
+  // Auto-populate with planner data if available
+  useEffect(() => {
+    if (plannerData && messages.length === 0) {
+      const initialPrompt = `I have a project plan from Project Planner AI:
+      
+Project: ${plannerData.projectName}
+Description: ${plannerData.description}
+Architecture: ${plannerData.architecture}
+Tech Stack: ${Object.entries(plannerData.techStack).map(([k, v]) => `${k}: ${v}`).join(", ")}
+Requirements: ${plannerData.requirements.users} users, ${plannerData.requirements.uptime} uptime
+
+Please help me build this architecture on AWS.`;
+      
+      setInput(initialPrompt);
+    }
+  }, [plannerData, messages.length]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -399,8 +416,8 @@ export function Chat() {
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+  const handleKeyDown = (e: any) => {
+    if (e.detail?.key === "Enter" && !e.detail?.shiftKey) {
       e.preventDefault();
       handleSubmit();
     }

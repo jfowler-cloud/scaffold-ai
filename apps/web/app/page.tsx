@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Canvas } from "@/components/Canvas";
 import { Chat } from "@/components/Chat";
 import { GeneratedCodeModal } from "@/components/GeneratedCodeModal";
+import { PlannerNotification } from "@/components/PlannerNotification";
+import { usePlannerImport } from "@/lib/usePlannerImport";
 import AppLayout from "@cloudscape-design/components/app-layout";
 import SideNavigation from "@cloudscape-design/components/side-navigation";
 import TopNavigation from "@cloudscape-design/components/top-navigation";
@@ -22,6 +24,10 @@ export default function Home() {
   const [mounted, setMounted] = useState(false);
   const [codeModalVisible, setCodeModalVisible] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [showPlannerNotification, setShowPlannerNotification] = useState(true);
+
+  // Import data from Project Planner AI
+  const { plannerData, isFromPlanner } = usePlannerImport();
 
   useEffect(() => {
     setMounted(true);
@@ -179,7 +185,7 @@ export default function Home() {
             hidePreferencesButton
             closeBehavior="hide"
           >
-            <Chat />
+            <Chat plannerData={plannerData} />
           </SplitPanel>
         }
         splitPanelOpen={splitPanelOpen}
@@ -201,14 +207,20 @@ export default function Home() {
           tools: "Help panel",
           toolsClose: "Close help",
           toolsToggle: "Open help",
-          splitPanelToggle: "Toggle AI assistant",
-          splitPanelClose: "Close AI assistant",
         }}
       />
       <GeneratedCodeModal
         visible={codeModalVisible}
         onDismiss={() => setCodeModalVisible(false)}
       />
+      
+      {/* Planner Import Notification */}
+      {isFromPlanner && showPlannerNotification && (
+        <PlannerNotification
+          plannerData={plannerData}
+          onDismiss={() => setShowPlannerNotification(false)}
+        />
+      )}
     </>
   );
 }
