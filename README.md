@@ -36,7 +36,7 @@ The goal was to demonstrate:
 
 *Scaffold AI's 67% coverage focuses on core business logic (LangGraph workflow, security review, IaC generation). Missing coverage is in deployment infrastructure (CDK synthesis, AWS deployment) which was out of scope for the 1-day build.
 
-Both projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing) -- the difference is the orchestration approach chosen to match the problem. See [LangGraph vs Step Functions](LANGGRAPH_VS_STEP_FUNCTIONS.md) for a detailed technical comparison.
+All three projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing) -- the difference is the orchestration approach chosen to match the problem. See [LangGraph vs Step Functions](LANGGRAPH_VS_STEP_FUNCTIONS.md) for a detailed technical comparison.
 
 ---
 
@@ -208,15 +208,15 @@ Tests cover agents, services, LangGraph workflow integration, API endpoints, inp
 
 ## Portfolio Comparison
 
-| | Resume Tailor AI | Scaffold AI |
-|---|---|---|
-| **Orchestration** | AWS Step Functions | LangGraph |
-| **Use case** | Deterministic resume tailoring | Dynamic AI multi-agent conversations |
-| **State management** | S3 + DynamoDB | LangGraph built-in memory |
-| **Deployment** | AWS-native (Lambda, Step Functions) | Framework-agnostic |
-| **Best for** | Predictable workflows, AWS-integrated | Dynamic routing, conversational AI |
+| | Resume Tailor AI | Scaffold AI | Career Path Architect |
+|---|---|---|---|
+| **Orchestration** | AWS Step Functions | LangGraph | LangGraph |
+| **Use case** | Deterministic resume tailoring | Dynamic AI multi-agent conversations | Career planning & roadmaps |
+| **State management** | S3 + DynamoDB | LangGraph built-in memory | LangGraph built-in memory |
+| **Deployment** | AWS-native (Lambda, Step Functions) | Framework-agnostic | Framework-agnostic |
+| **Best for** | Predictable workflows, AWS-integrated | Dynamic routing, conversational AI | Skill gap analysis, learning paths |
 
-Both projects share production patterns: input validation, error handling, pre-commit hooks, CI/CD with security scanning, rate limiting, and comprehensive testing.
+All three projects share production patterns: input validation, error handling, pre-commit hooks, CI/CD with security scanning, rate limiting, and comprehensive testing.
 
 ---
 
@@ -249,8 +249,17 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 MIT License -- see [LICENSE](LICENSE) for details.
 
+## Related Projects
+
+- **[Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai)** - AI-powered resume optimization with Claude Opus 4.5 (3 days, 212 tests, 98% coverage)
+- **[Career Path Architect](https://github.com/jfowler-cloud/career-path-architect)** - AI-powered career planning with LangGraph (2 hours, 142 tests, 99% coverage)
+
+**Together, these projects form a complete AI-powered career development platform.**
+
+---
+
 ## Author
 
 **James Fowler**
 - GitHub: [@jfowler-cloud](https://github.com/jfowler-cloud)
-- LinkedIn: [James Fowler](https://www.linkedin.com/in/james-fowler-aws-cloud-architect-dev-ops-professional/)
+- LinkedIn: [James Fowler - AWS Cloud Architect & DevOps Professional](https://www.linkedin.com/in/james-fowler-aws-cloud-architect-dev-ops-professional/)
