@@ -202,8 +202,8 @@ async def chat(request: Request, body: ChatRequest):
             "security_review": None,
         }
 
-        # Run the workflow with timeout
-        result = await asyncio.wait_for(run_workflow(initial_state), timeout=60.0)
+        # Run the workflow with timeout (3 minutes for complex architectures)
+        result = await asyncio.wait_for(run_workflow(initial_state), timeout=180.0)
 
         return ChatResponse(
             message=result.get("response", "I processed your request."),
@@ -212,7 +212,7 @@ async def chat(request: Request, body: ChatRequest):
         )
 
     except asyncio.TimeoutError:
-        logger.error("Workflow timeout after 60 seconds")
+        logger.error("Workflow timeout after 180 seconds")
         raise HTTPException(
             status_code=504, detail="Request timeout - operation took too long"
         )

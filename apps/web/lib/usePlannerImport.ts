@@ -17,28 +17,27 @@ export function usePlannerImport() {
   const [isFromPlanner, setIsFromPlanner] = useState(false);
 
   useEffect(() => {
-    // Check if coming from Project Planner AI
     const urlParams = new URLSearchParams(window.location.search);
     const fromPlanner = urlParams.get("from") === "planner";
-
+    
     if (fromPlanner) {
       setIsFromPlanner(true);
-
-      // Try to get data from localStorage
-      const storedData = localStorage.getItem("plannerExport");
-      if (storedData) {
-        try {
-          const data = JSON.parse(storedData);
-          setPlannerData(data);
-
-          // Clear the data after reading (one-time use)
-          localStorage.removeItem("plannerExport");
-
-          // Show notification
-          console.log("✅ Imported project plan from Project Planner AI");
-        } catch (error) {
-          console.error("Failed to parse planner data:", error);
-        }
+      
+      // Get prompt from URL parameter
+      const prompt = urlParams.get("prompt");
+      
+      if (prompt) {
+        console.log("✅ Received prompt from Project Planner AI");
+        
+        // The prompt is already decoded by URLSearchParams
+        // Create plannerData from the prompt
+        setPlannerData({
+          projectName: "Imported Project",
+          description: prompt,
+          architecture: "",
+          techStack: {},
+          requirements: { users: "", uptime: "", dataSize: "" }
+        });
       }
     }
   }, []);

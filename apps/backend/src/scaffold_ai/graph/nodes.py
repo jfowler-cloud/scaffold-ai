@@ -111,6 +111,27 @@ Review this architecture for security issues. Check for:
 5. Logging: CloudWatch/X-Ray enabled
 6. Data Protection: Backups, versioning, PITR
 
+IMPORTANT: Each node may have a "config" object inside "data". Treat these config flags as already applied:
+- config.encryption = "KMS" → KMS encryption is enabled
+- config.block_public_access = true → S3 public access is blocked
+- config.versioning = true → S3 versioning is enabled
+- config.https_only = true → HTTPS-only bucket policy is applied
+- config.pitr = true → DynamoDB PITR is enabled
+- config.vpc_enabled = true → Lambda is deployed in a VPC
+- config.tracing = "Active" → X-Ray tracing is enabled
+- config.waf_enabled = true → WAF is attached
+- config.has_dlq = true → Dead Letter Queue is configured
+- config.mfa = "REQUIRED" → MFA is enforced
+- config.advanced_security = "ENFORCED" → Cognito advanced security is on
+- config.security_headers = true → CloudFront security headers are configured
+- config.throttling = true → API Gateway throttling is enabled
+- config.access_logging = true → API Gateway access logging is enabled
+- config.resource_policy = "restricted" → EventBridge resource policy is set
+- config.access_policy = "restricted" → SNS access policy is set
+- config.access_control = "restricted" → Glue access control is configured
+
+Do NOT flag issues for config properties that are already set as above.
+
 Respond with JSON:
 {{
   "security_score": 0-100,

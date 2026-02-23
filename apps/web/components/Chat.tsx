@@ -103,27 +103,19 @@ export function Chat({ plannerData }: { plannerData?: any }) {
   const [input, setInput] = useState("");
   const [iacFormat, setIacFormat] = useState({ label: "CDK (TypeScript)", value: "cdk" });
   const [deploying, setDeploying] = useState(false);
-  const [costEstimate, setCostEstimate] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isLoading, addMessage, setLoading, setGeneratedFiles, generatedFiles } = useChatStore();
   const { getGraphJSON, setGraph, nodes } = useGraphStore();
 
   // Auto-populate with planner data if available
   useEffect(() => {
-    if (plannerData && messages.length === 0) {
-      const initialPrompt = `I have a project plan from Project Planner AI:
-      
-Project: ${plannerData.projectName}
-Description: ${plannerData.description}
-Architecture: ${plannerData.architecture}
-Tech Stack: ${Object.entries(plannerData.techStack).map(([k, v]) => `${k}: ${v}`).join(", ")}
-Requirements: ${plannerData.requirements.users} users, ${plannerData.requirements.uptime} uptime
-
-Please help me build this architecture on AWS.`;
-      
-      setInput(initialPrompt);
+    if (plannerData && plannerData.description) {
+      console.log("Planner data received, populating input");
+      // Use the description directly (it's already formatted)
+      setInput(plannerData.description);
+      console.log("✅ Input populated with planner data");
     }
-  }, [plannerData, messages.length]);
+  }, [plannerData]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -132,23 +124,6 @@ Please help me build this architecture on AWS.`;
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  useEffect(() => {
-    // Estimate cost when nodes change
-    if (nodes.length > 0) {
-      const graphJSON = getGraphJSON();
-      fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/cost/estimate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(graphJSON),
-      })
-        .then(res => res.json())
-        .then(data => setCostEstimate(data))
-        .catch(() => setCostEstimate(null));
-    } else {
-      setCostEstimate(null);
-    }
-  }, [nodes, getGraphJSON]);
 
   const handleDeploy = async () => {
     if (deploying || generatedFiles.length === 0) return;
@@ -187,7 +162,7 @@ Please help me build this architecture on AWS.`;
         throw new Error("CDK files not found. Generate code first.");
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/deploy`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001"}/api/deploy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -276,10 +251,10 @@ Please help me build this architecture on AWS.`;
 
     try {
       const graphJSON = getGraphJSON();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"}/api/security/autofix`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001"}/api/security/autofix`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(graphJSON),
+        body: JSON.stringify({ graph: graphJSON }),
       });
 
       const data = await response.json();
@@ -292,14 +267,18 @@ Please help me build this architecture on AWS.`;
         addMessage({
           id: `assistant-${Date.now()}`,
           role: "assistant",
-          content: `Security improvements applied:\n${data.changes.join("\n")}\n\nSecurity score: ${data.security_score.percentage}%`,
+          content: `Security improvements applied:\n${data.changes.join("\n")}\n\nSecurity score: ${data.security_score.percentage}%\n\nRe-generating code with security fixes applied...`,
         });
+        setLoading(false);
+        // Auto re-generate code with the fixed graph
+        await handleGenerateCode();
       } else {
         addMessage({
           id: `assistant-${Date.now()}`,
           role: "assistant",
           content: "✅ No security issues found. Your architecture looks good!",
         });
+        setLoading(false);
       }
     } catch (error) {
       addMessage({
@@ -307,7 +286,6 @@ Please help me build this architecture on AWS.`;
         role: "assistant",
         content: `❌ Security fix error: ${error instanceof Error ? error.message : "Unknown error"}`,
       });
-    } finally {
       setLoading(false);
     }
   };
@@ -404,6 +382,17 @@ Please help me build this architecture on AWS.`;
         role: "assistant",
         content: data.message,
       });
+
+      // Check if security review failed and prompt user to fix
+      if (data.message && data.message.includes("Security Review: FAILED")) {
+        setTimeout(() => {
+          addMessage({
+            id: `system-${Date.now()}`,
+            role: "assistant",
+            content: "Would you like me to automatically fix these security issues? Click the 'Fix Security' button above to apply recommended fixes.",
+          });
+        }, 500);
+      }
     } catch (error) {
       console.error("Chat error:", error);
       addMessage({
@@ -433,11 +422,6 @@ Please help me build this architecture on AWS.`;
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Icon name="gen-ai" />
             <span>AI Assistant</span>
-            {costEstimate && (
-              <Box color="text-status-info" fontSize="body-s">
-                Est. ${costEstimate.total_monthly}/mo
-              </Box>
-            )}
           </div>
         </Header>
       }
@@ -516,7 +500,7 @@ Please help me build this architecture on AWS.`;
               onChange={({ detail }) => setInput(detail.value)}
               onKeyDown={handleKeyDown}
               placeholder="Describe your application architecture..."
-              rows={2}
+              rows={8}
               disabled={isLoading}
             />
             <Box float="right">
