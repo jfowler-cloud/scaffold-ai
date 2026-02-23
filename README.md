@@ -8,7 +8,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
 ![Built in 1 Day](https://img.shields.io/badge/Built%20in-1%20Day-brightgreen?style=flat-square)
-![Tests: 116](https://img.shields.io/badge/Tests-116%20passing-brightgreen?style=flat-square)
+![Tests: 126](https://img.shields.io/badge/Tests-126%20passing-brightgreen?style=flat-square)
 ![Coverage: 67%](https://img.shields.io/badge/Coverage-67%25-yellow?style=flat-square)
 ![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-purple?style=flat-square)
 ![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
@@ -31,10 +31,10 @@ The goal was to demonstrate:
 | **Orchestration** | AWS Step Functions | LangGraph | LangGraph |
 | **Agents** | Step Functions workflow | 4 LangGraph agents | 6 LangGraph agents |
 | **Development** | 3 days | 1 day | 2 hours |
-| **Tests** | 212 tests, 98% | 116 tests, 67%* | 142 tests, 99% |
+| **Tests** | 212 tests, 98% | 126 tests, 67%* | 142 tests, 99% |
 | **Features** | Resume tailoring | Architecture generation | Roadmap + Critical Review |
 
-*Scaffold AI's 67% coverage focuses on core business logic (LangGraph workflow, security review, IaC generation). Missing coverage is in deployment infrastructure (CDK synthesis, AWS deployment) which was out of scope for the 1-day build.
+*Scaffold AI's 67% coverage focuses on core business logic (LangGraph workflow, security review, IaC generation). Missing coverage is in deployment infrastructure (CDK synthesis, AWS deployment) which was out of scope for the initial build.
 
 All three projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing) -- the difference is the orchestration approach chosen to match the problem. See [LangGraph vs Step Functions](LANGGRAPH_VS_STEP_FUNCTIONS.md) for a detailed technical comparison.
 
@@ -77,9 +77,12 @@ User Input --> Interpreter --> Architect --> Security Specialist --> Code Genera
 - **Visual Canvas** -- React Flow node graph editor with drag-and-drop AWS service nodes
 - **AI Chat** -- Natural language architecture design powered by AWS Bedrock (Claude)
 - **Security Gate** -- Automated scoring blocks code generation for insecure architectures
+- **Security Badges** -- Visual indicators on each node showing active security configs (encryption, WAF, auth)
+- **Security Auto-Fix** -- One-click security remediation with fail banner (Auto-Fix / Mark Resolved)
 - **Multi-Format IaC** -- Generate CDK TypeScript, CDK Python, CloudFormation, or Terraform
 - **Code Viewer** -- Tabbed modal for browsing generated infrastructure code
 - **Export & Deploy** -- Download as ZIP or deploy directly to AWS with CDK
+- **Project Planner Integration** -- Receives plans from [Project Planner AI](https://github.com/jfowler-cloud/project-planner-ai) via one-click handoff
 - **Rate Limiting** -- 10 req/min chat, 3 req/hr deployment
 - **Dark Mode** -- Persistent theme preference
 - **Pre-commit Hooks** -- TruffleHog secrets detection, AWS credentials scanning
@@ -140,6 +143,8 @@ uv run uvicorn scaffold_ai.main:app --reload
 cd apps/web
 pnpm dev
 ```
+
+When running alongside Project Planner AI (via the planner's `dev.sh`), Scaffold AI uses port 8001 (backend) and 3001 (frontend) to avoid conflicts.
 
 ### Environment Variables
 
@@ -330,6 +335,17 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## 🚀 Recent Updates
 
+### v1.5.0 - Security Visualization & UX Improvements (Feb 2026)
+- ✨ Added SecurityBadge component to all 11 node types — shows active security configs (encryption, WAF, auth, etc.)
+- ✨ Security fix visualization — auto-fix normalizes node types for React Flow rendering
+- ✨ Security review fail banner with Auto-Fix and Mark Resolved actions
+- ✨ Deploy to AWS modal with "coming soon" notice and manual deployment instructions
+- ✨ Centralized BACKEND_URL config (`lib/config.ts`) — single source of truth for backend URL
+- ✨ Added `skip_security` flag to workflow state for bypassing security gate
+- 🐛 Fixed all 11 node files — removed duplicate JSX bodies
+- 🐛 Fixed security gate test assertions and added missing GraphState fields
+- ✅ 126 tests passing (up from 116)
+
 ### v1.4.0 - AI Model Upgrade & Polish (Feb 2026)
 - ✨ Upgraded to Claude Opus 4.5 with cross-region inference profile
 - ✨ Added portfolio context and capability badges to README
@@ -388,6 +404,7 @@ MIT License -- see [LICENSE](LICENSE) for details.
 
 ## Related Projects
 
+- **[Project Planner AI](https://github.com/jfowler-cloud/project-planner-ai)** - AI-powered project planning — generates architecture plans that hand off directly to Scaffold AI
 - **[Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai)** - AI-powered resume optimization with Claude Opus 4.5 (3 days, 212 tests, 98% coverage)
 - **[Career Path Architect](https://github.com/jfowler-cloud/career-path-architect)** - AI-powered career planning with LangGraph (2 hours, 142 tests, 99% coverage)
 
