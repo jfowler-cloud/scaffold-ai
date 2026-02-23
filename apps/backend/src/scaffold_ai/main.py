@@ -118,6 +118,15 @@ class GraphRequest(BaseModel):
 
     graph: dict
 
+    @field_validator("graph")
+    @classmethod
+    def validate_graph(cls, v: dict) -> dict:
+        """Reject graphs with too many nodes to prevent context window abuse."""
+        nodes = v.get("nodes", [])
+        if len(nodes) > 50:
+            raise ValueError("Graph cannot have more than 50 nodes")
+        return v
+
 
 class ShareRequest(BaseModel):
     """Request model for sharing endpoint."""

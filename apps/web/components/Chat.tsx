@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useChatStore, useGraphStore } from "@/lib/store";
+import { BACKEND_URL } from "@/lib/config";
 import Container from "@cloudscape-design/components/container";
 import Header from "@cloudscape-design/components/header";
 import SpaceBetween from "@cloudscape-design/components/space-between";
@@ -162,7 +163,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
         throw new Error("CDK files not found. Generate code first.");
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001"}/api/deploy`, {
+      const response = await fetch(`${BACKEND_URL}/api/deploy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -251,7 +252,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
 
     try {
       const graphJSON = getGraphJSON();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001"}/api/security/autofix`, {
+      const response = await fetch(`${BACKEND_URL}/api/security/autofix`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ graph: graphJSON }),

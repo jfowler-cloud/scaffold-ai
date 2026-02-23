@@ -9,6 +9,9 @@ interface PlannerNotificationProps {
 export function PlannerNotification({ plannerData, onDismiss }: PlannerNotificationProps) {
   if (!plannerData) return null;
 
+  const archPart = plannerData.architecture ? ` · ${plannerData.architecture}` : "";
+  const content = `${plannerData.projectName}${archPart}. Ready to generate code and infrastructure.`;
+
   return (
     <div style={{ position: "fixed", top: 60, right: 20, zIndex: 1000, maxWidth: 400 }}>
       <Flashbar
@@ -18,7 +21,7 @@ export function PlannerNotification({ plannerData, onDismiss }: PlannerNotificat
             dismissible: true,
             onDismiss,
             header: "Project Plan Imported",
-            content: `${plannerData.projectName} - ${plannerData.architecture}. Ready to generate code and infrastructure.`,
+            content,
           },
         ]}
       />
