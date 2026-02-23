@@ -12,6 +12,8 @@ import Textarea from "@cloudscape-design/components/textarea";
 import Spinner from "@cloudscape-design/components/spinner";
 import Icon from "@cloudscape-design/components/icon";
 import Select from "@cloudscape-design/components/select";
+import Modal from "@cloudscape-design/components/modal";
+import Alert from "@cloudscape-design/components/alert";
 
 interface ChatMessage {
   id: string;
@@ -103,7 +105,7 @@ function WelcomeMessage() {
 export function Chat({ plannerData }: { plannerData?: any }) {
   const [input, setInput] = useState("");
   const [iacFormat, setIacFormat] = useState({ label: "CDK (TypeScript)", value: "cdk" });
-  const [deploying, setDeploying] = useState(false);
+  const [deployModalVisible, setDeployModalVisible] = useState(false);
   const [securityFailed, setSecurityFailed] = useState(false);
   const [lastGenerateInput, setLastGenerateInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -128,79 +130,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
     scrollToBottom();
   }, [messages]);
 
-  const handleDeploy = async () => {
-    if (deploying || generatedFiles.length === 0) return;
-    if (!["cdk", "cloudformation"].includes(iacFormat.value)) return;
-
-    setDeploying(true);
-    addMessage({
-      id: `system-${Date.now()}`,
-      role: "assistant",
-      content: "Starting deployment to AWS...",
-    });
-
-    try {
-      if (iacFormat.value === "cloudformation") {
-        // CloudFormation deployment
-        const templateFile = generatedFiles.find(f => f.path.includes("template.yaml"));
-
-        if (!templateFile) {
-          throw new Error("CloudFormation template not found. Generate code first.");
-        }
-
-        addMessage({
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: `⚠️ CloudFormation deployment requires AWS SAM CLI.\n\nTo deploy manually:\n\n1. Save the template to \`template.yaml\`\n2. Run: \`sam deploy --guided\`\n\nOr use AWS Console to create a stack with the generated template.`,
-        });
-        setDeploying(false);
-        return;
-      }
-
-      // CDK deployment
-      const stackFile = generatedFiles.find(f => f.path.includes("stack.ts"));
-      const appFile = generatedFiles.find(f => f.path.includes("app.ts"));
-
-      if (!stackFile || !appFile) {
-        throw new Error("CDK files not found. Generate code first.");
-      }
-
-      const response = await fetch(`${BACKEND_URL}/api/deploy`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stack_name: "ScaffoldAIStack",
-          cdk_code: stackFile.content,
-          app_code: appFile.content,
-          region: "us-east-1",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        addMessage({
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: `✅ Deployment successful! ${data.message || ""}`,
-        });
-      } else {
-        addMessage({
-          id: `error-${Date.now()}`,
-          role: "assistant",
-          content: `❌ Deployment failed: ${data.error}`,
-        });
-      }
-    } catch (error) {
-      addMessage({
-        id: `error-${Date.now()}`,
-        role: "assistant",
-        content: `❌ Deployment error: ${error instanceof Error ? error.message : "Unknown error"}`,
-      });
-    } finally {
-      setDeploying(false);
-    }
-  };
+  const handleDeploy = () => setDeployModalVisible(true);
 
   const handleDownloadZip = async () => {
     if (generatedFiles.length === 0) return;
@@ -421,6 +351,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
   };
 
   return (
+    <>
     <Container
       header={
         <Header
@@ -534,8 +465,6 @@ export function Chat({ plannerData }: { plannerData?: any }) {
               </Button>
               <Button
                 onClick={handleDeploy}
-                disabled={deploying || generatedFiles.length === 0 || !["cdk", "cloudformation"].includes(iacFormat.value)}
-                loading={deploying}
                 iconName="upload"
               >
                 Deploy to AWS
@@ -565,5 +494,45 @@ export function Chat({ plannerData }: { plannerData?: any }) {
         </div>
       </div>
     </Container>
+
+      <Modal
+        visible={deployModalVisible}
+        onDismiss={() => setDeployModalVisible(false)}
+        header={
+          <SpaceBetween direction="horizontal" size="s">
+            <Icon name="upload" size="medium" />
+            <span>Deploy to AWS</span>
+          </SpaceBetween>
+        }
+        footer={
+          <Box float="right">
+            <Button variant="primary" onClick={() => setDeployModalVisible(false)}>
+              Got it
+            </Button>
+          </Box>
+        }
+        size="medium"
+      >
+        <SpaceBetween size="l">
+          <Alert type="info" header="Coming soon">
+            One-click deployment to AWS is not yet available. It&apos;s on the roadmap and will support CDK, CloudFormation, and Terraform.
+          </Alert>
+          <Box variant="p" color="text-body-secondary">
+            In the meantime, download your generated code as a ZIP and deploy manually:
+          </Box>
+          <SpaceBetween size="xs">
+            <Box variant="p">
+              <strong>CDK</strong> — run <code>cdk deploy</code> from the project root
+            </Box>
+            <Box variant="p">
+              <strong>CloudFormation</strong> — run <code>sam deploy --guided</code> or upload via the AWS Console
+            </Box>
+            <Box variant="p">
+              <strong>Terraform</strong> — run <code>terraform init &amp;&amp; terraform apply</code>
+            </Box>
+          </SpaceBetween>
+        </SpaceBetween>
+      </Modal>
+    </>
   );
 }
