@@ -232,6 +232,89 @@ All three projects share production patterns: input validation, error handling, 
 
 ---
 
+## Critical Review & Recommendations
+
+Honest assessment of the codebase as of Feb 2026, based on a full source review. See also [CRITICAL_REVIEW.md](CRITICAL_REVIEW.md) for the detailed 44-item audit.
+
+### P0 -- Planner Import Loses Structured Data
+
+The Project Planner AI integration (`usePlannerImport.ts`) receives a URL-encoded `prompt` parameter, but discards all structured fields. The resulting `PlannerImport` object has empty `architecture`, `techStack`, and `requirements` -- only `description` (the raw text prompt) is populated. This means the Chat component receives an unstructured text blob rather than parsed project metadata.
+
+**Recommendation:** Parse the prompt text to extract structured fields (project name, architecture, tech stack entries, user count, uptime). Alternatively, coordinate with Project Planner AI to pass a JSON payload via `postMessage` or a shared backend key instead of a URL parameter. This would allow the architect agent to receive typed inputs and produce better initial designs.
+
+### P0 -- No Authentication or Persistence
+
+All endpoints are public. All state (architectures, chat history, sharing links, security scores) is stored in memory and lost on restart. The deploy endpoint runs `cdk deploy` with full system access and no user validation.
+
+**Recommendation (short-term):** Add API key validation middleware for the deploy endpoint. Add a `projects` dict keyed by session ID so architectures survive page refreshes. **Recommendation (medium-term):** Add Cognito auth + DynamoDB persistence as outlined in CRITICAL_REVIEW.md Phase 1.
+
+### P1 -- Deployment Service Runs Unsandboxed Subprocesses
+
+`cdk_deployment.py` executes `npm install` and `npx cdk deploy` via `subprocess.run` with no container isolation, no disk space checks, and no cleanup on failure. A malicious or buggy CDK template could write anywhere on the filesystem.
+
+**Recommendation:** Run CDK synthesis and deployment inside a Docker container with a read-only root filesystem and a tmpfs work directory. Add explicit timeouts and cleanup logic in `finally` blocks.
+
+### P1 -- Broad Exception Handling Masks Root Causes
+
+15+ `except Exception as e` blocks across the codebase catch everything and return generic "An internal error occurred" messages. This makes debugging difficult and hides transient vs. permanent failures.
+
+**Recommendation:** Create a custom exception hierarchy (`ScaffoldError`, `LLMError`, `DeploymentError`, etc.). Catch specific exceptions, log with request context, and return structured error responses with error codes.
+
+### P1 -- No Input Length Validation on Chat
+
+~~`user_input: str` has no max length constraint.~~ **Correction:** `ChatRequest` does validate `user_input` with a 5000-char limit and non-empty check via `field_validator`. However, `graph_json: dict | None` is still unvalidated -- there is no schema check, no node count limit, and no max depth. A crafted graph payload could cause the architect prompt to exceed the LLM context window or produce excessive token costs.
+
+**Recommendation:** Add a Pydantic validator for `graph_json` that rejects graphs with more than 50 nodes. Validate that node IDs and types match expected formats.
+
+### P2 -- Inconsistent Backend URL Configuration
+
+The frontend references the backend URL in multiple places with different fallback chains (`NEXT_PUBLIC_BACKEND_URL || NEXT_PUBLIC_API_URL || "http://localhost:8001"`). The port 8001 default is correct -- when launched via the planner's `dev.sh`, Scaffold AI's backend is bumped to 8001 (and frontend to 3001) so both projects run side-by-side.
+
+**Recommendation:** Centralize the URL logic into a single `lib/config.ts` exporting `BACKEND_URL` and import it everywhere, rather than repeating the fallback chain in each component.
+
+### P2 -- Agent Classes vs. Node Functions Are Redundant
+
+The `agents/` directory contains class-based agents (`ArchitectAgent`, `InterpreterAgent`) with placeholder methods that are never called. The real logic lives in `graph/nodes.py` as standalone async functions. This is confusing -- two implementations of the same concept.
+
+**Recommendation:** Either remove the unused agent classes or refactor `nodes.py` to delegate to them. The `SecuritySpecialistAgent` is the one agent class that is actually used (as a fallback); keep that pattern and extend it.
+
+### P1 -- Deploy Endpoint Accepts Arbitrary CDK Code
+
+The `/api/deploy` endpoint accepts raw `cdk_code` and `app_code` strings from the client and writes them to disk before executing `cdk deploy`. While `stack_name` is validated against a regex to prevent command injection, the **code content itself** is not inspected. An attacker could submit CDK code containing `child_process.exec()` or filesystem operations. The deployment runs with the server's full AWS credentials.
+
+**Recommendation:** At minimum, validate that the CDK code only imports from `aws-cdk-lib` and `constructs`. Better: run synthesis in a Docker container with restricted network access and no AWS credentials, then deploy the synthesized CloudFormation template directly.
+
+### P2 -- PlannerNotification Shows Broken Content
+
+`PlannerNotification.tsx` renders `plannerData.projectName` (always `"Imported Project"`) and `plannerData.architecture` (always `""`). The notification reads: *"Imported Project - . Ready to generate code and infrastructure."* -- note the dangling hyphen-period from the empty architecture field.
+
+**Recommendation:** Conditionally render the architecture field. Parse the project name from the prompt text (it's on the `Project:` line) instead of hardcoding `"Imported Project"`.
+
+### P2 -- Mixed Direct/Proxy Backend Calls in Frontend
+
+`Chat.tsx` uses two different patterns to reach the backend:
+- `handleSubmit` and `handleGenerateCode` call `/api/chat` (relative URL, routed through Next.js API proxy)
+- `handleDeploy`, `handleSecurityFix`, and `handleDownloadZip` call `process.env.NEXT_PUBLIC_BACKEND_URL || ...` (direct, bypasses Next.js)
+
+This means CORS, authentication, and error handling behave differently depending on the action. If a proxy middleware is added later (for auth tokens, logging, etc.), it will only apply to some requests.
+
+**Recommendation:** Route all backend calls through the Next.js API proxy for consistency, or call the backend directly everywhere. Don't mix both.
+
+### P2 -- Generated File Disk Write Uses Fragile Path Resolution
+
+`_write_generated_file` in `nodes.py` walks up 8 parent directories looking for `package.json` to find the repo root. If the backend is run from an unexpected working directory or the file structure changes, generated files may be written to the wrong location or silently fail.
+
+**Recommendation:** Resolve the repo root once at startup via an environment variable or by walking from `__file__` with a known anchor (e.g., `apps/backend`). Cache the result instead of re-walking on every write.
+
+### Integration with Project Planner AI
+
+The planner-to-scaffold handoff works end-to-end: the planner's `ScaffoldIntegration.tsx` opens Scaffold AI with `?from=planner&prompt=...`, and `usePlannerImport.ts` populates the Chat textarea. The notification banner appears via `PlannerNotification.tsx`. The main gaps are:
+- **Data fidelity** -- structured plan fields are lost (see P0 above)
+- **Notification content** -- project name and architecture display incorrectly (see P2 above)
+- **URL length** -- long plans may be truncated by browsers/proxies at ~2000 chars
+
+---
+
 ## Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
