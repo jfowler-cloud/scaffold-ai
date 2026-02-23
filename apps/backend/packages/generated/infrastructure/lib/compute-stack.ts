@@ -2,7 +2,6 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 
@@ -10,18 +9,14 @@ export class ComputeStack extends cdk.NestedStack {
   constructor(scope: Construct, id: string, props?: cdk.NestedStackProps) {
     super(scope, id, props);
 
-    const eventbridgeeventbus = new events.EventBus(this, 'eventbridge', {
-      eventBusName: 'EventBridge Event Bus',
-    });
-
-    const logingestionqueueDlq = new sqs.Queue(this, 'ingestion-queueDlq', {
+    const logprocessingqueueDlq = new sqs.Queue(this, 'log-processor-queueDlq', {
       encryption: sqs.QueueEncryption.SQS_MANAGED,
     });
 
-    const logingestionqueue = new sqs.Queue(this, 'ingestion-queue', {
+    const logprocessingqueue = new sqs.Queue(this, 'log-processor-queue', {
       encryption: sqs.QueueEncryption.SQS_MANAGED,
       deadLetterQueue: {
-        queue: logingestionqueueDlq,
+        queue: logprocessingqueueDlq,
         maxReceiveCount: 3,
       },
     });
@@ -36,7 +31,7 @@ export class ComputeStack extends cdk.NestedStack {
       },
     });
 
-    const anomalydetectionengine = new lambda.Function(this, 'anomaly-detection-lambda', {
+    const anomalydetector = new lambda.Function(this, 'anomaly-detector-lambda', {
       runtime: lambda.Runtime.PYTHON_3_12,
       handler: 'index.handler',
       code: lambda.Code.fromInline('def handler(event, context): return {"statusCode": 200}'),
@@ -46,7 +41,15 @@ export class ComputeStack extends cdk.NestedStack {
       },
     });
 
-    const analyticsaggregator = new lambda.Function(this, 'analytics-lambda', {
+    const securityeventsbus = new events.EventBus(this, 'event-bus', {
+      eventBusName: 'Security Events Bus',
+    });
+
+    const alertnotifications = new sns.Topic(this, 'alert-notifications', {
+      displayName: 'Alert Notifications',
+    });
+
+    const alerthandler = new lambda.Function(this, 'alert-handler-lambda', {
       runtime: lambda.Runtime.PYTHON_3_12,
       handler: 'index.handler',
       code: lambda.Code.fromInline('def handler(event, context): return {"statusCode": 200}'),
@@ -56,7 +59,7 @@ export class ComputeStack extends cdk.NestedStack {
       },
     });
 
-    const athenaqueryservice = new lambda.Function(this, 'athena-query-lambda', {
+    const dashboardapihandler = new lambda.Function(this, 'dashboard-api-lambda', {
       runtime: lambda.Runtime.PYTHON_3_12,
       handler: 'index.handler',
       code: lambda.Code.fromInline('def handler(event, context): return {"statusCode": 200}'),
@@ -66,11 +69,7 @@ export class ComputeStack extends cdk.NestedStack {
       },
     });
 
-    const securityalertssns = new sns.Topic(this, 'alert-topic', {
-      displayName: 'Security Alerts SNS',
-    });
-
-    const apihandler = new lambda.Function(this, 'api-handler-lambda', {
+    const athenaqueryhandler = new lambda.Function(this, 'athena-query-lambda', {
       runtime: lambda.Runtime.PYTHON_3_12,
       handler: 'index.handler',
       code: lambda.Code.fromInline('def handler(event, context): return {"statusCode": 200}'),
@@ -80,16 +79,33 @@ export class ComputeStack extends cdk.NestedStack {
       },
     });
 
-    const cdkinfrastructurestack = new sfn.StateMachine(this, 'cdk-stack', {
-      definition: new sfn.Pass(this, 'PassState'),
-      tracingEnabled: true,
-    });
-
-    const deadletterqueueDlq = new sqs.Queue(this, 'dlqDlq', {
+    const anomalydetectionqueueDlq = new sqs.Queue(this, 'anomaly-queueDlq', {
       encryption: sqs.QueueEncryption.SQS_MANAGED,
     });
 
-    const deadletterqueue = new sqs.Queue(this, 'dlq', {
+    const anomalydetectionqueue = new sqs.Queue(this, 'anomaly-queue', {
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
+      deadLetterQueue: {
+        queue: anomalydetectionqueueDlq,
+        maxReceiveCount: 3,
+      },
+    });
+
+    const dlqhandler = new lambda.Function(this, 'dlq-handler-lambda', {
+      runtime: lambda.Runtime.PYTHON_3_12,
+      handler: 'index.handler',
+      code: lambda.Code.fromInline('def handler(event, context): return {"statusCode": 200}'),
+      timeout: cdk.Duration.seconds(30),
+      environment: {
+        LOG_LEVEL: 'INFO',
+      },
+    });
+
+    const deadletterqueueDlq = new sqs.Queue(this, 'dead-letter-queueDlq', {
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
+    });
+
+    const deadletterqueue = new sqs.Queue(this, 'dead-letter-queue', {
       encryption: sqs.QueueEncryption.SQS_MANAGED,
       deadLetterQueue: {
         queue: deadletterqueueDlq,

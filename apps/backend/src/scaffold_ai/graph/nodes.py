@@ -517,6 +517,8 @@ async def security_review_node(state: GraphState) -> GraphState:
 
 def security_gate(state: GraphState) -> str:
     """Router function to determine if security review passed."""
+    if state.get("skip_security"):
+        return "passed"
     review = state.get("security_review")
     if review and review.get("passed", False):
         return "passed"

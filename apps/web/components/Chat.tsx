@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useChatStore, useGraphStore } from "@/lib/store";
+import { BACKEND_URL } from "@/lib/config";
 import Container from "@cloudscape-design/components/container";
 import Header from "@cloudscape-design/components/header";
 import SpaceBetween from "@cloudscape-design/components/space-between";
@@ -11,6 +12,8 @@ import Textarea from "@cloudscape-design/components/textarea";
 import Spinner from "@cloudscape-design/components/spinner";
 import Icon from "@cloudscape-design/components/icon";
 import Select from "@cloudscape-design/components/select";
+import Modal from "@cloudscape-design/components/modal";
+import Alert from "@cloudscape-design/components/alert";
 
 interface ChatMessage {
   id: string;
@@ -102,7 +105,9 @@ function WelcomeMessage() {
 export function Chat({ plannerData }: { plannerData?: any }) {
   const [input, setInput] = useState("");
   const [iacFormat, setIacFormat] = useState({ label: "CDK (TypeScript)", value: "cdk" });
-  const [deploying, setDeploying] = useState(false);
+  const [deployModalVisible, setDeployModalVisible] = useState(false);
+  const [securityFailed, setSecurityFailed] = useState(false);
+  const [lastGenerateInput, setLastGenerateInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isLoading, addMessage, setLoading, setGeneratedFiles, generatedFiles } = useChatStore();
   const { getGraphJSON, setGraph, nodes } = useGraphStore();
@@ -125,79 +130,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
     scrollToBottom();
   }, [messages]);
 
-  const handleDeploy = async () => {
-    if (deploying || generatedFiles.length === 0) return;
-    if (!["cdk", "cloudformation"].includes(iacFormat.value)) return;
-
-    setDeploying(true);
-    addMessage({
-      id: `system-${Date.now()}`,
-      role: "assistant",
-      content: "Starting deployment to AWS...",
-    });
-
-    try {
-      if (iacFormat.value === "cloudformation") {
-        // CloudFormation deployment
-        const templateFile = generatedFiles.find(f => f.path.includes("template.yaml"));
-
-        if (!templateFile) {
-          throw new Error("CloudFormation template not found. Generate code first.");
-        }
-
-        addMessage({
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: `⚠️ CloudFormation deployment requires AWS SAM CLI.\n\nTo deploy manually:\n\n1. Save the template to \`template.yaml\`\n2. Run: \`sam deploy --guided\`\n\nOr use AWS Console to create a stack with the generated template.`,
-        });
-        setDeploying(false);
-        return;
-      }
-
-      // CDK deployment
-      const stackFile = generatedFiles.find(f => f.path.includes("stack.ts"));
-      const appFile = generatedFiles.find(f => f.path.includes("app.ts"));
-
-      if (!stackFile || !appFile) {
-        throw new Error("CDK files not found. Generate code first.");
-      }
-
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001"}/api/deploy`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          stack_name: "ScaffoldAIStack",
-          cdk_code: stackFile.content,
-          app_code: appFile.content,
-          region: "us-east-1",
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        addMessage({
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: `✅ Deployment successful! ${data.message || ""}`,
-        });
-      } else {
-        addMessage({
-          id: `error-${Date.now()}`,
-          role: "assistant",
-          content: `❌ Deployment failed: ${data.error}`,
-        });
-      }
-    } catch (error) {
-      addMessage({
-        id: `error-${Date.now()}`,
-        role: "assistant",
-        content: `❌ Deployment error: ${error instanceof Error ? error.message : "Unknown error"}`,
-      });
-    } finally {
-      setDeploying(false);
-    }
-  };
+  const handleDeploy = () => setDeployModalVisible(true);
 
   const handleDownloadZip = async () => {
     if (generatedFiles.length === 0) return;
@@ -251,7 +184,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
 
     try {
       const graphJSON = getGraphJSON();
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001"}/api/security/autofix`, {
+      const response = await fetch(`${BACKEND_URL}/api/security/autofix`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ graph: graphJSON }),
@@ -260,18 +193,21 @@ export function Chat({ plannerData }: { plannerData?: any }) {
       const data = await response.json();
 
       if (data.updated_graph) {
-        setGraph(data.updated_graph.nodes || [], data.updated_graph.edges || []);
+        // Normalize nodes: ensure node.type is set at top level for React Flow
+        const normalizedNodes = (data.updated_graph.nodes || []).map((n: any) => ({
+          ...n,
+          type: n.type || n.data?.type || "lambda",
+        }));
+        setGraph(normalizedNodes, data.updated_graph.edges || []);
       }
 
       if (data.changes && data.changes.length > 0) {
         addMessage({
           id: `assistant-${Date.now()}`,
           role: "assistant",
-          content: `Security improvements applied:\n${data.changes.join("\n")}\n\nSecurity score: ${data.security_score.percentage}%\n\nRe-generating code with security fixes applied...`,
+          content: `Security improvements applied:\n${data.changes.join("\n")}\n\nSecurity score: ${data.security_score?.percentage ?? "N/A"}%`,
         });
         setLoading(false);
-        // Auto re-generate code with the fixed graph
-        await handleGenerateCode();
       } else {
         addMessage({
           id: `assistant-${Date.now()}`,
@@ -290,10 +226,11 @@ export function Chat({ plannerData }: { plannerData?: any }) {
     }
   };
 
-  const handleGenerateCode = async () => {
+  const handleGenerateCode = async (skipSecurityCheck = false) => {
     if (isLoading || nodes.length === 0) return;
 
     setLoading(true);
+    setSecurityFailed(false);
 
     try {
       const graphJSON = getGraphJSON();
@@ -302,7 +239,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: "generate code",
+          message: skipSecurityCheck ? "generate code skip_security_check" : "generate code",
           graph: graphJSON,
           iac_format: iacFormat.value,
         }),
@@ -316,6 +253,11 @@ export function Chat({ plannerData }: { plannerData?: any }) {
 
       if (data.generated_files && data.generated_files.length > 0) {
         setGeneratedFiles(data.generated_files);
+      }
+
+      // Check if security review failed
+      if (data.message && data.message.includes("Security Review: FAILED")) {
+        setSecurityFailed(true);
       }
 
       addMessage({
@@ -385,13 +327,9 @@ export function Chat({ plannerData }: { plannerData?: any }) {
 
       // Check if security review failed and prompt user to fix
       if (data.message && data.message.includes("Security Review: FAILED")) {
-        setTimeout(() => {
-          addMessage({
-            id: `system-${Date.now()}`,
-            role: "assistant",
-            content: "Would you like me to automatically fix these security issues? Click the 'Fix Security' button above to apply recommended fixes.",
-          });
-        }, 500);
+        setSecurityFailed(true);
+      } else {
+        setSecurityFailed(false);
       }
     } catch (error) {
       console.error("Chat error:", error);
@@ -413,6 +351,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
   };
 
   return (
+    <>
     <Container
       header={
         <Header
@@ -444,6 +383,44 @@ export function Chat({ plannerData }: { plannerData?: any }) {
           {isLoading && <LoadingBubble />}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Security failure banner */}
+        {securityFailed && (
+          <div style={{
+            backgroundColor: "#fff7ed",
+            border: "1px solid #fed7aa",
+            borderRadius: "8px",
+            padding: "12px 16px",
+            marginBottom: "8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+          }}>
+            <span style={{ fontSize: "13px", color: "#9a3412" }}>
+              ⚠️ Security review failed. Fix issues or mark as resolved to proceed.
+            </span>
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button
+                variant="primary"
+                onClick={handleSecurityFix}
+                disabled={isLoading}
+                iconName="security"
+              >
+                Auto-Fix
+              </Button>
+              <Button
+                onClick={() => {
+                  setSecurityFailed(false);
+                  handleGenerateCode(true);
+                }}
+                disabled={isLoading}
+              >
+                Mark Resolved
+              </Button>
+            </SpaceBetween>
+          </div>
+        )}
 
         {/* Input area */}
         <div style={{ borderTop: "1px solid #e9ebed", paddingTop: "16px" }}>
@@ -488,8 +465,6 @@ export function Chat({ plannerData }: { plannerData?: any }) {
               </Button>
               <Button
                 onClick={handleDeploy}
-                disabled={deploying || generatedFiles.length === 0 || !["cdk", "cloudformation"].includes(iacFormat.value)}
-                loading={deploying}
                 iconName="upload"
               >
                 Deploy to AWS
@@ -519,5 +494,45 @@ export function Chat({ plannerData }: { plannerData?: any }) {
         </div>
       </div>
     </Container>
+
+      <Modal
+        visible={deployModalVisible}
+        onDismiss={() => setDeployModalVisible(false)}
+        header={
+          <SpaceBetween direction="horizontal" size="s">
+            <Icon name="upload" size="medium" />
+            <span>Deploy to AWS</span>
+          </SpaceBetween>
+        }
+        footer={
+          <Box float="right">
+            <Button variant="primary" onClick={() => setDeployModalVisible(false)}>
+              Got it
+            </Button>
+          </Box>
+        }
+        size="medium"
+      >
+        <SpaceBetween size="l">
+          <Alert type="info" header="Coming soon">
+            One-click deployment to AWS is not yet available. It&apos;s on the roadmap and will support CDK, CloudFormation, and Terraform.
+          </Alert>
+          <Box variant="p" color="text-body-secondary">
+            In the meantime, download your generated code as a ZIP and deploy manually:
+          </Box>
+          <SpaceBetween size="xs">
+            <Box variant="p">
+              <strong>CDK</strong> — run <code>cdk deploy</code> from the project root
+            </Box>
+            <Box variant="p">
+              <strong>CloudFormation</strong> — run <code>sam deploy --guided</code> or upload via the AWS Console
+            </Box>
+            <Box variant="p">
+              <strong>Terraform</strong> — run <code>terraform init &amp;&amp; terraform apply</code>
+            </Box>
+          </SpaceBetween>
+        </SpaceBetween>
+      </Modal>
+    </>
   );
 }

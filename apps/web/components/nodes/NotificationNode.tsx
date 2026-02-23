@@ -3,19 +3,13 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { AppNode } from "@/lib/store";
+import { SecurityBadge } from "./SecurityBadge";
 
-export const NotificationNode = memo(function NotificationNode({
-  data,
-  selected,
-}: NodeProps<AppNode>) {
+export const NotificationNode = memo(function NotificationNode({ data, selected }: NodeProps<AppNode>) {
   return (
-    <div
-      className={`px-4 py-3 rounded-lg border-2 bg-white shadow-md min-w-[150px] ${
-        selected ? "border-red-500 ring-2 ring-red-200" : "border-red-300"
-      }`}
-    >
+    <div className={`relative px-4 py-3 rounded-lg border-2 bg-white shadow-md min-w-[150px] ${selected ? "border-red-500 ring-2 ring-red-200" : "border-red-300"}`}>
+      <SecurityBadge config={data.config} />
       <Handle type="target" position={Position.Left} className="!bg-red-500" />
-
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded bg-red-100 flex items-center justify-center">
           <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -27,7 +21,6 @@ export const NotificationNode = memo(function NotificationNode({
           <div className="text-xs text-gray-500">SNS Topic</div>
         </div>
       </div>
-
       <Handle type="source" position={Position.Right} className="!bg-red-500" />
     </div>
   );

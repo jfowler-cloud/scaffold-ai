@@ -118,6 +118,15 @@ class GraphRequest(BaseModel):
 
     graph: dict
 
+    @field_validator("graph")
+    @classmethod
+    def validate_graph(cls, v: dict) -> dict:
+        """Reject graphs with too many nodes to prevent context window abuse."""
+        nodes = v.get("nodes", [])
+        if len(nodes) > 50:
+            raise ValueError("Graph cannot have more than 50 nodes")
+        return v
+
 
 class ShareRequest(BaseModel):
     """Request model for sharing endpoint."""
@@ -191,13 +200,14 @@ async def chat(request: Request, body: ChatRequest):
     try:
         # Initialize state
         initial_state: GraphState = {
-            "user_input": body.user_input,
+            "user_input": body.user_input.replace("skip_security_check", "").strip(),
             "intent": "new_feature",  # Will be determined by interpreter
             "graph_json": body.graph_json or {"nodes": [], "edges": []},
             "iac_format": body.iac_format,
             "generated_files": [],
             "errors": [],
             "retry_count": 0,
+            "skip_security": "skip_security_check" in body.user_input,
             "response": "",
             "security_review": None,
         }

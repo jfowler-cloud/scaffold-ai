@@ -8,7 +8,20 @@ export class FrontendStack extends cdk.NestedStack {
   constructor(scope: Construct, id: string, props?: cdk.NestedStackProps) {
     super(scope, id, props);
 
-    const cognitouserpool = new cognito.UserPool(this, 'cognito', {
+    const dashboardapi = new apigateway.RestApi(this, 'api-gateway', {
+      restApiName: 'Dashboard API',
+      deployOptions: {
+        stageName: 'prod',
+        tracingEnabled: true,
+        loggingLevel: apigateway.MethodLoggingLevel.INFO,
+      },
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS,
+        allowMethods: apigateway.Cors.ALL_METHODS,
+      },
+    });
+
+    const userauthentication = new cognito.UserPool(this, 'user-auth', {
       selfSignUpEnabled: true,
       signInAliases: { email: true },
       passwordPolicy: {
@@ -22,20 +35,7 @@ export class FrontendStack extends cdk.NestedStack {
       advancedSecurityMode: cognito.AdvancedSecurityMode.ENFORCED,
     });
 
-    const restapigateway = new apigateway.RestApi(this, 'api-gateway', {
-      restApiName: 'REST API Gateway',
-      deployOptions: {
-        stageName: 'prod',
-        tracingEnabled: true,
-        loggingLevel: apigateway.MethodLoggingLevel.INFO,
-      },
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS,
-      },
-    });
-
-    const cloudfrontdistribution = new cloudfront.Distribution(this, 'cloudfront', {
+    const dashboardcdn = new cloudfront.Distribution(this, 'frontend-cdn', {
       defaultBehavior: {
         origin: /* Configure origin: S3 bucket or API Gateway */,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,

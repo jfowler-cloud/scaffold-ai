@@ -7,7 +7,7 @@ export class DataStack extends cdk.NestedStack {
   constructor(scope: Construct, id: string, props?: cdk.NestedStackProps) {
     super(scope, id, props);
 
-    const vpcflowlogss3bucket = new s3.Bucket(this, 'flow-logs-bucket', {
+    const vpcflowlogsbucket = new s3.Bucket(this, 'flow-logs-bucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       enforceSSL: true,
@@ -16,7 +16,7 @@ export class DataStack extends cdk.NestedStack {
       autoDeleteObjects: true,
     });
 
-    const processedlogss3bucket = new s3.Bucket(this, 'processed-logs-bucket', {
+    const rawlogsarchive = new s3.Bucket(this, 'raw-logs-bucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       enforceSSL: true,
@@ -25,7 +25,7 @@ export class DataStack extends cdk.NestedStack {
       autoDeleteObjects: true,
     });
 
-    const analyticsdynamodb = new dynamodb.Table(this, 'dynamodb', {
+    const analysisresultsdb = new dynamodb.Table(this, 'analysis-database', {
       partitionKey: { name: 'id', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       encryption: dynamodb.TableEncryption.AWS_MANAGED,
@@ -33,7 +33,16 @@ export class DataStack extends cdk.NestedStack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    const frontendassetss3 = new s3.Bucket(this, 'frontend-bucket', {
+    const athenaqueryresults = new s3.Bucket(this, 'athena-analytics', {
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      enforceSSL: true,
+      versioned: true,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
+    const frontendassets = new s3.Bucket(this, 'frontend-bucket', {
       encryption: s3.BucketEncryption.S3_MANAGED,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       enforceSSL: true,

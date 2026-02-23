@@ -17,7 +17,7 @@ _TYPE_HINTS = {
     "dlq": ["dlq", "dead-letter", "deadletter", "dead_letter"],
     "storage": ["bucket", "s3", "storage"],
     "database": ["db", "database", "dynamo", "table", "rds", "aurora"],
-    "lambda": ["lambda", "function", "fn", "handler", "processor", "detector"],
+    "lambda": ["lambda", "function", "fn", "handler", "processor", "detector", "athena"],
     "api": ["api", "gateway", "apigw", "rest", "http"],
     "auth": ["auth", "cognito", "identity", "login"],
     "cdn": ["cdn", "cloudfront", "distribution"],
@@ -29,16 +29,34 @@ _TYPE_HINTS = {
 
 
 def _resolve_type(node: dict) -> str:
-    """Resolve the effective type of a node using data.type, id, and label."""
+    """Resolve the effective type of a node using data.type, id, and label.
+
+    Priority order:
+    1. data.type if it's a known type (most reliable)
+    2. Keyword matching on id + label — lambda beats dlq when both match
+       (e.g. 'dlq-processor-lambda' is a Lambda, not a queue)
+    """
     data_type = node.get("data", {}).get("type", "")
+    known_types = {"queue", "storage", "database", "lambda", "api", "auth",
+                   "cdn", "sns", "events", "glue", "stream", "notification", "frontend"}
+
+    if data_type in known_types:
+        return data_type
+
     node_id = node.get("id", "").lower()
     label = node.get("data", {}).get("label", "").lower()
-    combined = f"{data_type} {node_id} {label}"
+    combined = f"{node_id} {label}"
 
-    # dlq check first (subset of queue)
+    # Lambda takes priority — check before dlq so 'dlq-processor-lambda' → lambda
+    if any(k in combined for k in _TYPE_HINTS["lambda"]):
+        return "lambda"
+    # Then dlq/queue
     if any(k in combined for k in _TYPE_HINTS["dlq"]):
         return "queue"
+    # Rest of types
     for t, keywords in _TYPE_HINTS.items():
+        if t in ("lambda", "dlq"):
+            continue
         if any(k in combined for k in keywords):
             return t
     return data_type or "unknown"
