@@ -87,5 +87,8 @@ class GraphState(TypedDict):
     # Retry counter for error handling
     retry_count: int
 
+    # Skip security review (user marked issues as resolved)
+    skip_security: bool
+
     # Response to return to user
     response: str

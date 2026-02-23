@@ -104,6 +104,8 @@ export function Chat({ plannerData }: { plannerData?: any }) {
   const [input, setInput] = useState("");
   const [iacFormat, setIacFormat] = useState({ label: "CDK (TypeScript)", value: "cdk" });
   const [deploying, setDeploying] = useState(false);
+  const [securityFailed, setSecurityFailed] = useState(false);
+  const [lastGenerateInput, setLastGenerateInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { messages, isLoading, addMessage, setLoading, setGeneratedFiles, generatedFiles } = useChatStore();
   const { getGraphJSON, setGraph, nodes } = useGraphStore();
@@ -261,18 +263,21 @@ export function Chat({ plannerData }: { plannerData?: any }) {
       const data = await response.json();
 
       if (data.updated_graph) {
-        setGraph(data.updated_graph.nodes || [], data.updated_graph.edges || []);
+        // Normalize nodes: ensure node.type is set at top level for React Flow
+        const normalizedNodes = (data.updated_graph.nodes || []).map((n: any) => ({
+          ...n,
+          type: n.type || n.data?.type || "lambda",
+        }));
+        setGraph(normalizedNodes, data.updated_graph.edges || []);
       }
 
       if (data.changes && data.changes.length > 0) {
         addMessage({
           id: `assistant-${Date.now()}`,
           role: "assistant",
-          content: `Security improvements applied:\n${data.changes.join("\n")}\n\nSecurity score: ${data.security_score.percentage}%\n\nRe-generating code with security fixes applied...`,
+          content: `Security improvements applied:\n${data.changes.join("\n")}\n\nSecurity score: ${data.security_score?.percentage ?? "N/A"}%`,
         });
         setLoading(false);
-        // Auto re-generate code with the fixed graph
-        await handleGenerateCode();
       } else {
         addMessage({
           id: `assistant-${Date.now()}`,
@@ -291,10 +296,11 @@ export function Chat({ plannerData }: { plannerData?: any }) {
     }
   };
 
-  const handleGenerateCode = async () => {
+  const handleGenerateCode = async (skipSecurityCheck = false) => {
     if (isLoading || nodes.length === 0) return;
 
     setLoading(true);
+    setSecurityFailed(false);
 
     try {
       const graphJSON = getGraphJSON();
@@ -303,7 +309,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: "generate code",
+          message: skipSecurityCheck ? "generate code skip_security_check" : "generate code",
           graph: graphJSON,
           iac_format: iacFormat.value,
         }),
@@ -317,6 +323,11 @@ export function Chat({ plannerData }: { plannerData?: any }) {
 
       if (data.generated_files && data.generated_files.length > 0) {
         setGeneratedFiles(data.generated_files);
+      }
+
+      // Check if security review failed
+      if (data.message && data.message.includes("Security Review: FAILED")) {
+        setSecurityFailed(true);
       }
 
       addMessage({
@@ -386,13 +397,9 @@ export function Chat({ plannerData }: { plannerData?: any }) {
 
       // Check if security review failed and prompt user to fix
       if (data.message && data.message.includes("Security Review: FAILED")) {
-        setTimeout(() => {
-          addMessage({
-            id: `system-${Date.now()}`,
-            role: "assistant",
-            content: "Would you like me to automatically fix these security issues? Click the 'Fix Security' button above to apply recommended fixes.",
-          });
-        }, 500);
+        setSecurityFailed(true);
+      } else {
+        setSecurityFailed(false);
       }
     } catch (error) {
       console.error("Chat error:", error);
@@ -445,6 +452,44 @@ export function Chat({ plannerData }: { plannerData?: any }) {
           {isLoading && <LoadingBubble />}
           <div ref={messagesEndRef} />
         </div>
+
+        {/* Security failure banner */}
+        {securityFailed && (
+          <div style={{
+            backgroundColor: "#fff7ed",
+            border: "1px solid #fed7aa",
+            borderRadius: "8px",
+            padding: "12px 16px",
+            marginBottom: "8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+          }}>
+            <span style={{ fontSize: "13px", color: "#9a3412" }}>
+              ⚠️ Security review failed. Fix issues or mark as resolved to proceed.
+            </span>
+            <SpaceBetween direction="horizontal" size="xs">
+              <Button
+                variant="primary"
+                onClick={handleSecurityFix}
+                disabled={isLoading}
+                iconName="security"
+              >
+                Auto-Fix
+              </Button>
+              <Button
+                onClick={() => {
+                  setSecurityFailed(false);
+                  handleGenerateCode(true);
+                }}
+                disabled={isLoading}
+              >
+                Mark Resolved
+              </Button>
+            </SpaceBetween>
+          </div>
+        )}
 
         {/* Input area */}
         <div style={{ borderTop: "1px solid #e9ebed", paddingTop: "16px" }}>

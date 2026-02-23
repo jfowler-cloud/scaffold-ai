@@ -200,13 +200,14 @@ async def chat(request: Request, body: ChatRequest):
     try:
         # Initialize state
         initial_state: GraphState = {
-            "user_input": body.user_input,
+            "user_input": body.user_input.replace("skip_security_check", "").strip(),
             "intent": "new_feature",  # Will be determined by interpreter
             "graph_json": body.graph_json or {"nodes": [], "edges": []},
             "iac_format": body.iac_format,
             "generated_files": [],
             "errors": [],
             "retry_count": 0,
+            "skip_security": "skip_security_check" in body.user_input,
             "response": "",
             "security_review": None,
         }
