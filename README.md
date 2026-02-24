@@ -82,10 +82,24 @@ User Input --> Interpreter --> Architect --> Security Specialist --> Code Genera
 - **Multi-Format IaC** -- Generate CDK TypeScript, CDK Python, CloudFormation, or Terraform
 - **Code Viewer** -- Tabbed modal for browsing generated infrastructure code
 - **Export & Deploy** -- Download as ZIP or deploy directly to AWS with CDK
-- **Project Planner Integration** -- Receives plans from [Project Planner AI](https://github.com/jfowler-cloud/project-planner-ai) via one-click handoff
-- **Rate Limiting** -- 10 req/min chat, 3 req/hr deployment
+- **Project Planner Integration** -- Structured API integration with session-based storage
+- **Shared Types Package** -- Type-safe data transfer with Project Planner AI
+- **Rate Limiting** -- 10 req/min chat, 3 req/hr deployment, 20 req/min plan import
 - **Dark Mode** -- Persistent theme preference
 - **Pre-commit Hooks** -- TruffleHog secrets detection, AWS credentials scanning
+
+### Integration with Project Planner AI
+
+Scaffold AI receives project plans from [Project Planner AI](https://github.com/jfowler-cloud/project-planner-ai) via structured API:
+
+- **REST API endpoints** - `POST /api/import/plan` and `GET /api/import/plan/{session_id}`
+- **Session-based storage** - Plans stored with unique session IDs
+- **Type-safe** - Shared TypeScript types ensure data consistency
+- **Backward compatible** - Falls back to URL parameter parsing if needed
+- **Auto-populated chat** - Project context pre-filled from plan data
+- **7 comprehensive tests** - Full test coverage for import functionality
+
+The integration enables a seamless workflow: Plan → Build → Deploy.
 
 ---
 
