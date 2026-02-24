@@ -143,6 +143,18 @@ class SecurityHistoryRequest(BaseModel):
     issues: list[dict] = []
 
 
+class PlanImportRequest(BaseModel):
+    """Request model for importing a plan from Project Planner AI."""
+
+    plan_id: str
+    project_name: str
+    description: str
+    architecture: str
+    tech_stack: dict[str, str]
+    requirements: dict[str, str]
+    full_plan: dict | None = None  # Optional full plan data
+
+
 class DeployResponse(BaseModel):
     """Response model for deployment endpoint."""
 
@@ -401,3 +413,71 @@ async def get_security_history(request: Request, architecture_id: str):
     improvement = security_history.get_improvement(architecture_id)
 
     return {"history": history, "improvement": improvement}
+
+
+# In-memory store for imported plans (temporary - should use Redis/DB in production)
+_imported_plans: dict[str, dict] = {}
+
+
+@app.post("/api/import/plan")
+@limiter.limit("20/minute")
+async def import_plan(request: Request, body: PlanImportRequest):
+    """
+    Import a project plan from Project Planner AI.
+    
+    This endpoint receives structured plan data and stores it for the session,
+    then returns a session ID that can be used to retrieve the plan.
+    """
+    import uuid
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    try:
+        session_id = str(uuid.uuid4())
+        
+        # Store the plan data
+        _imported_plans[session_id] = {
+            "plan_id": body.plan_id,
+            "project_name": body.project_name,
+            "description": body.description,
+            "architecture": body.architecture,
+            "tech_stack": body.tech_stack,
+            "requirements": body.requirements,
+            "full_plan": body.full_plan,
+            "imported_at": __import__("datetime").datetime.now().isoformat(),
+        }
+        
+        # Generate initial prompt for the user
+        prompt = f"""I have a project plan from Project Planner AI:
+
+Project: {body.project_name}
+Architecture: {body.architecture}
+Tech Stack: {', '.join(f'{k}: {v}' for k, v in body.tech_stack.items())}
+Requirements: {', '.join(f'{k}: {v}' for k, v in body.requirements.items())}
+
+Please help me build this architecture on AWS."""
+        
+        logger.info(f"Imported plan {body.plan_id} with session {session_id}")
+        
+        return {
+            "session_id": session_id,
+            "message": "Plan imported successfully",
+            "initial_prompt": prompt,
+        }
+        
+    except Exception:
+        logger.exception("Plan import error")
+        raise HTTPException(status_code=500, detail="Failed to import plan")
+
+
+@app.get("/api/import/plan/{session_id}")
+@limiter.limit("30/minute")
+async def get_imported_plan(request: Request, session_id: str):
+    """Retrieve an imported plan by session ID."""
+    plan = _imported_plans.get(session_id)
+    
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found or expired")
+    
+    return plan
