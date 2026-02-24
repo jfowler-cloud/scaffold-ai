@@ -69,6 +69,7 @@ function parsePrompt(prompt: string): PlannerImport {
 export function usePlannerImport() {
   const [plannerData, setPlannerData] = useState<PlannerImport | null>(null);
   const [isFromPlanner, setIsFromPlanner] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -77,13 +78,49 @@ export function usePlannerImport() {
     if (fromPlanner) {
       setIsFromPlanner(true);
 
-      const prompt = urlParams.get("prompt");
-      if (prompt) {
-        console.log("✅ Received prompt from Project Planner AI");
-        setPlannerData(parsePrompt(prompt));
+      // Check for new session-based import first
+      const sessionId = urlParams.get("session");
+      if (sessionId) {
+        setIsLoading(true);
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8001";
+        
+        fetch(`${backendUrl}/api/import/plan/${sessionId}`)
+          .then(res => {
+            if (!res.ok) throw new Error("Failed to fetch plan");
+            return res.json();
+          })
+          .then(data => {
+            console.log("✅ Received structured plan from Project Planner AI via API");
+            setPlannerData({
+              projectName: data.project_name,
+              description: data.description,
+              architecture: data.architecture,
+              techStack: data.tech_stack,
+              requirements: data.requirements,
+            });
+          })
+          .catch(error => {
+            console.error("Failed to fetch plan from API:", error);
+            // Fall back to prompt parsing if API fails
+            const prompt = urlParams.get("prompt");
+            if (prompt) {
+              console.log("⚠️ Falling back to prompt parsing");
+              setPlannerData(parsePrompt(prompt));
+            }
+          })
+          .finally(() => {
+            setIsLoading(false);
+          });
+      } else {
+        // Fallback to old prompt-based method
+        const prompt = urlParams.get("prompt");
+        if (prompt) {
+          console.log("✅ Received prompt from Project Planner AI (legacy method)");
+          setPlannerData(parsePrompt(prompt));
+        }
       }
     }
   }, []);
 
-  return { plannerData, isFromPlanner };
+  return { plannerData, isFromPlanner, isLoading };
 }
