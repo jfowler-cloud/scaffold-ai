@@ -35,7 +35,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS — configurable via ALLOWED_ORIGINS env var (comma-separated).
 # Defaults to localhost:3000 for local development.
-_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001")
 ALLOWED_ORIGINS = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
 app.add_middleware(
