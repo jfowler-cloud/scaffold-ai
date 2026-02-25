@@ -3,14 +3,6 @@
 from typing import Dict, List, Tuple
 
 
-class SecurityAutoFix:
-    """Automatically add security improvements to architectures."""
-
-"""Security auto-fix service for automatically improving architecture security."""
-
-from typing import Dict, List, Tuple
-
-
 # Keywords to match node types by ID or label when data.type is missing/generic
 _TYPE_HINTS = {
     "queue": ["queue", "sqs", "fifo"],

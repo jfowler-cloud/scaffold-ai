@@ -25,14 +25,14 @@ The goal was to demonstrate:
 - **Architectural judgment** -- Knowing when LangGraph fits better than Step Functions (and vice versa), rather than defaulting to one tool
 - **Production mindset** -- Security gates, rate limiting, input validation, and testing from the start, not bolted on later
 
-| | Resume Tailor AI | Scaffold AI | Career Path Architect |
-|---|---|---|---|
-| **Purpose** | Resume optimization | AWS architecture design | Career planning |
-| **Orchestration** | AWS Step Functions | LangGraph | LangGraph |
-| **Agents** | Step Functions workflow | 4 LangGraph agents | 6 LangGraph agents |
-| **Development** | 3 days | 1 day | 2 hours |
-| **Tests** | 212 tests, 98% | 126 tests, 67%* | 142 tests, 99% |
-| **Features** | Resume tailoring | Architecture generation | Roadmap + Critical Review |
+| | Resume Tailor AI | Project Planner AI | Scaffold AI | Career Path Architect |
+|---|---|---|---|---|
+| **Purpose** | Resume optimization | Project planning | AWS architecture design | Career planning |
+| **Orchestration** | AWS Step Functions | LangGraph | LangGraph | LangGraph |
+| **Agents** | Step Functions workflow | LangGraph pipeline | 4 LangGraph agents | 6 LangGraph agents |
+| **Development** | 3 days | 2 days | 1 day | 2 hours |
+| **Tests** | 212 tests, 98% | 99 tests, 86% | 126 tests, 67%* | 142 tests, 99% |
+| **Features** | Resume tailoring | Architecture planning | Architecture generation | Roadmap + Critical Review |
 
 *Scaffold AI's 67% coverage focuses on core business logic (LangGraph workflow, security review, IaC generation). Missing coverage is in deployment infrastructure (CDK synthesis, AWS deployment) which was out of scope for the initial build.
 
@@ -165,9 +165,13 @@ When running alongside Project Planner AI (via the planner's `dev.sh`), Scaffold
 **Backend** (`apps/backend/.env`):
 ```bash
 AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your_access_key
-AWS_SECRET_ACCESS_KEY=your_secret_key
+# Prefer AWS_PROFILE or IAM role-based auth (recommended)
+AWS_PROFILE=your_profile
+# Raw keys work but are not recommended — use profile or IAM role instead
+# AWS_ACCESS_KEY_ID=your_access_key
+# AWS_SECRET_ACCESS_KEY=your_secret_key
 BACKEND_URL=http://localhost:8000
+PORT=8000
 ```
 
 **Frontend** (`apps/web/.env.local`):
@@ -334,6 +338,35 @@ The planner-to-scaffold handoff works end-to-end: the planner's `ScaffoldIntegra
 
 ---
 
+## Suggested Polish
+
+Small improvements to tighten things up -- none of these are heavy lifts.
+
+### README / Documentation Fixes
+
+1. **Changelog emoji inconsistency** -- The "Recent Updates" header uses a rocket emoji (`🚀`) but the rest of the README is emoji-free. Either commit to emojis in headers or drop it for consistency with the clean, professional tone of the rest of the doc.
+2. **Portfolio table is missing Project Planner AI** -- The comparison table (line 28) lists Resume Tailor, Scaffold, and Career Path Architect but omits Project Planner AI. Since these two projects are tightly integrated, it's notable by its absence.
+3. **Environment variables section shows raw AWS keys** -- The example `.env` block (line 168-169) shows `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` as the way to configure credentials. Prefer recommending `AWS_PROFILE` or IAM role-based auth, with a note that raw keys work but aren't recommended. Avoids encouraging bad habits.
+4. **Port defaults underdocumented** -- The "Running Locally" section says port 8000/3000, and a note mentions 8001/3001 when paired with the planner. But there's no env var shown for changing the port. Add `PORT=8000` to the env vars section so it's obvious how to control it.
+
+### Quick Code Wins
+
+5. **Remove duplicate class stub in `security_autofix.py`** -- Lines 1-9 contain an incomplete `SecurityAutoFix` class definition followed by duplicate imports, then the real class starts at the second definition. Delete lines 1-9. One-second fix.
+6. **Centralize backend URL config (finish the job)** -- v1.5.0 notes mention adding `lib/config.ts` as a "single source of truth," but `Chat.tsx` still uses mixed patterns: some calls go through `/api/chat` (Next.js proxy) and others hit `BACKEND_URL` directly. Pick one pattern and apply it everywhere.
+7. **Pass structured plan fields to the architect agent** -- `usePlannerImport.ts` receives `PlanImportRequest` with `project_name`, `architecture`, `tech_stack`, and `requirements`, but only passes the raw `description` string to Chat. Thread the structured fields into the architect prompt (e.g., prepend "Tech stack: React, DynamoDB\nArchitecture: serverless\n..." to the message) so the first design pass is better informed. ~10 lines.
+8. **Add graph validation to `ChatRequest`** -- `user_input` has a 5000-char validator, but `graph_json` has no validation at all. Add a Pydantic validator rejecting graphs with >50 nodes and validating node types against the known 12 service types. Prevents context window overflow.
+9. **Add cleanup to `cdk_deployment.py`** -- The `subprocess.run` calls for `npm install` / `cdk deploy` have no `finally` block for cleanup. If synthesis fails mid-write, temp files stay on disk. Wrap in `try/finally` with a `shutil.rmtree` of the temp directory.
+10. **Narrow the broad exception handlers** -- 17 `except Exception as e` blocks across the codebase. You don't need a full exception hierarchy to improve this -- even splitting into `except (json.JSONDecodeError, KeyError)` vs `except Exception` in the LLM response parsing paths would make debugging much easier.
+
+### Nice-to-Haves
+
+11. **PlannerNotification project name** -- The notification always shows "Imported Project" because `usePlannerImport.ts` doesn't extract the project name from the prompt. The prompt typically starts with "Project: My App Name" -- a simple regex extraction would make the notification feel polished instead of generic.
+12. **Repo root resolution** -- `_write_generated_file` in `nodes.py` walks up 8 parent directories looking for `package.json`. Resolve once at startup using `Path(__file__).resolve().parents[n]` with a known anchor like `apps/backend`, then cache. Removes a fragile runtime lookup.
+13. **Remove unused agent classes or wire them up** -- `agents/` has class-based agents (`ArchitectAgent`, `InterpreterAgent`) with methods that are never called. The real logic is in `graph/nodes.py`. Either delete the unused classes (less confusion) or refactor nodes to delegate to them (cleaner architecture). Currently they just add confusion.
+14. **Frontend test coverage** -- 4 test files for the entire Next.js app is light. Priority targets: Chat message submission, canvas node interactions, and planner import flow. These are the highest-traffic paths with the most integration surface.
+
+---
+
 ## Contributing
 
 Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
@@ -347,7 +380,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
-## 🚀 Recent Updates
+## Recent Updates
 
 ### v1.5.0 - Security Visualization & UX Improvements (Feb 2026)
 - ✨ Added SecurityBadge component to all 11 node types — shows active security configs (encryption, WAF, auth, etc.)
