@@ -21,7 +21,6 @@ export default function Home() {
   const [toolsOpen, setToolsOpen] = useState(false);
   const [splitPanelOpen, setSplitPanelOpen] = useState(true);
   const [splitPanelSize, setSplitPanelSize] = useState(420);
-  const [mounted, setMounted] = useState(false);
   const [codeModalVisible, setCodeModalVisible] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [showPlannerNotification, setShowPlannerNotification] = useState(true);
@@ -30,7 +29,6 @@ export default function Home() {
   const { plannerData, isFromPlanner } = usePlannerImport();
 
   useEffect(() => {
-    setMounted(true);
     // Load theme preference from localStorage
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme === "dark") {
@@ -47,22 +45,6 @@ export default function Home() {
     applyMode(newMode ? Mode.Dark : Mode.Light);
     localStorage.setItem("theme", newMode ? "dark" : "light");
   };
-
-  // Prevent hydration mismatch by not rendering until mounted
-  if (!mounted) {
-    return (
-      <div style={{ 
-        width: '100vw', 
-        height: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        backgroundColor: '#0f1419'
-      }}>
-        <div>Loading...</div>
-      </div>
-    );
-  }
 
   return (
     <>
