@@ -24,11 +24,13 @@ export default function Home() {
   const [codeModalVisible, setCodeModalVisible] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [showPlannerNotification, setShowPlannerNotification] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   // Import data from Project Planner AI
   const { plannerData, isFromPlanner } = usePlannerImport();
 
   useEffect(() => {
+    setMounted(true);
     // Load theme preference from localStorage
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme === "dark") {
@@ -164,13 +166,15 @@ export default function Home() {
         onToolsChange={({ detail }) => setToolsOpen(detail.open)}
         toolsWidth={320}
         splitPanel={
-          <SplitPanel
-            header="AI Assistant"
-            hidePreferencesButton
-            closeBehavior="hide"
-          >
-            <Chat plannerData={plannerData} />
-          </SplitPanel>
+          mounted ? (
+            <SplitPanel
+              header="AI Assistant"
+              hidePreferencesButton
+              closeBehavior="hide"
+            >
+              <Chat plannerData={plannerData} />
+            </SplitPanel>
+          ) : undefined
         }
         splitPanelOpen={splitPanelOpen}
         onSplitPanelToggle={({ detail }) => setSplitPanelOpen(detail.open)}
