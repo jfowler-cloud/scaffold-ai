@@ -111,13 +111,32 @@ export function Chat({ plannerData }: { plannerData?: any }) {
   const { messages, isLoading, addMessage, setLoading, setGeneratedFiles, generatedFiles } = useChatStore();
   const { getGraphJSON, setGraph, nodes } = useGraphStore();
 
-  // Auto-populate with planner data if available
+  // Auto-populate and submit with planner data if available
   useEffect(() => {
     if (plannerData && plannerData.description) {
-      console.log("Planner data received, populating input");
-      // Use the description directly (it's already formatted)
-      setInput(plannerData.description);
-      console.log("✅ Input populated with planner data");
+      const msg = plannerData.description;
+      // Add user message and kick off the request automatically
+      addMessage({ id: `user-${Date.now()}`, role: "user", content: msg });
+      setLoading(true);
+      const graphJSON = getGraphJSON();
+      fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg, graph: graphJSON, iac_format: "cdk" }),
+      })
+        .then(r => r.json())
+        .then(data => {
+          if (data.updated_graph?.nodes?.length > 0 || data.updated_graph?.edges?.length > 0) {
+            setGraph(data.updated_graph.nodes || [], data.updated_graph.edges || []);
+          }
+          if (data.generated_files?.length > 0) setGeneratedFiles(data.generated_files);
+          addMessage({ id: `assistant-${Date.now()}`, role: "assistant", content: data.message });
+          if (data.message?.includes("Security Review: FAILED")) setSecurityFailed(true);
+        })
+        .catch(() => {
+          addMessage({ id: `error-${Date.now()}`, role: "assistant", content: "Sorry, I encountered an error. Please try again." });
+        })
+        .finally(() => setLoading(false));
     }
   }, [plannerData]);
 
