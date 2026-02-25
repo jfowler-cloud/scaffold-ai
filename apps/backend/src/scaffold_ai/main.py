@@ -81,6 +81,17 @@ class ChatRequest(BaseModel):
             raise ValueError(f"iac_format must be one of: {', '.join(allowed)}")
         return v
 
+    @field_validator("graph_json")
+    @classmethod
+    def validate_graph_json(cls, v: dict | None) -> dict | None:
+        """Reject graphs with too many nodes to prevent context window abuse."""
+        if v is None:
+            return v
+        nodes = v.get("nodes", [])
+        if len(nodes) > 50:
+            raise ValueError("graph_json cannot have more than 50 nodes")
+        return v
+
 
 class ChatResponse(BaseModel):
     """Response model for chat endpoint."""

@@ -696,13 +696,12 @@ async def cdk_specialist_node(state: GraphState) -> GraphState:
 def _write_generated_file(file: dict) -> None:
     """Write a generated file to disk under the repo root (best-effort)."""
     try:
-        # Resolve repo root: walk up from this file until we find package.json
-        here = pathlib.Path(__file__).resolve()
-        repo_root = here
-        for _ in range(8):
-            if (repo_root / "package.json").exists():
-                break
-            repo_root = repo_root.parent
+        # Resolve repo root once using a known anchor: apps/backend is 2 levels below repo root
+        repo_root = pathlib.Path(__file__).resolve().parents[4]  # src/scaffold_ai -> src -> backend -> apps -> repo root
+        # Validate the anchor exists to catch unexpected working directories
+        if not (repo_root / "apps").exists():
+            logger.warning("Repo root anchor not found at %s, skipping file write", repo_root)
+            return
 
         dest = repo_root / file["path"]
         dest.parent.mkdir(parents=True, exist_ok=True)
