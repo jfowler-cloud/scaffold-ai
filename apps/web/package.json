@@ -15,7 +15,7 @@
   "dependencies": {
     "@cloudscape-design/chat-components": "^1.0.96",
     "@cloudscape-design/collection-hooks": "^1.0.0",
-    "@cloudscape-design/components": "^3.0.1205",
+    "@cloudscape-design/components": "^3.0.1211",
     "@cloudscape-design/design-tokens": "^3.0.0",
     "@cloudscape-design/global-styles": "^1.0.0",
     "@scaffold-ai/ui": "workspace:*",
