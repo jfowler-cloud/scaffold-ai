@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useChatStore, useGraphStore } from "@/lib/store";
-import { BACKEND_URL } from "@/lib/config";
 import Container from "@cloudscape-design/components/container";
 import Header from "@cloudscape-design/components/header";
 import SpaceBetween from "@cloudscape-design/components/space-between";
@@ -184,7 +183,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
 
     try {
       const graphJSON = getGraphJSON();
-      const response = await fetch(`${BACKEND_URL}/api/security/autofix`, {
+      const response = await fetch("/api/security", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ graph: graphJSON }),

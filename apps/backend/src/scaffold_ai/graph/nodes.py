@@ -447,7 +447,7 @@ async def security_review_node(state: GraphState) -> GraphState:
 
         review_result = json.loads(response_text)
 
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError, KeyError) as e:
         import logging
 
         logging.getLogger(__name__).warning(
@@ -707,7 +707,7 @@ def _write_generated_file(file: dict) -> None:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(file["content"], encoding="utf-8")
         logger.info(f"Generated file written to {dest}")
-    except Exception as e:
+    except OSError as e:
         logger.error(f"Could not write generated file to disk: {e}")
 
 

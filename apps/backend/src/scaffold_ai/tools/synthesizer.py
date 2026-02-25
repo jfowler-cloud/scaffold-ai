@@ -47,7 +47,7 @@ class SynthesizerTool:
                 "success": False,
                 "error": "CDK CLI not found. Please install with: npm install -g aws-cdk",
             }
-        except Exception as e:
+        except OSError as e:
             return {
                 "success": False,
                 "error": str(e),
@@ -81,5 +81,5 @@ class SynthesizerTool:
             else:
                 return {"valid": False, "errors": result.stderr.split("\n")}
 
-        except Exception as e:
+        except (subprocess.TimeoutExpired, OSError, FileNotFoundError) as e:
             return {"valid": False, "errors": [str(e)]}

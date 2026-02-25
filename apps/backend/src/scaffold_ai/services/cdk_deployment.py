@@ -84,7 +84,7 @@ class CDKDeploymentService:
 
             return deploy_result
 
-        except Exception as e:
+        except (OSError, RuntimeError) as e:
             return {"success": False, "error": f"Deployment failed: {str(e)}"}
         finally:
             # Cleanup temp directory
@@ -267,7 +267,7 @@ class CDKDeploymentService:
                 "stdout": "",
                 "stderr": f"Command timed out after {timeout} seconds",
             }
-        except Exception as e:
+        except (OSError, ValueError) as e:
             return {"returncode": -1, "stdout": "", "stderr": str(e)}
 
     def destroy(
