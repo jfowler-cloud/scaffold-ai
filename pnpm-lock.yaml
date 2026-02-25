@@ -26,8 +26,8 @@ importers:
         specifier: ^3.0.1205
         version: 3.0.1205(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       '@cloudscape-design/design-tokens':
-        specifier: ^3.0.0
-        version: 3.0.70
+        specifier: ^3.0.72
+        version: 3.0.72
       '@cloudscape-design/global-styles':
         specifier: ^1.0.0
         version: 1.0.50
@@ -308,8 +308,8 @@ packages:
     peerDependencies:
       react: '>=16.8.0'
 
-  '@cloudscape-design/design-tokens@3.0.70':
-    resolution: {integrity: sha512-/jFkU+iDoTzbNNXJ3eZdqkdsgIi9TtBSXX21UFyIv9buZseP+WaP2mZ6r2s0HvuRtal550binnfAexxrOYeaTA==}
+  '@cloudscape-design/design-tokens@3.0.72':
+    resolution: {integrity: sha512-NUq7ycjybYSwy8QyF9aNtCj+cqAMDt4X3BXO554dRjLFfo54OYE/2zEe1YH2Y4wOYf8vkqhBDjDNMBAoFQ1QHQ==}
 
   '@cloudscape-design/global-styles@1.0.50':
     resolution: {integrity: sha512-IF/z6yhFvN+jWJeXgpHqvs5Eib52R3xOIzPkX/HcoXcDIO818IIwx9cFFgnt9ZHKyduIlmQ1wtBbCdIixMISHw==}
@@ -3129,7 +3129,7 @@ snapshots:
     transitivePeerDependencies:
       - react-dom
 
-  '@cloudscape-design/design-tokens@3.0.70': {}
+  '@cloudscape-design/design-tokens@3.0.72': {}
 
   '@cloudscape-design/global-styles@1.0.50': {}
 
