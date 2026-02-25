@@ -41,6 +41,8 @@ export default function Home() {
 
   const toggleTheme = () => {
     const newMode = !darkMode;
+    document.body.classList.add("theme-transitioning");
+    setTimeout(() => document.body.classList.remove("theme-transitioning"), 300);
     setDarkMode(newMode);
     applyMode(newMode ? Mode.Dark : Mode.Light);
     localStorage.setItem("theme", newMode ? "dark" : "light");

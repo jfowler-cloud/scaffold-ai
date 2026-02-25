@@ -28,8 +28,8 @@
   --awsui-color-background-container-content: #16191f;
 }
 
-/* Smooth transitions for theme switching */
-* {
+/* Smooth transitions for theme switching — only on explicit theme toggle, not initial load */
+.theme-transitioning * {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
