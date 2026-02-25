@@ -117,6 +117,16 @@ The integration enables a seamless workflow: Plan → Build → Deploy.
 | Testing | pytest + Vitest |
 | Tooling | pnpm + Turborepo + uv |
 
+### AI Models by Deployment Tier
+
+| Tier | Model | Use Case |
+|------|-------|----------|
+| `testing` (default) | Claude Haiku 4.5 | Fast, cost-effective — local dev and CI |
+| `optimized` | Claude Sonnet 4.5 | Balanced quality and cost |
+| `premium` | Claude Opus 4.5 | Highest quality for production |
+
+Set `DEPLOYMENT_TIER` in your `.env` to switch tiers. Override any tier with `BEDROCK_MODEL_ID`.
+
 ---
 
 ## Quick Start
@@ -170,8 +180,13 @@ AWS_PROFILE=your_profile
 # Raw keys work but are not recommended — use profile or IAM role instead
 # AWS_ACCESS_KEY_ID=your_access_key
 # AWS_SECRET_ACCESS_KEY=your_secret_key
-BACKEND_URL=http://localhost:8000
-PORT=8000
+BACKEND_URL=http://localhost:8001
+PORT=8001
+
+# Deployment tier (testing/optimized/premium) — default: testing
+DEPLOYMENT_TIER=testing
+# Model override — leave blank to use tier default
+BEDROCK_MODEL_ID=
 ```
 
 **Frontend** (`apps/web/.env.local`):
@@ -370,6 +385,14 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - 🐛 Fixed all 11 node files — removed duplicate JSX bodies
 - 🐛 Fixed security gate test assertions and added missing GraphState fields
 - ✅ 126 tests passing (up from 116)
+
+### v1.6.1 - Deployment Tier Model Selection (Feb 2026)
+- ✨ Added `config.py` with `testing/optimized/premium` deployment tier system
+- ✨ Testing tier: Claude Haiku 4.5 (default) — fast and cost-effective
+- ✨ Optimized tier: Claude Sonnet 4.5 — balanced quality and cost
+- ✨ Premium tier: Claude Opus 4.5 — highest quality
+- 🔧 `DEPLOYMENT_TIER` env var controls model selection; `BEDROCK_MODEL_ID` overrides
+- 📝 Added model tier table to README and `.env.example`
 
 ### v1.4.0 - AI Model Upgrade & Polish (Feb 2026)
 - ✨ Upgraded to Claude Opus 4.5 with cross-region inference profile

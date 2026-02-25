@@ -10,6 +10,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from .state import GraphState, Intent
 from ..agents.security_specialist import SecuritySpecialistAgent
+from ..config import get_model_id
 
 logger = logging.getLogger(__name__)
 
@@ -17,11 +18,13 @@ logger = logging.getLogger(__name__)
 # Initialize Bedrock client (singleton)
 @lru_cache(maxsize=1)
 def get_llm():
-    """Get the Bedrock LLM client (cached singleton)."""
+    """Get the Bedrock LLM client (cached singleton).
+
+    Model is selected by DEPLOYMENT_TIER (testing/optimized/premium).
+    Override with BEDROCK_MODEL_ID for a specific model.
+    """
     return ChatBedrock(
-        model_id=os.getenv(
-            "BEDROCK_MODEL_ID", "us.anthropic.claude-opus-4-5-20251101-v1:0"
-        ),
+        model_id=get_model_id(),
         region_name=os.getenv("AWS_REGION", "us-east-1"),
         model_kwargs={"temperature": 0.7, "max_tokens": 16384},
     )
