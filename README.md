@@ -9,7 +9,7 @@
 
 ![Built in 1 Day](https://img.shields.io/badge/Built%20in-1%20Day-brightgreen?style=flat-square)
 ![Tests: 133](https://img.shields.io/badge/Tests-133%20passing-brightgreen?style=flat-square)
-![Coverage: 67%](https://img.shields.io/badge/Coverage-67%25-yellow?style=flat-square)
+![Coverage: 64%](https://img.shields.io/badge/Coverage-64%25-yellow?style=flat-square)
 ![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-purple?style=flat-square)
 ![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
 
@@ -31,10 +31,10 @@ The goal was to demonstrate:
 | **Orchestration** | AWS Step Functions | LangGraph | LangGraph | LangGraph |
 | **Agents** | Step Functions workflow | LangGraph pipeline | 4 LangGraph agents | 6 LangGraph agents |
 | **Development** | 3 days | 2 days | 1 day | 2 hours |
-| **Tests** | 212 tests, 98% | 99 tests, 86% | 133 tests, 67%* | 142 tests, 99% |
+| **Tests** | 212 tests, 98% | 99 tests, 86% | 133 tests, 64%* | 142 tests, 99% |
 | **Features** | Resume tailoring | Architecture planning | Architecture generation | Roadmap + Critical Review |
 
-*Scaffold AI's 67% coverage focuses on core business logic (LangGraph workflow, security review, IaC generation). Missing coverage is in deployment infrastructure (CDK synthesis, AWS deployment) which was out of scope for the initial build.
+*Scaffold AI's 64% coverage focuses on core business logic (LangGraph workflow, security review, IaC generation). Missing coverage is in deployment infrastructure (CDK synthesis, AWS deployment) which was out of scope for the initial build.
 
 All three projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing) -- the difference is the orchestration approach chosen to match the problem. See [LangGraph vs Step Functions](LANGGRAPH_VS_STEP_FUNCTIONS.md) for a detailed technical comparison.
 
@@ -385,6 +385,15 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - 🐛 Fixed all 11 node files — removed duplicate JSX bodies
 - 🐛 Fixed security gate test assertions and added missing GraphState fields
 - ✅ 126 tests passing (up from 116)
+
+### v1.6.3 - Hydration Fix & Model Prefix (Feb 2026)
+- Fixed React hydration mismatch on Cloudscape `SplitPanel` — `aria-valuenow` on the resize handle is computed from `window.width` (client-only), causing SSR/client tree mismatch; deferred `splitPanel` prop render until after mount
+- Fixed all Bedrock model IDs to use `us.` cross-region inference profile prefix (e.g. `us.anthropic.claude-haiku-4-5-20251001-v1:0`) — bare IDs were rejected by Bedrock in the `us-east-1` region
+- Updated coverage badge to 64% (measured with pytest-cov; added `pytest-cov` to dev dependencies)
+- Removed `mounted` guard that was blocking full-page render for 4+ seconds on planner handoff
+- Scoped global CSS transition to `.theme-transitioning` class only (was applying to every element on every paint)
+- Fixed CORS default to include `localhost:3001` alongside `localhost:3000`
+- Auto-submit planner import to chat immediately instead of just populating textarea
 
 ### v1.6.2 - CI Fix (Feb 2026)
 - Fixed `test_security_gate_blocks_insecure_architecture` and `test_security_gate_passes_secure_architecture` — both were making real Bedrock calls in CI (no credentials); now properly mock `get_llm` with ordered side effects
