@@ -110,26 +110,6 @@ def test_import_plan_missing_fields():
     assert response.status_code == 422
 
 
-def test_import_plan_rate_limit():
-    """Test that rate limiting is applied to import endpoint."""
-    # Make multiple requests
-    responses = []
-    for i in range(25):  # Exceed the 20/minute limit
-        plan_data = {
-            "plan_id": f"rate-test-{i}",
-            "project_name": "Rate Test",
-            "description": "Testing rate limits",
-            "architecture": "Serverless",
-            "tech_stack": {"api": "FastAPI"},
-            "requirements": {"users": "<100"},
-        }
-        response = client.post("/api/import/plan", json=plan_data)
-        responses.append(response.status_code)
-
-    # At least one should be rate limited
-    assert 429 in responses
-
-
 def test_initial_prompt_format():
     """Test that the initial prompt is properly formatted."""
     plan_data = {
@@ -161,3 +141,26 @@ def test_initial_prompt_format():
     assert "10K-100K" in prompt
     assert "99.99%" in prompt
     assert "10-100GB" in prompt
+
+
+def test_import_plan_rate_limit():
+    """Test that rate limiting is applied to import endpoint.
+    
+    This test runs last to avoid affecting other tests with rate limits.
+    """
+    # Make multiple requests
+    responses = []
+    for i in range(25):  # Exceed the 20/minute limit
+        plan_data = {
+            "plan_id": f"rate-test-{i}",
+            "project_name": "Rate Test",
+            "description": "Testing rate limits",
+            "architecture": "Serverless",
+            "tech_stack": {"api": "FastAPI"},
+            "requirements": {"users": "<100"},
+        }
+        response = client.post("/api/import/plan", json=plan_data)
+        responses.append(response.status_code)
+
+    # At least one should be rate limited
+    assert 429 in responses
