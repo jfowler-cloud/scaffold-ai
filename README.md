@@ -8,7 +8,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
 ![Built in 1 Day](https://img.shields.io/badge/Built%20in-1%20Day-brightgreen?style=flat-square)
-![Tests: 126](https://img.shields.io/badge/Tests-126%20passing-brightgreen?style=flat-square)
+![Tests: 133](https://img.shields.io/badge/Tests-133%20passing-brightgreen?style=flat-square)
 ![Coverage: 67%](https://img.shields.io/badge/Coverage-67%25-yellow?style=flat-square)
 ![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-purple?style=flat-square)
 ![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
@@ -31,7 +31,7 @@ The goal was to demonstrate:
 | **Orchestration** | AWS Step Functions | LangGraph | LangGraph | LangGraph |
 | **Agents** | Step Functions workflow | LangGraph pipeline | 4 LangGraph agents | 6 LangGraph agents |
 | **Development** | 3 days | 2 days | 1 day | 2 hours |
-| **Tests** | 212 tests, 98% | 99 tests, 86% | 126 tests, 67%* | 142 tests, 99% |
+| **Tests** | 212 tests, 98% | 99 tests, 86% | 133 tests, 67%* | 142 tests, 99% |
 | **Features** | Resume tailoring | Architecture planning | Architecture generation | Roadmap + Critical Review |
 
 *Scaffold AI's 67% coverage focuses on core business logic (LangGraph workflow, security review, IaC generation). Missing coverage is in deployment infrastructure (CDK synthesis, AWS deployment) which was out of scope for the initial build.
@@ -385,6 +385,11 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - 🐛 Fixed all 11 node files — removed duplicate JSX bodies
 - 🐛 Fixed security gate test assertions and added missing GraphState fields
 - ✅ 126 tests passing (up from 116)
+
+### v1.6.2 - CI Fix (Feb 2026)
+- Fixed `test_security_gate_blocks_insecure_architecture` and `test_security_gate_passes_secure_architecture` — both were making real Bedrock calls in CI (no credentials); now properly mock `get_llm` with ordered side effects
+- Fixed `optimized` tier model ID: `anthropic.claude-sonnet-4-5-20250929-v1:0` (was `20251001`)
+- 133 backend tests passing
 
 ### v1.6.1 - Deployment Tier Model Selection (Feb 2026)
 - ✨ Added `config.py` with `testing/optimized/premium` deployment tier system
