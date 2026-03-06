@@ -48,3 +48,7 @@ packages/generated/infrastructure/cdk.out/
 
 # Internal documentation (not for public)
 .archive/
+
+# Test artifacts
+coverage.json
+test-results.json
