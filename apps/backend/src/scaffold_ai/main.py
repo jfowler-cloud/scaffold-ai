@@ -18,7 +18,6 @@ from .services.security_autofix import SecurityAutoFix
 from .services.security_history import SecurityHistoryService
 from .services.sharing import SharingService
 from .services.templates import ArchitectureTemplates
-from .config import get_model_id
 
 load_dotenv()
 
@@ -332,8 +331,8 @@ async def record_security_score(request: Request, body: SecurityHistoryRequest):
 @app.get("/api/security/history/{architecture_id}")
 @limiter.limit("30/minute")
 async def get_security_history(request: Request, architecture_id: str):
-    history = security_history.get_history(body.architecture_id)
-    improvement = security_history.get_improvement(body.architecture_id)
+    history = security_history.get_history(architecture_id)
+    improvement = security_history.get_improvement(architecture_id)
     return {"history": history, "improvement": improvement}
 
 
