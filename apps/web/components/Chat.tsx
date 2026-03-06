@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { BACKEND_URL } from "@/lib/config";
 import { useChatStore, useGraphStore } from "@/lib/store";
 import Container from "@cloudscape-design/components/container";
 import Header from "@cloudscape-design/components/header";
@@ -119,10 +120,10 @@ export function Chat({ plannerData }: { plannerData?: any }) {
       addMessage({ id: `user-${Date.now()}`, role: "user", content: msg });
       setLoading(true);
       const graphJSON = getGraphJSON();
-      fetch("/api/chat", {
+      fetch(`${BACKEND_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: msg, graph: graphJSON, iac_format: "cdk" }),
+        body: JSON.stringify({ user_input: msg, graph_json: graphJSON, iac_format: "cdk" }),
       })
         .then(r => r.json())
         .then(data => {
@@ -202,7 +203,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
 
     try {
       const graphJSON = getGraphJSON();
-      const response = await fetch("/api/security", {
+      const response = await fetch(`${BACKEND_URL}/api/security/autofix`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ graph: graphJSON }),
@@ -253,12 +254,12 @@ export function Chat({ plannerData }: { plannerData?: any }) {
     try {
       const graphJSON = getGraphJSON();
 
-      const response = await fetch("/api/chat", {
+      const response = await fetch(`${BACKEND_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: skipSecurityCheck ? "generate code skip_security_check" : "generate code",
-          graph: graphJSON,
+          user_input: skipSecurityCheck ? "generate code skip_security_check" : "generate code",
+          graph_json: graphJSON,
           iac_format: iacFormat.value,
         }),
       });
@@ -311,12 +312,12 @@ export function Chat({ plannerData }: { plannerData?: any }) {
     try {
       const graphJSON = getGraphJSON();
 
-      const response = await fetch("/api/chat", {
+      const response = await fetch(`${BACKEND_URL}/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: input,
-          graph: graphJSON,
+          user_input: input,
+          graph_json: graphJSON,
           iac_format: iacFormat.value,
         }),
       });

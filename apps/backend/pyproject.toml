@@ -43,4 +43,7 @@ dev = [
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-cov>=7.0.0",
+    "pytest-json-report>=1.5",
+    "moto[s3,dynamodb,ssm,secretsmanager]>=5.0",
+    "ruff>=0.7.0",
 ]

@@ -2,22 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fix TopNavigation title truncation - expand the identity container */
+/* Red accent Cloudscape theme */
+html body {
+  --color-primary-50-1y05xv: #fff1f1 !important;
+  --color-primary-100-f62fz9: #ffe0e0 !important;
+  --color-primary-200-vubr4w: #ffc5c5 !important;
+  --color-primary-300-5q65ox: #ff9a9a !important;
+  --color-primary-400-n8h4bx: #ff5c5c !important;
+  --color-primary-500-q9c16y: #e8001c !important;
+  --color-primary-600-1lcy1k: #cc0018 !important;
+  --color-primary-700-n6k121: #a80014 !important;
+  --color-primary-800-j9rj38: #8a0010 !important;
+  --color-primary-900-a5kqrr: #6b000c !important;
+}
+
+/* Fix TopNavigation title truncation */
 [class*="awsui_identity"] {
   max-width: none !important;
   min-width: 200px !important;
   flex-shrink: 0 !important;
 }
-
-/* Ensure title text doesn't truncate */
 [class*="awsui_identity"] [class*="awsui_title"] {
   max-width: none !important;
   white-space: nowrap !important;
   overflow: visible !important;
   text-overflow: clip !important;
 }
-
-/* Also fix the link wrapper */
 [class*="awsui_identity"] a {
   max-width: none !important;
 }
@@ -28,35 +38,30 @@
   --awsui-color-background-container-content: #16191f;
 }
 
-/* Smooth transitions for theme switching — only on explicit theme toggle, not initial load */
+/* Smooth transitions for theme switching */
 .theme-transitioning * {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 }
 
-/* Canvas dark mode styling */
 .react-flow__node {
   transition: all 0.2s ease;
 }
 
-/* Code modal dark mode */
 .awsui-dark-mode [class*="awsui_code"] {
   background-color: #1e2228 !important;
   color: #e8eaed !important;
 }
 
-/* Chat messages dark mode */
 .awsui-dark-mode [class*="awsui_message"] {
   background-color: #16191f !important;
   border-color: #2d3139 !important;
 }
 
-/* Fix React Flow panel containers in dark mode */
 .awsui-dark-mode .react-flow__panel > div {
   background-color: #16191f !important;
   border: 1px solid #414d5c !important;
 }
 
-/* Fix Select dropdowns in dark mode */
 .awsui-dark-mode [class*="awsui_select"] [class*="awsui_trigger"],
 .awsui-dark-mode [class*="awsui_select"] button {
   background-color: #16191f !important;
@@ -70,7 +75,6 @@
   border-color: #5f6b7a !important;
 }
 
-/* Fix dropdown menu in dark mode */
 .awsui-dark-mode [class*="awsui_dropdown"] {
   background-color: #16191f !important;
   border-color: #414d5c !important;

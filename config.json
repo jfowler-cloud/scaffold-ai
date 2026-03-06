@@ -1,0 +1,6 @@
+{
+  "testCommands": {
+    "backend": "cd apps/backend && uv run pytest tests/ --cov=src/ --cov-report=json -q",
+    "frontend": "cd apps/web && pnpm test:coverage"
+  }
+}
