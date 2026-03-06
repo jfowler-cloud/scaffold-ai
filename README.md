@@ -110,7 +110,7 @@ The integration enables a seamless workflow: Plan → Build → Deploy.
 | AI Orchestration | LangGraph |
 | LLM | AWS Bedrock (Claude) |
 | Backend | FastAPI |
-| Frontend | Next.js 15 + React 19 |
+| Frontend | React 19 + Vite SPA |
 | UI Library | AWS Cloudscape Design System |
 | State | Zustand |
 | Canvas | React Flow |
@@ -189,9 +189,9 @@ DEPLOYMENT_TIER=testing
 BEDROCK_MODEL_ID=
 ```
 
-**Frontend** (`apps/web/.env.local`):
+**Frontend** (`apps/web/.env`):
 ```bash
-NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+VITE_BACKEND_URL=http://localhost:8000
 ```
 
 ---
@@ -210,8 +210,8 @@ scaffold-ai/
 │   │   │   └── tools/          # Git, CDK synthesis
 │   │   └── tests/
 │   │
-│   └── web/                    # Next.js 15 frontend
-│       ├── app/                # App router
+│   └── web/                    # React 19 + Vite SPA
+│       ├── src/                # App entry point and root component
 │       ├── components/         # Cloudscape components, Canvas, Chat
 │       └── lib/                # Zustand stores
 │
@@ -306,9 +306,9 @@ All endpoints are public. All state (architectures, chat history, sharing links,
 
 ### P2 -- Inconsistent Backend URL Configuration
 
-The frontend references the backend URL in multiple places with different fallback chains (`NEXT_PUBLIC_BACKEND_URL || NEXT_PUBLIC_API_URL || "http://localhost:8001"`). The port 8001 default is correct -- when launched via the planner's `dev.sh`, Scaffold AI's backend is bumped to 8001 (and frontend to 3001) so both projects run side-by-side.
+The frontend references the backend URL in multiple places with different fallback chains. `lib/config.ts` exports a centralized `BACKEND_URL` using `VITE_BACKEND_URL || VITE_API_URL || "http://localhost:8001"`, but two files (`usePlannerImport.ts` and `PlannerRefineButton.tsx`) still use stale `process.env.NEXT_PUBLIC_*` references from the pre-Vite era.
 
-**Recommendation:** Centralize the URL logic into a single `lib/config.ts` exporting `BACKEND_URL` and import it everywhere, rather than repeating the fallback chain in each component.
+**Recommendation:** Update `usePlannerImport.ts` and `PlannerRefineButton.tsx` to import `BACKEND_URL` / `PLANNER_URL` from `lib/config.ts` instead of reading `process.env.NEXT_PUBLIC_*` directly.
 
 ### P2 -- Agent Classes vs. Node Functions Are Redundant
 
@@ -331,12 +331,12 @@ The `/api/deploy` endpoint accepts raw `cdk_code` and `app_code` strings from th
 ### P2 -- Mixed Direct/Proxy Backend Calls in Frontend
 
 `Chat.tsx` uses two different patterns to reach the backend:
-- `handleSubmit` and `handleGenerateCode` call `/api/chat` (relative URL, routed through Next.js API proxy)
-- `handleDeploy`, `handleSecurityFix`, and `handleDownloadZip` call `process.env.NEXT_PUBLIC_BACKEND_URL || ...` (direct, bypasses Next.js)
+- `handleSubmit` and `handleGenerateCode` call `/api/chat` (relative URL, handled by Vite's `server.proxy` config)
+- `handleDeploy`, `handleSecurityFix`, and `handleDownloadZip` call `BACKEND_URL` directly (bypasses the proxy)
 
-This means CORS, authentication, and error handling behave differently depending on the action. If a proxy middleware is added later (for auth tokens, logging, etc.), it will only apply to some requests.
+This means error handling and any future middleware (auth tokens, logging) behave differently depending on the action.
 
-**Recommendation:** Route all backend calls through the Next.js API proxy for consistency, or call the backend directly everywhere. Don't mix both.
+**Recommendation:** Route all backend calls through the Vite proxy for consistency, or call the backend directly everywhere. Don't mix both.
 
 ### P2 -- Generated File Disk Write Uses Fragile Path Resolution
 
