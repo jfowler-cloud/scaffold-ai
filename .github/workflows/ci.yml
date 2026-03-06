@@ -65,6 +65,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - uses: pnpm/action-setup@v4
       - uses: astral-sh/setup-uv@v4
 
       - name: npm audit (web)
@@ -77,7 +78,6 @@ jobs:
       - name: pip-audit (functions)
         run: cd apps/functions && uv sync --all-extras && uv run pip-audit
 
-      - uses: pnpm/action-setup@v4
       - uses: github/codeql-action/init@v3
         with:
           languages: python, javascript
