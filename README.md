@@ -379,6 +379,9 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ## Recent Updates
 
 ### v2.0.0 - Step Functions + Strands Refactor (Mar 2026)
+
+> **Looking for the LangGraph version?** The previous LangGraph-based orchestration is preserved on the [`legacy/langgraph`](https://github.com/jfowler-cloud/scaffold-ai/tree/legacy/langgraph) branch.
+
 - 🔄 Replaced LangGraph with AWS Step Functions + Strands agent core
 - 🔄 Each workflow node is now an independent Lambda handler in `apps/functions/`
 - 🔄 `/api/chat` is now fire-and-poll — returns `execution_arn` immediately, poll `/api/chat/{arn}/status`
