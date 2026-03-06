@@ -1,42 +1,38 @@
 # Scaffold AI
 
-**AI-powered AWS architecture designer built with LangGraph**
+**AI-powered AWS architecture designer — Step Functions + Strands agent core**
 
 [![CI](https://github.com/jfowler-cloud/scaffold-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/jfowler-cloud/scaffold-ai/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
-![Built in 1 Day](https://img.shields.io/badge/Built%20in-1%20Day-brightgreen?style=flat-square)
-![Tests: 133](https://img.shields.io/badge/Tests-133%20passing-brightgreen?style=flat-square)
-![Coverage: 64%](https://img.shields.io/badge/Coverage-64%25-yellow?style=flat-square)
-![LangGraph](https://img.shields.io/badge/LangGraph-Multi--Agent-purple?style=flat-square)
+![Tests: 244](https://img.shields.io/badge/Tests-244%20passing-brightgreen?style=flat-square)
+![Coverage: 88%](https://img.shields.io/badge/Coverage-88%25-brightgreen?style=flat-square)
+![Step Functions](https://img.shields.io/badge/Step%20Functions-Agent%20Core-orange?style=flat-square)
 ![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
 
 Describe your application in natural language and Scaffold AI designs the AWS serverless architecture, runs a security review against AWS Well-Architected principles, and generates deployment-ready infrastructure-as-code -- all through a visual canvas and chat interface.
 
 ## Why This Project
 
-After building [Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai) with AWS Step Functions, I wanted to explore modern AI orchestration beyond AWS-native tooling. I picked up LangGraph -- a framework I had no prior experience with -- and built this full-stack multi-agent platform in a single day.
+After building [Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai) with AWS Step Functions, I wanted to explore modern AI orchestration. I originally built this with LangGraph, then refactored to Step Functions + Strands to align the entire portfolio on a consistent, AWS-native agent pattern.
 
 The goal was to demonstrate:
 
 - **Learning velocity** -- Shipping production-quality code in unfamiliar frameworks, fast
-- **Architectural judgment** -- Knowing when LangGraph fits better than Step Functions (and vice versa), rather than defaulting to one tool
+- **Architectural judgment** -- Knowing when to refactor and why, not just when to build
 - **Production mindset** -- Security gates, rate limiting, input validation, and testing from the start, not bolted on later
 
 | | Resume Tailor AI | Project Planner AI | Scaffold AI | Career Path Architect |
 |---|---|---|---|---|
 | **Purpose** | Resume optimization | Project planning | AWS architecture design | Career planning |
-| **Orchestration** | AWS Step Functions | LangGraph | LangGraph | LangGraph |
-| **Agents** | Step Functions workflow | LangGraph pipeline | 4 LangGraph agents | 6 LangGraph agents |
-| **Development** | 3 days | 2 days | 1 day | 2 hours |
-| **Tests** | 212 tests, 98% | 99 tests, 86% | 133 tests, 64%* | 142 tests, 99% |
+| **Orchestration** | AWS Step Functions | AWS Step Functions | AWS Step Functions | LangGraph |
+| **Agents** | Step Functions workflow | SFN Map + Strands | 5 SFN Lambda + Strands | 6 LangGraph agents |
+| **Tests** | 212 tests, 98% | 99 tests, 86% | 244 tests, 88% | 142 tests, 99% |
 | **Features** | Resume tailoring | Architecture planning | Architecture generation | Roadmap + Critical Review |
 
-*Scaffold AI's 64% coverage focuses on core business logic (LangGraph workflow, security review, IaC generation). Missing coverage is in deployment infrastructure (CDK synthesis, AWS deployment) which was out of scope for the initial build.
-
-All three projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing) -- the difference is the orchestration approach chosen to match the problem. See [LangGraph vs Step Functions](LANGGRAPH_VS_STEP_FUNCTIONS.md) for a detailed technical comparison.
+All projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing).
 
 ---
 
@@ -107,7 +103,7 @@ The integration enables a seamless workflow: Plan → Build → Deploy.
 
 | Layer | Technology |
 |-------|-----------|
-| AI Orchestration | LangGraph |
+| AI Orchestration | AWS Step Functions + Strands |
 | LLM | AWS Bedrock (Claude) |
 | Backend | FastAPI |
 | Frontend | React 19 + Vite SPA |
@@ -201,14 +197,27 @@ VITE_BACKEND_URL=http://localhost:8000
 ```
 scaffold-ai/
 ├── apps/
-│   ├── backend/                # FastAPI + LangGraph
+│   ├── backend/                # FastAPI — fire-and-poll API
 │   │   ├── src/scaffold_ai/
-│   │   │   ├── main.py         # FastAPI app
-│   │   │   ├── graph/          # LangGraph workflow (DAG, nodes, state)
-│   │   │   ├── agents/         # Specialist agents
-│   │   │   ├── services/       # Business services
+│   │   │   ├── main.py         # FastAPI app (/api/chat starts SFN, /api/chat/{arn}/status polls)
+│   │   │   ├── agents/         # Specialist agents (CDK, React, security, etc.)
+│   │   │   ├── services/       # Business services (cost estimator, security autofix, etc.)
 │   │   │   └── tools/          # Git, CDK synthesis
 │   │   └── tests/
+│   │
+│   ├── functions/              # Lambda handlers — one per Step Functions state
+│   │   ├── interpret/          # Classify user intent
+│   │   ├── architect/          # Design/modify architecture graph
+│   │   ├── security_review/    # Security gate (blocks code gen if failed)
+│   │   ├── cdk_specialist/     # Generate IaC (CDK/CF/TF/Python-CDK)
+│   │   ├── react_specialist/   # Generate React component scaffolding
+│   │   └── get_execution/      # Poll SFN execution status
+│   │
+│   ├── agents/
+│   │   └── shared/             # config.py, db.py — shared across functions
+│   │
+│   ├── infra/                  # CDK infrastructure
+│   │   └── lib/workflow-stack.ts  # Step Functions state machine definition
 │   │
 │   └── web/                    # React 19 + Vite SPA
 │       ├── src/                # App entry point and root component
@@ -240,7 +249,7 @@ pnpm test
 pnpm test:all
 ```
 
-Tests cover agents, services, LangGraph workflow integration, API endpoints, input validation, rate limiting, and frontend components/stores.
+Tests cover agents, services, Lambda handlers, API endpoints, input validation, rate limiting, and frontend components/stores.
 
 ---
 
@@ -248,11 +257,10 @@ Tests cover agents, services, LangGraph workflow integration, API endpoints, inp
 
 | | Resume Tailor AI | Scaffold AI | Career Path Architect |
 |---|---|---|---|
-| **Orchestration** | AWS Step Functions | LangGraph | LangGraph |
+| **Orchestration** | AWS Step Functions | AWS Step Functions | LangGraph |
 | **Use case** | Deterministic resume tailoring | Dynamic AI multi-agent conversations | Career planning & roadmaps |
-| **State management** | S3 + DynamoDB | LangGraph built-in memory | LangGraph built-in memory |
-| **Deployment** | AWS-native (Lambda, Step Functions) | Framework-agnostic | Framework-agnostic |
-| **Best for** | Predictable workflows, AWS-integrated | Dynamic routing, conversational AI | Skill gap analysis, learning paths |
+| **State management** | S3 + DynamoDB | Step Functions + DynamoDB | LangGraph built-in memory |
+| **Deployment** | AWS-native (Lambda, Step Functions) | AWS-native (Lambda, Step Functions) | Framework-agnostic |
 
 All three projects share production patterns: input validation, error handling, pre-commit hooks, CI/CD with security scanning, rate limiting, and comprehensive testing.
 
@@ -260,7 +268,6 @@ All three projects share production patterns: input validation, error handling, 
 
 ## Documentation
 
-- [LangGraph vs Step Functions](LANGGRAPH_VS_STEP_FUNCTIONS.md) -- Technical comparison with cost analysis
 - [Development Journey](DEVELOPMENT_JOURNEY.md) -- Build timeline and key decisions
 - [Multi-Format IaC](docs/MULTI_FORMAT_IAC.md) -- IaC generation patterns
 - [Contributing](CONTRIBUTING.md) -- Development setup and guidelines
@@ -368,6 +375,14 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## Recent Updates
 
+### v2.0.0 - Step Functions + Strands Refactor (Mar 2026)
+- 🔄 Replaced LangGraph with AWS Step Functions + Strands agent core
+- 🔄 Each workflow node is now an independent Lambda handler in `apps/functions/`
+- 🔄 `/api/chat` is now fire-and-poll — returns `execution_arn` immediately, poll `/api/chat/{arn}/status`
+- ✨ Added `apps/infra/` CDK stack defining the Step Functions state machine
+- ✨ Added `apps/agents/shared/` config + db helpers (consistent with PSP/idea-fairy pattern)
+- 📈 Coverage improved: 64% → 88% (133 → 244 tests)
+
 ### v1.6.0 - Polish & Hardening (Feb 2026)
 - Removed duplicate `SecurityAutoFix` class stub from `security_autofix.py`
 - Added `graph_json` node count validation to `ChatRequest` (max 50 nodes, consistent with `GraphRequest`)
@@ -453,7 +468,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### v1.0.0 - Initial Release (Feb 2026)
 - 🎉 Serverless-first architecture with 12 node types
-- 🎉 LangGraph multi-agent workflow with security specialist
+- 🎉 Step Functions + Strands multi-agent workflow with security specialist
 - 🎉 Interactive drag-and-drop architecture canvas
 - 🎉 CloudFormation and Terraform IaC generation
 - 🎉 Real-time AI chat for architecture guidance
