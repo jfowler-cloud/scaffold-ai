@@ -3,6 +3,10 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions'
 import * as tasks from 'aws-cdk-lib/aws-stepfunctions-tasks'
 import * as lambda from 'aws-cdk-lib/aws-lambda'
 import * as iam from 'aws-cdk-lib/aws-iam'
+import * as sns from 'aws-cdk-lib/aws-sns'
+import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch'
+import * as cwActions from 'aws-cdk-lib/aws-cloudwatch-actions'
+import * as budgets from 'aws-cdk-lib/aws-budgets'
 import { Construct } from 'constructs'
 import * as path from 'path'
 
@@ -33,7 +37,6 @@ export class WorkflowStack extends cdk.Stack {
     const commonEnv = {
       DEPLOYMENT_TIER: deploymentTier,
       BEDROCK_MODEL_ID: modelId,
-      AWS_REGION: this.region,
     }
 
     const fnProps = (name: string): lambda.FunctionProps => ({
@@ -113,5 +116,62 @@ export class WorkflowStack extends cdk.Stack {
 
     this.stateMachineArn = stateMachine.stateMachineArn
     new cdk.CfnOutput(this, 'WorkflowArn', { value: stateMachine.stateMachineArn })
+
+    // ── CloudWatch Alarms ──────────────────────────────────────────────────
+    const alarmTopic = new sns.Topic(this, 'AlarmTopic', {
+      topicName: 'ScaffoldAI-Alarms',
+    })
+
+    const allFns = [interpretFn, architectFn, securityReviewFn, cdkSpecialistFn, reactSpecialistFn]
+    for (const fn of allFns) {
+      fn.metricErrors({ period: cdk.Duration.minutes(5) })
+        .createAlarm(this, `${fn.node.id}ErrorAlarm`, {
+          alarmName: `ScaffoldAI-${fn.node.id}-Errors`,
+          threshold: 1,
+          evaluationPeriods: 1,
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        })
+        .addAlarmAction(new cwActions.SnsAction(alarmTopic))
+
+      fn.metricDuration({ statistic: 'p99', period: cdk.Duration.minutes(5) })
+        .createAlarm(this, `${fn.node.id}DurationAlarm`, {
+          alarmName: `ScaffoldAI-${fn.node.id}-P99Duration`,
+          threshold: 240_000,
+          evaluationPeriods: 3,
+          treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+        })
+        .addAlarmAction(new cwActions.SnsAction(alarmTopic))
+    }
+
+    // SFN execution failure alarm
+    stateMachine.metricFailed({ period: cdk.Duration.minutes(5) })
+      .createAlarm(this, 'WorkflowFailedAlarm', {
+        alarmName: 'ScaffoldAI-Workflow-ExecutionFailed',
+        threshold: 0,
+        comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+        evaluationPeriods: 1,
+        treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+      })
+      .addAlarmAction(new cwActions.SnsAction(alarmTopic))
+
+    // ── Cost Budget ($25/mo) ───────────────────────────────────────────────
+    new budgets.CfnBudget(this, 'MonthlyBudget', {
+      budget: {
+        budgetName: 'scaffold-ai-monthly',
+        budgetLimit: { amount: 25, unit: 'USD' },
+        budgetType: 'COST',
+        timeUnit: 'MONTHLY',
+        costFilters: { TagKeyValue: ['user:Project$scaffold-ai'] },
+      },
+      notificationsWithSubscribers: [{
+        notification: {
+          comparisonOperator: 'GREATER_THAN',
+          notificationType: 'ACTUAL',
+          threshold: 80,
+          thresholdType: 'PERCENTAGE',
+        },
+        subscribers: [{ address: alarmTopic.topicArn, subscriptionType: 'SNS' }],
+      }],
+    })
   }
 }
