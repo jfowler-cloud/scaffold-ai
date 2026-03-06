@@ -1,0 +1,39 @@
+"""Tests for interpret Lambda handler."""
+import sys
+import os
+from unittest.mock import MagicMock, patch
+
+_HANDLER_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "interpret"))
+
+
+def _set_path():
+    sys.path.insert(0, _HANDLER_DIR)
+
+
+def test_keyword_classify_generate_code():
+    _set_path()
+    from handler import _keyword_classify
+
+    assert _keyword_classify("generate the CDK code") == "generate_code"
+
+
+def test_keyword_classify_new_feature():
+    _set_path()
+    from handler import _keyword_classify
+
+    assert _keyword_classify("add a database") == "new_feature"
+
+
+def test_handler_returns_intent():
+    _set_path()
+    mock_agent = MagicMock()
+    mock_agent.return_value = "new_feature"
+    mock_agent.__call__ = lambda self, x: "new_feature"
+
+    with patch("handler.Agent") as MockAgent, patch("handler.BedrockModel"), patch("handler.app_config"):
+        MockAgent.return_value = mock_agent
+        from handler import handler
+
+        result = handler({"user_input": "add a queue", "graph_json": {}, "iac_format": "cdk"})
+
+    assert "intent" in result

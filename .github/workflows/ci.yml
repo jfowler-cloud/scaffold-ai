@@ -32,6 +32,28 @@ jobs:
       - run: cd apps/backend && uv run ruff check src/
       - run: cd apps/backend && uv run pytest tests/ --cov=src/ --cov-report=json -q
 
+  functions:
+    name: Functions (Lambda handlers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - run: cd apps/functions && uv sync --all-extras
+      - run: cd apps/functions && uv run ruff check .
+      - run: cd apps/functions && uv run pytest tests/
+
+  infrastructure:
+    name: Infrastructure (CDK synth + Jest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: cd apps/infra && npm ci
+      - run: cd apps/infra && npx cdk synth
+      - run: cd apps/infra && npm test
+
   security:
     runs-on: ubuntu-latest
     permissions:
@@ -40,6 +62,22 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: astral-sh/setup-uv@v4
+
+      - name: npm audit (web)
+        run: cd apps/web && pnpm install --frozen-lockfile && pnpm audit --audit-level=high
+        continue-on-error: true
+
+      - name: pip-audit (backend)
+        run: cd apps/backend && uv sync && uv run pip-audit
+
+      - name: pip-audit (functions)
+        run: cd apps/functions && uv sync --all-extras && uv run pip-audit
+
+      - uses: pnpm/action-setup@v4
       - uses: github/codeql-action/init@v3
         with:
           languages: python, javascript

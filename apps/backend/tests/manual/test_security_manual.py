@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Manual test script for security gate workflow."""
+# ruff: noqa: E402
 
 import asyncio
 import sys
