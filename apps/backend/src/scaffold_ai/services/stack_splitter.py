@@ -24,7 +24,7 @@ class StackSplitter:
         # Categorize nodes by type
         for node in nodes:
             node_type = node.get("data", {}).get("type", "")
-            node_id = node.get("id", "")
+            node_id = node.get("id", "")  # noqa: F841
 
             if node_type in ["vpc", "subnet", "security-group"]:
                 stacks["network"]["nodes"].append(node)

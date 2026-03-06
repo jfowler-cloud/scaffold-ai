@@ -461,7 +461,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
               </div>
               <Button
                 variant="primary"
-                onClick={handleGenerateCode}
+                onClick={() => handleGenerateCode()}
                 disabled={isLoading || nodes.length === 0}
                 loading={isLoading}
                 iconName="download"

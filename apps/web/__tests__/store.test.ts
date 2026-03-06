@@ -84,7 +84,7 @@ describe('useGraphStore', () => {
 
   describe('onConnect', () => {
     it('should add an edge when connecting nodes', () => {
-      const connection = { source: '1', target: '2' };
+      const connection = { source: '1', target: '2', sourceHandle: null, targetHandle: null };
 
       useGraphStore.getState().onConnect(connection);
 

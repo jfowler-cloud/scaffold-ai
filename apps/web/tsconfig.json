@@ -14,8 +14,10 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
+      "@/lib/*": ["./lib/*"],
+      "@/components/*": ["./components/*"],
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src", "__tests__", "vitest.setup.ts", "vite.config.ts"]
+  "include": ["src", "components", "lib", "__tests__", "vitest.setup.ts", "vite.config.ts", "vite-env.d.ts"]
 }

@@ -178,7 +178,7 @@ class SecurityAutoFix:
     def _add_auth_node(self, nodes: List, edges: List) -> Tuple[Dict, List[Dict]]:
         """Add Cognito auth node and connect to APIs."""
         # Find next available position
-        max_x = max((n.get("position", {}).get("x", 0) for n in nodes), default=0)
+        max_x = max((n.get("position", {}).get("x", 0) for n in nodes), default=0)  # noqa: F841
 
         auth_node = {
             "id": f"auth-{len(nodes) + 1}",

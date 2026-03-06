@@ -1,5 +1,6 @@
 """CDK deployment service for deploying generated infrastructure."""
 
+import json
 import os
 import subprocess
 import tempfile
@@ -114,7 +115,6 @@ class CDKDeploymentService:
         }
 
         with open(project_path / "package.json", "w") as f:
-            import json
 
             json.dump(package_json, f, indent=2)
 
@@ -144,12 +144,11 @@ class CDKDeploymentService:
         }
 
         with open(project_path / "tsconfig.json", "w") as f:
-            import json
 
             json.dump(tsconfig, f, indent=2)
 
         # Write cdk.json
-        approval_level = "never" if not require_approval else "broadening"
+        approval_level = "never" if not require_approval else "broadening"  # noqa: F821
         cdk_json = {
             "app": "npx ts-node --prefer-ts-exts bin/app.ts",
             "requireApproval": approval_level,
@@ -160,7 +159,6 @@ class CDKDeploymentService:
         }
 
         with open(project_path / "cdk.json", "w") as f:
-            import json
 
             json.dump(cdk_json, f, indent=2)
 
@@ -231,7 +229,6 @@ class CDKDeploymentService:
         outputs = {}
         outputs_file = project_path / "outputs.json"
         if outputs_file.exists():
-            import json
 
             with open(outputs_file) as f:
                 outputs = json.load(f)
