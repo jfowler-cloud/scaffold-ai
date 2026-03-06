@@ -82,7 +82,7 @@ export function usePlannerImport() {
       const sessionId = urlParams.get("session");
       if (sessionId) {
         setIsLoading(true);
-        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8001";
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || "http://localhost:8001";
         
         fetch(`${backendUrl}/api/import/plan/${sessionId}`)
           .then(res => {

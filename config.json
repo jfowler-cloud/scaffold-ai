@@ -1,6 +1,12 @@
 {
   "testCommands": {
     "backend": "cd apps/backend && uv run pytest tests/ --cov=src/ --cov-report=json -q",
-    "frontend": "cd apps/web && pnpm test:coverage"
+    "frontend": "cd apps/web && npm run test:coverage",
+    "e2e": "cd apps/web && npm run test:e2e"
+  },
+  "dependencies": {
+    "sharedInfra": [],
+    "sharedLibs": [],
+    "upstreamProjects": ["project-planner-ai"]
   }
 }

@@ -27,7 +27,7 @@ ${refinementData.feedback}
 Architecture: ${JSON.stringify(architecture, null, 2)}`;
     
     navigator.clipboard.writeText(feedbackText).then(() => {
-      const plannerUrl = process.env.NEXT_PUBLIC_PLANNER_URL || "http://localhost:3000";
+      const plannerUrl = import.meta.env.VITE_PLANNER_URL || "http://localhost:3000";
       window.open(plannerUrl, "_blank");
       alert("Architecture feedback copied to clipboard! Paste it in Project Planner AI to refine your plan.");
     }).catch(() => {
