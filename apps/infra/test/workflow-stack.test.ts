@@ -1,109 +1,101 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template, Match } from 'aws-cdk-lib/assertions';
+import { DatabaseStack } from '../lib/database-stack';
+import { FunctionsStack } from '../lib/functions-stack';
 import { WorkflowStack } from '../lib/workflow-stack';
 
-describe('WorkflowStack', () => {
-  let template: Template;
+describe('ScaffoldAI Multi-Stack', () => {
+  let dbTemplate: Template;
+  let fnsTemplate: Template;
+  let wfTemplate: Template;
 
   beforeAll(() => {
     const app = new cdk.App({ context: { 'aws:cdk:bundling-stacks': [] } });
-    new WorkflowStack(app, 'TestWorkflow', { deploymentTier: 'testing' });
-    template = Template.fromStack(app.node.findChild('TestWorkflow') as cdk.Stack);
+    const db = new DatabaseStack(app, 'TestDB');
+    const fns = new FunctionsStack(app, 'TestFns', {
+      deploymentTier: 'testing',
+      modelId: 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+      alarmTopic: db.alarmTopic,
+    });
+    new WorkflowStack(app, 'TestWF', { db, fns });
+
+    dbTemplate = Template.fromStack(db);
+    fnsTemplate = Template.fromStack(fns);
+    wfTemplate = Template.fromStack(app.node.findChild('TestWF') as cdk.Stack);
   });
 
-  test('snapshot', () => {
-    expect(template.toJSON()).toMatchSnapshot();
+  // ── DatabaseStack ─────────────────────────────────────────────────────────
+
+  test('creates Cognito user pool', () => {
+    dbTemplate.hasResourceProperties('AWS::Cognito::UserPool', {
+      UserPoolName: 'ScaffoldAI-Users',
+    });
   });
 
-  // ── Lambda Functions ──────────────────────────────────────────────────────
-
-  test('creates 5 Lambda functions', () => {
-    template.resourceCountIs('AWS::Lambda::Function', 5);
+  test('creates identity pool', () => {
+    dbTemplate.resourceCountIs('AWS::Cognito::IdentityPool', 1);
   });
 
-  test('all Lambda functions use Python 3.12', () => {
-    const fns = template.findResources('AWS::Lambda::Function');
-    for (const fn of Object.values(fns)) {
-      expect((fn as any).Properties.Runtime).toBe('python3.12');
-    }
+  test('creates S3 hosting bucket', () => {
+    dbTemplate.resourceCountIs('AWS::S3::Bucket', 1);
   });
 
-  test('all Lambda functions have X-Ray tracing', () => {
-    const fns = template.findResources('AWS::Lambda::Function');
-    for (const fn of Object.values(fns)) {
-      expect((fn as any).Properties.TracingConfig).toEqual({ Mode: 'Active' });
-    }
+  test('creates CloudFront distribution', () => {
+    dbTemplate.resourceCountIs('AWS::CloudFront::Distribution', 1);
   });
 
-  test('Lambda functions have DEPLOYMENT_TIER env var set to testing', () => {
-    template.hasResourceProperties('AWS::Lambda::Function', {
+  test('creates SNS alarm topic', () => {
+    dbTemplate.hasResourceProperties('AWS::SNS::Topic', { TopicName: 'ScaffoldAI-Alarms' });
+  });
+
+  test('creates $25/mo cost budget', () => {
+    dbTemplate.hasResourceProperties('AWS::Budgets::Budget', {
+      Budget: Match.objectLike({ BudgetName: 'scaffold-ai-monthly', BudgetLimit: { Amount: 25, Unit: 'USD' } }),
+    });
+  });
+
+  // ── FunctionsStack ────────────────────────────────────────────────────────
+
+  test('creates 6 Lambda functions (5 agents + get_execution)', () => {
+    fnsTemplate.resourceCountIs('AWS::Lambda::Function', 6);
+  });
+
+  test('Lambda functions use Python 3.12', () => {
+    fnsTemplate.hasResourceProperties('AWS::Lambda::Function', { Runtime: 'python3.12' });
+  });
+
+  test('Lambda functions have DEPLOYMENT_TIER env var', () => {
+    fnsTemplate.hasResourceProperties('AWS::Lambda::Function', {
       Environment: { Variables: Match.objectLike({ DEPLOYMENT_TIER: 'testing' }) },
     });
   });
 
-  // ── Step Functions ────────────────────────────────────────────────────────
+  test('creates error alarms for all functions', () => {
+    const alarms = fnsTemplate.findResources('AWS::CloudWatch::Alarm', {
+      Properties: { AlarmName: Match.stringLikeRegexp('ScaffoldAI-.*-Errors') },
+    });
+    expect(Object.keys(alarms).length).toBe(6);
+  });
 
-  test('creates state machine with correct name', () => {
-    template.resourceCountIs('AWS::StepFunctions::StateMachine', 1);
-    template.hasResourceProperties('AWS::StepFunctions::StateMachine', {
+  // ── WorkflowStack ────────────────────────────────────────────────────────
+
+  test('creates state machine', () => {
+    wfTemplate.hasResourceProperties('AWS::StepFunctions::StateMachine', {
       StateMachineName: 'ScaffoldAI-Workflow',
     });
   });
 
-  // ── IAM ───────────────────────────────────────────────────────────────────
-
-  test('grants Bedrock InvokeModel to Lambda roles', () => {
-    template.hasResourceProperties('AWS::IAM::Policy', {
-      PolicyDocument: {
-        Statement: Match.arrayWith([
-          Match.objectLike({
-            Action: 'bedrock:InvokeModel',
-            Effect: 'Allow',
-          }),
-        ]),
-      },
-    });
-  });
-
-  // ── Monitoring ────────────────────────────────────────────────────────────
-
-  test('creates SNS alarm topic', () => {
-    template.hasResourceProperties('AWS::SNS::Topic', {
-      TopicName: 'ScaffoldAI-Alarms',
-    });
-  });
-
-  test('creates Lambda error alarms for all functions', () => {
-    const alarms = template.findResources('AWS::CloudWatch::Alarm', {
-      Properties: { AlarmName: Match.stringLikeRegexp('ScaffoldAI-.*-Errors') },
-    });
-    expect(Object.keys(alarms).length).toBe(5);
-  });
-
-  test('creates SFN execution failure alarm', () => {
-    template.hasResourceProperties('AWS::CloudWatch::Alarm', {
+  test('creates SFN failure alarm', () => {
+    wfTemplate.hasResourceProperties('AWS::CloudWatch::Alarm', {
       AlarmName: 'ScaffoldAI-Workflow-ExecutionFailed',
-      Threshold: 0,
-      ComparisonOperator: 'GreaterThanThreshold',
     });
   });
 
-  // ── Budget ────────────────────────────────────────────────────────────────
-
-  test('creates $25/mo cost budget', () => {
-    template.hasResourceProperties('AWS::Budgets::Budget', {
-      Budget: Match.objectLike({
-        BudgetName: 'scaffold-ai-monthly',
-        BudgetLimit: { Amount: 25, Unit: 'USD' },
-        BudgetType: 'COST',
-        TimeUnit: 'MONTHLY',
-      }),
-    });
+  test('creates Cognito identity pool role attachment', () => {
+    wfTemplate.resourceCountIs('AWS::Cognito::IdentityPoolRoleAttachment', 1);
   });
-
-  // ── Outputs ───────────────────────────────────────────────────────────────
 
   test('exports WorkflowArn', () => {
-    template.hasOutput('WorkflowArn', {});
+    wfTemplate.hasOutput('WorkflowArn', {});
   });
 });

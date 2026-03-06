@@ -1,0 +1,5 @@
+# Shared layer: utilities used by ALL Lambda functions
+# NOTE: boto3/botocore are provided by the Lambda Python 3.12 runtime — don't add them here
+pydantic-settings>=2.0.0,<3
+aws-lambda-powertools>=3.0.0,<4
+aws-xray-sdk>=2.14.0,<3

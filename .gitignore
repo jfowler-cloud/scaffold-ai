@@ -52,3 +52,6 @@ packages/generated/infrastructure/cdk.out/
 # Test artifacts
 coverage.json
 test-results.json
+
+# Lambda layers — built by CDK PythonLayerVersion at deploy time
+apps/infra/layers/*/python/
