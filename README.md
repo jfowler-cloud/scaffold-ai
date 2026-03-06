@@ -217,10 +217,13 @@ scaffold-ai/
 │   │   └── shared/             # config.py, db.py — shared across functions
 │   │
 │   ├── infra/                  # CDK infrastructure
-│   │   └── lib/workflow-stack.ts  # Step Functions state machine definition
+│   │   ├── lib/workflow-stack.ts  # Step Functions + alarms + budget
+│   │   └── test/               # Snapshot + assertion tests (12 tests)
 │   │
 │   └── web/                    # React 19 + Vite SPA
 │       ├── src/                # App entry point and root component
+│       ├── src/test/           # e2e-main.tsx, e2e-auth-stub.ts
+│       ├── e2e/                # Playwright E2E + accessibility specs
 │       ├── components/         # Cloudscape components, Canvas, Chat
 │       └── lib/                # Zustand stores
 │
@@ -381,6 +384,12 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - 🔄 `/api/chat` is now fire-and-poll — returns `execution_arn` immediately, poll `/api/chat/{arn}/status`
 - ✨ Added `apps/infra/` CDK stack defining the Step Functions state machine
 - ✨ Added `apps/agents/shared/` config + db helpers (consistent with PSP/idea-fairy pattern)
+- ✨ CloudWatch alarms (Lambda error rate, P99 duration, SFN execution failures)
+- ✨ AWS Budget alarm ($25/mo, 80% threshold) with SNS topic
+- ✨ CDK cost tags (`Project`, `Environment`, `ManagedBy`) on all resources
+- ✨ CDK snapshot + assertion tests (12 tests)
+- ✨ Accessibility tests (`@axe-core/playwright`) with WCAG 2.0 AA checks
+- ✨ E2E test stubs (`e2e-main.tsx`, `e2e-auth-stub.ts`)
 - 📈 Coverage improved: 64% → 88% (133 → 244 tests)
 
 ### v1.6.0 - Polish & Hardening (Feb 2026)
