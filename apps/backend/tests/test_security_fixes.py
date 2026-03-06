@@ -93,3 +93,24 @@ class TestCDKGenerator:
         code = generator.generate(nodes)
 
         assert "user@example.com" not in code
+
+
+class TestGitOperatorBranchAndDiff:
+    @pytest.mark.asyncio
+    async def test_create_branch_success(self, tmp_path):
+        git_tool = GitOperatorTool(str(tmp_path))
+        git_tool.repo  # init
+        # Need an initial commit before creating branches
+        (tmp_path / "init.txt").write_text("init")
+        git_tool.repo.index.add(["init.txt"])
+        git_tool.repo.index.commit("initial")
+        result = await git_tool.create_branch("feature/test")
+        assert result["success"] is True
+        assert result["branch"] == "feature/test"
+
+    @pytest.mark.asyncio
+    async def test_get_diff_returns_string(self, tmp_path):
+        git_tool = GitOperatorTool(str(tmp_path))
+        git_tool.repo  # init
+        result = await git_tool.get_diff()
+        assert isinstance(result, str)
