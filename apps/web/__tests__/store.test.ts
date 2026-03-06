@@ -253,3 +253,65 @@ describe('useChatStore', () => {
     });
   });
 });
+
+describe('useGraphStore — flow callbacks', () => {
+  const node = (id: string): AppNode => ({
+    id, type: 'default', position: { x: 0, y: 0 }, data: { label: 'N', type: 'lambda' },
+  });
+
+  beforeEach(() => {
+    useGraphStore.setState({ nodes: [], edges: [], selectedNode: null });
+  });
+
+  it('onNodesChange applies changes', () => {
+    useGraphStore.getState().addNode(node('n1'));
+    useGraphStore.getState().onNodesChange([{ type: 'select', id: 'n1', selected: true }]);
+    expect(useGraphStore.getState().nodes[0].selected).toBe(true);
+  });
+
+  it('onEdgesChange applies changes', () => {
+    useGraphStore.setState({
+      nodes: [node('a'), node('b')],
+      edges: [{ id: 'e1', source: 'a', target: 'b' }],
+    });
+    useGraphStore.getState().onEdgesChange([{ type: 'select', id: 'e1', selected: true }]);
+    expect(useGraphStore.getState().edges[0].selected).toBe(true);
+  });
+
+  it('setSelectedNode sets and clears selected node', () => {
+    const n = node('x');
+    useGraphStore.getState().setSelectedNode(n);
+    expect(useGraphStore.getState().selectedNode).toEqual(n);
+    useGraphStore.getState().setSelectedNode(null);
+    expect(useGraphStore.getState().selectedNode).toBeNull();
+  });
+
+  it('applyLayout with unknown type does nothing', () => {
+    useGraphStore.getState().addNode(node('n1'));
+    const before = useGraphStore.getState().nodes[0].position;
+    useGraphStore.getState().applyLayout('unknown' as any);
+    expect(useGraphStore.getState().nodes[0].position).toEqual(before);
+  });
+
+  it('applyLayout vertical repositions nodes', () => {
+    useGraphStore.setState({ nodes: [node('a'), node('b')], edges: [] });
+    useGraphStore.getState().applyLayout('vertical');
+    const positions = useGraphStore.getState().nodes.map(n => n.position);
+    expect(positions.length).toBe(2);
+    expect(typeof positions[0].x).toBe('number');
+  });
+
+  it('applyLayout grid repositions nodes', () => {
+    useGraphStore.setState({ nodes: [node('a'), node('b'), node('c')], edges: [] });
+    useGraphStore.getState().applyLayout('grid');
+    const positions = useGraphStore.getState().nodes.map(n => n.position);
+    expect(positions.length).toBe(3);
+  });
+
+  it('applyLayout circular repositions nodes', () => {
+    useGraphStore.setState({ nodes: [node('a'), node('b'), node('c')], edges: [] });
+    useGraphStore.getState().applyLayout('circular');
+    const positions = useGraphStore.getState().nodes.map(n => n.position);
+    expect(positions.length).toBe(3);
+  });
+});

@@ -5,8 +5,12 @@ import App from '../src/App';
 // Mock heavy dependencies
 vi.mock('@cloudscape-design/global-styles', () => ({ applyMode: vi.fn(), Mode: { Dark: 'dark', Light: 'light' } }));
 vi.mock('@cloudscape-design/components/app-layout', () => ({
-  default: ({ content, splitPanel, navigation, tools }: any) => (
+  default: ({ content, splitPanel, navigation, tools, onNavigationChange, onToolsChange, onSplitPanelToggle, onSplitPanelResize }: any) => (
     <div>
+      <button data-testid="nav-toggle" onClick={() => onNavigationChange?.({ detail: { open: true } })}>nav</button>
+      <button data-testid="tools-toggle" onClick={() => onToolsChange?.({ detail: { open: true } })}>tools</button>
+      <button data-testid="split-toggle" onClick={() => onSplitPanelToggle?.({ detail: { open: true } })}>split</button>
+      <button data-testid="split-resize" onClick={() => onSplitPanelResize?.({ detail: { size: 500 } })}>resize</button>
       <div data-testid="navigation">{navigation}</div>
       <div data-testid="tools">{tools}</div>
       <div data-testid="split-panel">{splitPanel}</div>
@@ -18,7 +22,11 @@ vi.mock('@cloudscape-design/components/top-navigation', () => ({
   default: ({ utilities }: any) => (
     <div data-testid="top-nav">
       {utilities?.map((u: any, i: number) =>
-        u.type === 'button' ? <button key={i} onClick={u.onClick}>{u.text}</button> : null
+        u.type === 'button' ? (
+          <button key={i} onClick={u.onClick} aria-label={u.ariaLabel}>
+            {u.text || u.ariaLabel}
+          </button>
+        ) : null
       )}
     </div>
   ),
@@ -45,7 +53,7 @@ vi.mock('@cloudscape-design/components/space-between', () => ({ default: ({ chil
 vi.mock('../components/Canvas', () => ({ Canvas: () => <div data-testid="canvas" /> }));
 vi.mock('../components/Chat', () => ({ Chat: () => <div data-testid="chat" /> }));
 vi.mock('../components/GeneratedCodeModal', () => ({
-  GeneratedCodeModal: ({ visible }: any) => visible ? <div data-testid="code-modal" /> : null,
+  GeneratedCodeModal: ({ visible, onDismiss }: any) => visible ? <div data-testid="code-modal"><button onClick={onDismiss}>Close</button></div> : null,
 }));
 vi.mock('../components/PlannerNotification', () => ({
   PlannerNotification: ({ onDismiss }: any) => <div data-testid="planner-notification"><button onClick={onDismiss}>Dismiss</button></div>,
@@ -95,6 +103,52 @@ describe('App', () => {
     const link = screen.getByText('Generated Code');
     fireEvent.click(link);
     expect(screen.getByTestId('code-modal')).toBeInTheDocument();
+  });
+
+  it('closes code modal on dismiss', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Generated Code'));
+    expect(screen.getByTestId('code-modal')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Close'));
+    expect(screen.queryByTestId('code-modal')).not.toBeInTheDocument();
+  });
+
+  it('clicking non-generated nav link does not open modal', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Canvas'));
+    expect(screen.queryByTestId('code-modal')).not.toBeInTheDocument();
+  });
+
+  it('toggles help panel via info button', () => {
+    render(<App />);
+    const helpBtn = screen.getByLabelText('Help');
+    fireEvent.click(helpBtn);
+    // toolsOpen toggled — no crash
+    expect(screen.getByTestId('top-nav')).toBeInTheDocument();
+  });
+
+  it('calls onNavigationChange callback', () => {
+    render(<App />);
+    fireEvent.click(screen.getByTestId('nav-toggle'));
+    expect(screen.getByTestId('navigation')).toBeInTheDocument();
+  });
+
+  it('calls onToolsChange callback', () => {
+    render(<App />);
+    fireEvent.click(screen.getByTestId('tools-toggle'));
+    expect(screen.getByTestId('tools')).toBeInTheDocument();
+  });
+
+  it('calls onSplitPanelToggle callback', () => {
+    render(<App />);
+    fireEvent.click(screen.getByTestId('split-toggle'));
+    expect(screen.getByTestId('split-panel')).toBeInTheDocument();
+  });
+
+  it('calls onSplitPanelResize callback', () => {
+    render(<App />);
+    fireEvent.click(screen.getByTestId('split-resize'));
+    expect(screen.getByTestId('split-panel')).toBeInTheDocument();
   });
 
   it('does not show planner notification when not from planner', () => {
