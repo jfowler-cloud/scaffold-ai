@@ -15,6 +15,7 @@ new WorkflowStack(app, 'ScaffoldAIWorkflowStack', {
   },
   tags: {
     Project: 'scaffold-ai',
-    Tier: tier,
+    Environment: tier,
+    ManagedBy: 'cdk',
   },
 })
