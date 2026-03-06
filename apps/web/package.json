@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:e2e": "vite build --mode e2e",
     "preview": "vite preview",
     "lint": "eslint src",
     "type-check": "tsc --noEmit",
