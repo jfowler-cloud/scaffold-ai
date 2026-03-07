@@ -85,7 +85,7 @@ jobs:
         run: cd apps/backend && uv sync && uv run pip-audit
 
       - name: pip-audit (functions)
-        run: cd apps/functions && uv sync --all-extras && uv run pip-audit
+        run: cd apps/functions && uv sync && uv run pip-audit
 
       - uses: github/codeql-action/init@v3
         with:
