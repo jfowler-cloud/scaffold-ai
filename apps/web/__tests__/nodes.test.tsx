@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { APINode } from '../components/nodes/APINode';
 import { AuthNode } from '../components/nodes/AuthNode';
@@ -13,9 +13,10 @@ import { StorageNode } from '../components/nodes/StorageNode';
 import { StreamNode } from '../components/nodes/StreamNode';
 import { WorkflowNode } from '../components/nodes/WorkflowNode';
 import { SecurityBadge } from '../components/nodes/SecurityBadge';
+import type { NodeType } from '../lib/store';
 
 // Minimal props factory for node components
-const makeProps = (label: string, type: string, selected = false) => ({
+const makeProps = (label: string, type: NodeType, selected = false) => ({
   id: 'test-id',
   type,
   selected,
