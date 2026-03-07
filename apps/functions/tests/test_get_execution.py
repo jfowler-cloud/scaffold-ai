@@ -23,7 +23,10 @@ def test_get_execution_success():
 
         result = handler({"executionArn": "arn:aws:states:us-east-1:123:execution:test"}, None)
 
-    assert result["status"] == "SUCCEEDED"
+    assert result["statusCode"] == 200
+    import json
+    body = json.loads(result["body"])
+    assert body["status"] == "SUCCEEDED"
 
 
 def test_get_execution_missing_arn():
