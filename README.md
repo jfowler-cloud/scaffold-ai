@@ -7,8 +7,8 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
-![Tests: 244](https://img.shields.io/badge/Tests-244%20passing-brightgreen?style=flat-square)
-![Coverage: 88%](https://img.shields.io/badge/Coverage-88%25-brightgreen?style=flat-square)
+![Tests: 130](https://img.shields.io/badge/Tests-130%20passing-brightgreen?style=flat-square)
+![Coverage: 96%](https://img.shields.io/badge/Coverage-96%25-brightgreen?style=flat-square)
 ![Step Functions](https://img.shields.io/badge/Step%20Functions-Agent%20Core-orange?style=flat-square)
 ![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
 
@@ -29,7 +29,7 @@ The goal was to demonstrate:
 | **Purpose** | Resume optimization | Project planning | AWS architecture design | Career planning |
 | **Orchestration** | AWS Step Functions | AWS Step Functions | AWS Step Functions | LangGraph |
 | **Agents** | Step Functions workflow | SFN Map + Strands | 5 SFN Lambda + Strands | 6 LangGraph agents |
-| **Tests** | 212 tests, 98% | 99 tests, 86% | 244 tests, 88% | 142 tests, 99% |
+| **Tests** | 212 tests, 98% | 109 tests, 92% | 130 tests, 96% | 142 tests, 99% |
 | **Features** | Resume tailoring | Architecture planning | Architecture generation | Roadmap + Critical Review |
 
 All projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing).
@@ -393,7 +393,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - ✨ CDK snapshot + assertion tests (12 tests)
 - ✨ Accessibility tests (`@axe-core/playwright`) with WCAG 2.0 AA checks
 - ✨ E2E test stubs (`e2e-main.tsx`, `e2e-auth-stub.ts`)
-- 📈 Coverage improved: 64% → 88% (133 → 244 tests)
+- 📈 Coverage improved: 64% → 96% (133 → 130 frontend tests, thresholds ratcheted to 96/88/94/97)
 
 ### v1.6.0 - Polish & Hardening (Feb 2026)
 - Removed duplicate `SecurityAutoFix` class stub from `security_autofix.py`
