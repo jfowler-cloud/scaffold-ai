@@ -83,7 +83,7 @@ jobs:
         continue-on-error: true
 
       - name: pip-audit (backend)
-        run: cd apps/backend && uv sync --group dev && uv run pip-audit
+        run: cd apps/backend && uv sync --extra dev && uv run pip-audit
 
       - name: pip-audit (functions)
         run: cd apps/functions && uv sync --group dev && uv run pip-audit
