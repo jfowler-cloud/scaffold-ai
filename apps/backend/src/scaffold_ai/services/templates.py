@@ -149,15 +149,13 @@ class ArchitectureTemplates:
 
         template = self.TEMPLATES[template_id]
 
-        # Add positions to nodes
-        from ..graph.nodes import generate_node_positions
-
-        nodes_with_positions = generate_node_positions(template["nodes"], [])
+        # Note: generate_node_positions removed in v2 (Step Functions refactor)
+        # Templates return nodes without positions; frontend handles layout
 
         return {
             "name": template["name"],
             "description": template["description"],
-            "nodes": nodes_with_positions,
+            "nodes": template["nodes"],
             "edges": [
                 {"id": f"e-{edge['source']}-{edge['target']}", **edge}
                 for edge in template["edges"]
