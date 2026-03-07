@@ -38,7 +38,7 @@ vi.mock('@xyflow/react', () => ({
 }));
 
 describe('Node components', () => {
-  const nodes = [
+  const nodes: Array<{ Component: React.ComponentType<any>; label: string; type: NodeType; subtitle: string }> = [
     { Component: APINode, label: 'My API', type: 'api', subtitle: 'API Endpoint' },
     { Component: AuthNode, label: 'My Auth', type: 'auth', subtitle: 'Cognito' },
     { Component: CdnNode, label: 'My CDN', type: 'cdn', subtitle: 'CloudFront' },
