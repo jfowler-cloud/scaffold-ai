@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'node /home/user/Desktop/Projects/scaffold-ai/apps/web/node_modules/vite/bin/vite.js preview --port 4173 --host 127.0.0.1',
+    command: 'pnpm preview',
     url: 'http://localhost:4173/e2e.html',
     reuseExistingServer: true,
     timeout: 15000,
