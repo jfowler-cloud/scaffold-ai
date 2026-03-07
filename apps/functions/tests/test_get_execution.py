@@ -17,8 +17,7 @@ def test_get_execution_success():
         "status": "SUCCEEDED",
         "output": '{"result": "ok"}',
     }
-    with patch("handler.boto3") as mock_boto3:
-        mock_boto3.client.return_value = mock_sfn
+    with patch("handler.sfn", mock_sfn):
         from handler import handler
 
         result = handler({"executionArn": "arn:aws:states:us-east-1:123:execution:test"}, None)
