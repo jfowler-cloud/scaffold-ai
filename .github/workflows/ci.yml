@@ -18,7 +18,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: cd apps/web && pnpm type-check
       - run: cd apps/web && pnpm test:coverage
-      - run: cd apps/web && pnpm exec playwright install --with-deps
       - run: cd apps/web && pnpm audit --audit-level=high
         continue-on-error: true  # transitive dev-dep vulns (minimatch, rollup) — not runtime exploitable
 
