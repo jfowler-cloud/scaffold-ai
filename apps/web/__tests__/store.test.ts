@@ -314,4 +314,19 @@ describe('useGraphStore — flow callbacks', () => {
     const positions = useGraphStore.getState().nodes.map(n => n.position);
     expect(positions.length).toBe(3);
   });
+
+  it('applyLayout uses fallback column for unknown node types', () => {
+    const unknownNode: AppNode = { id: 'u1', type: 'default', position: { x: 0, y: 0 }, data: { label: 'X', type: 'custom-thing' as any } };
+    useGraphStore.setState({ nodes: [node('a'), unknownNode], edges: [] });
+    useGraphStore.getState().applyLayout('horizontal');
+    const positions = useGraphStore.getState().nodes.map(n => n.position);
+    expect(positions[1].x).toBeGreaterThan(0);
+  });
+
+  it('applyLayout vertical uses fallback row for unknown node types', () => {
+    const unknownNode: AppNode = { id: 'u1', type: 'default', position: { x: 0, y: 0 }, data: { label: 'X', type: 'custom-thing' as any } };
+    useGraphStore.setState({ nodes: [unknownNode], edges: [] });
+    useGraphStore.getState().applyLayout('vertical');
+    expect(useGraphStore.getState().nodes[0].position.y).toBeGreaterThan(0);
+  });
 });

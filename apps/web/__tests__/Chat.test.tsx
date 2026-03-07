@@ -16,6 +16,37 @@ vi.mock('jszip', () => ({
   },
 }));
 
+// Mock Cloudscape Textarea to expose onKeyDown with detail format
+vi.mock('@cloudscape-design/components/textarea', () => ({
+  default: ({ value, onChange, onKeyDown, placeholder, rows, disabled }: any) => (
+    <textarea
+      value={value ?? ''}
+      placeholder={placeholder}
+      rows={rows}
+      disabled={disabled}
+      onChange={e => onChange?.({ detail: { value: e.target.value } })}
+      onKeyDown={e => onKeyDown?.({ detail: { key: e.key, shiftKey: e.shiftKey }, preventDefault: () => e.preventDefault() })}
+    />
+  ),
+}));
+
+// Mock Cloudscape Select to expose onChange
+vi.mock('@cloudscape-design/components/select', () => ({
+  default: ({ selectedOption, onChange, options, disabled }: any) => (
+    <select
+      value={selectedOption?.value ?? ''}
+      disabled={disabled}
+      onChange={e => {
+        const opt = options?.find((o: any) => o.value === e.target.value);
+        onChange?.({ detail: { selectedOption: opt } });
+      }}
+      data-testid="iac-select"
+    >
+      {options?.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  ),
+}));
+
 describe('Chat', () => {
   beforeEach(() => {
     useChatStore.setState({ messages: [], isLoading: false, generatedFiles: [] });
@@ -448,5 +479,37 @@ describe('Chat', () => {
     await waitFor(() => {
       expect(screen.getByText(/security improvements applied/i)).toBeInTheDocument();
     });
+  });
+
+  it('should submit on Enter key via textarea', async () => {
+    (global.fetch as any).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ message: 'Response', updated_graph: null, generated_files: [] }),
+    });
+
+    render(<Chat />);
+    const textarea = screen.getByPlaceholderText(/describe your application architecture/i);
+    fireEvent.change(textarea, { target: { value: 'Hello' } });
+    fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: false });
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalled();
+    });
+  });
+
+  it('should not submit on Shift+Enter', async () => {
+    render(<Chat />);
+    const textarea = screen.getByPlaceholderText(/describe your application architecture/i);
+    fireEvent.change(textarea, { target: { value: 'Hello' } });
+    fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: true });
+
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it('should change IaC format via select', () => {
+    render(<Chat />);
+    const select = screen.getByTestId('iac-select');
+    fireEvent.change(select, { target: { value: 'terraform' } });
+    expect(select).toHaveValue('terraform');
   });
 });
