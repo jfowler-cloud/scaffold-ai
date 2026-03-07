@@ -1,5 +1,4 @@
 """Lambda: classify user intent from natural language."""
-import json
 import logging
 import os
 import sys
