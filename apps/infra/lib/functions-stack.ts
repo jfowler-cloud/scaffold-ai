@@ -45,8 +45,11 @@ export class FunctionsStack extends cdk.Stack {
 
     // ── IAM ──────────────────────────────────────────────────────────────────
     const bedrockPolicy = new iam.PolicyStatement({
-      actions: ['bedrock:InvokeModel'],
-      resources: [`arn:aws:bedrock:${this.region}::foundation-model/*`],
+      actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
+      resources: [
+        `arn:aws:bedrock:${this.region}::foundation-model/*`,
+        `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/*`,
+      ],
     })
 
     const sfnPolicy = new iam.PolicyStatement({
