@@ -37,3 +37,32 @@ def test_handler_returns_intent():
         result = handler({"user_input": "add a queue", "graph_json": {}, "iac_format": "cdk"})
 
     assert "intent" in result
+
+
+def test_handler_falls_back_to_keyword_on_exception():
+    """Cover LLM exception fallback branch (lines 56-58)."""
+    _set_path()
+
+    with patch("handler.BedrockModel", side_effect=Exception("Bedrock unavailable")), patch(
+        "handler.app_config"
+    ) as mock_config:
+        mock_config.model_id = "some-model"
+        from handler import handler
+
+        result = handler({"user_input": "generate the CDK code", "graph_json": {}, "iac_format": "cdk"})
+
+    assert result["intent"] == "generate_code"
+
+
+def test_keyword_classify_explain():
+    _set_path()
+    from handler import _keyword_classify
+
+    assert _keyword_classify("what is this service?") == "explain"
+
+
+def test_keyword_classify_modify_graph():
+    _set_path()
+    from handler import _keyword_classify
+
+    assert _keyword_classify("remove the database") == "modify_graph"
