@@ -1,4 +1,3 @@
-"use client";
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
@@ -7,7 +6,7 @@ import { SecurityBadge } from "./SecurityBadge";
 
 export const DatabaseNode = memo(function DatabaseNode({ data, selected }: NodeProps<AppNode>) {
   return (
-    <div className={`relative px-4 py-3 rounded-lg border-2 bg-white shadow-md min-w-[150px] ${selected ? "border-blue-500 ring-2 ring-blue-200" : "border-blue-300"}`}>
+    <div className={`relative px-4 py-3 rounded-lg border-2 bg-white dark:bg-zinc-800 shadow-md min-w-[150px] ${selected ? "border-blue-500 ring-2 ring-blue-200" : "border-blue-300"}`}>
       <SecurityBadge config={data.config} />
       <Handle type="target" position={Position.Left} className="!bg-blue-500" />
       <div className="flex items-center gap-2">
@@ -17,8 +16,8 @@ export const DatabaseNode = memo(function DatabaseNode({ data, selected }: NodeP
           </svg>
         </div>
         <div>
-          <div className="font-medium text-sm text-gray-900">{data.label}</div>
-          <div className="text-xs text-gray-500">Database</div>
+          <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{data.label}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Database</div>
         </div>
       </div>
       <Handle type="source" position={Position.Right} className="!bg-blue-500" />

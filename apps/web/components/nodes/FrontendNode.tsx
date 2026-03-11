@@ -1,4 +1,3 @@
-"use client";
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
@@ -10,7 +9,7 @@ export const FrontendNode = memo(function FrontendNode({
 }: NodeProps<AppNode>) {
   return (
     <div
-      className={`px-4 py-3 rounded-lg border-2 bg-white shadow-md min-w-[150px] ${
+      className={`px-4 py-3 rounded-lg border-2 bg-white dark:bg-zinc-800 shadow-md min-w-[150px] ${
         selected ? "border-cyan-500 ring-2 ring-cyan-200" : "border-cyan-300"
       }`}
     >
@@ -31,8 +30,8 @@ export const FrontendNode = memo(function FrontendNode({
           </svg>
         </div>
         <div>
-          <div className="font-medium text-sm text-gray-900">{data.label}</div>
-          <div className="text-xs text-gray-500">Frontend</div>
+          <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{data.label}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">Frontend</div>
         </div>
       </div>
 

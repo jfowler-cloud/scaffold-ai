@@ -1,4 +1,3 @@
-"use client";
 
 import { useCallback, useMemo } from "react";
 import {
@@ -154,7 +153,7 @@ export function Canvas() {
 
         {/* Layout Controls - Top Left */}
         <Panel position="top-left">
-          <div style={{ backgroundColor: "white", borderRadius: "8px", padding: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <div className="bg-white dark:bg-zinc-800 rounded-lg p-2 shadow-sm border border-transparent dark:border-zinc-700">
             <SpaceBetween direction="horizontal" size="xs">
               <ButtonDropdown
                 items={[
@@ -173,12 +172,12 @@ export function Canvas() {
 
         {/* Add Node Controls - Top Right */}
         <Panel position="top-right">
-          <div style={{ backgroundColor: "white", borderRadius: "8px", padding: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <div className="bg-white dark:bg-zinc-800 rounded-lg p-2 shadow-sm border border-transparent dark:border-zinc-700">
             <SpaceBetween direction="horizontal" size="xs">
               <ButtonDropdown
                 variant="primary"
                 items={[
-                  { id: "frontend", text: "Frontend", description: "Next.js/React app" },
+                  { id: "frontend", text: "Frontend", description: "React + Vite SPA" },
                   { id: "auth", text: "Auth", description: "Cognito User Pool" },
                   { id: "api", text: "API", description: "API Gateway" },
                   { id: "lambda", text: "Lambda", description: "Serverless function" },

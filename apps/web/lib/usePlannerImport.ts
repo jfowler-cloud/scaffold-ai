@@ -1,5 +1,12 @@
 import { useEffect, useState } from "react";
 
+export interface ReviewFinding {
+  category: string;
+  findings: string[];
+  recommendations: string[];
+  risk_level: string;
+}
+
 export interface PlannerImport {
   projectName: string;
   description: string;
@@ -10,6 +17,8 @@ export interface PlannerImport {
     uptime: string;
     dataSize: string;
   };
+  reviewFindings?: ReviewFinding[];
+  reviewSummary?: string;
 }
 
 /**
@@ -97,6 +106,8 @@ export function usePlannerImport() {
               architecture: data.architecture,
               techStack: data.tech_stack,
               requirements: data.requirements,
+              reviewFindings: data.review_findings,
+              reviewSummary: data.review_summary,
             });
           })
           .catch(error => {

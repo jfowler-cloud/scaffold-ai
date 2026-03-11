@@ -7,7 +7,7 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
-![Tests: 130](https://img.shields.io/badge/Tests-130%20passing-brightgreen?style=flat-square)
+![Tests: 135](https://img.shields.io/badge/Tests-135%20passing-brightgreen?style=flat-square)
 ![Coverage: 96%](https://img.shields.io/badge/Coverage-96%25-brightgreen?style=flat-square)
 ![Step Functions](https://img.shields.io/badge/Step%20Functions-Agent%20Core-orange?style=flat-square)
 ![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
@@ -29,7 +29,7 @@ The goal was to demonstrate:
 | **Purpose** | Resume optimization | Project planning | AWS architecture design | Career planning |
 | **Orchestration** | AWS Step Functions | AWS Step Functions | AWS Step Functions | LangGraph |
 | **Agents** | Step Functions workflow | SFN Map + Strands | 5 SFN Lambda + Strands | 6 LangGraph agents |
-| **Tests** | 212 tests, 98% | 109 tests, 92% | 130 tests, 96% | 142 tests, 99% |
+| **Tests** | 212 tests, 98% | 109 tests, 92% | 135 tests, 96% | 142 tests, 99% |
 | **Features** | Resume tailoring | Architecture planning | Architecture generation | Roadmap + Critical Review |
 
 All projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing).
@@ -284,11 +284,9 @@ All three projects share production patterns: input validation, error handling, 
 
 Honest assessment of the codebase as of Feb 2026, based on a full source review. See also [CRITICAL_REVIEW.md](CRITICAL_REVIEW.md) for the detailed 44-item audit.
 
-### P0 -- Planner Import Loses Structured Data
+### ~~P0 -- Planner Import Loses Structured Data~~ (RESOLVED)
 
-The Project Planner AI integration (`usePlannerImport.ts`) receives a URL-encoded `prompt` parameter, but discards all structured fields. The resulting `PlannerImport` object has empty `architecture`, `techStack`, and `requirements` -- only `description` (the raw text prompt) is populated. This means the Chat component receives an unstructured text blob rather than parsed project metadata.
-
-**Recommendation:** Parse the prompt text to extract structured fields (project name, architecture, tech stack entries, user count, uptime). Alternatively, coordinate with Project Planner AI to pass a JSON payload via `postMessage` or a shared backend key instead of a URL parameter. This would allow the architect agent to receive typed inputs and produce better initial designs.
+`usePlannerImport.ts` now supports two import modes: (1) session-based API (`/api/import/plan/{sessionId}`) which returns fully structured data, and (2) legacy `?prompt=` fallback with `parsePrompt()` that extracts project name, architecture, tech stack, and requirements from the formatted prompt text. Chat auto-submit now builds a rich prompt including all structured fields, review findings, and review summary.
 
 ### P0 -- No Authentication or Persistence
 
@@ -314,17 +312,13 @@ All endpoints are public. All state (architectures, chat history, sharing links,
 
 **Recommendation:** Add a Pydantic validator for `graph_json` that rejects graphs with more than 50 nodes. Validate that node IDs and types match expected formats.
 
-### P2 -- Inconsistent Backend URL Configuration
+### ~~P2 -- Inconsistent Backend URL Configuration~~ (RESOLVED)
 
-The frontend references the backend URL in multiple places with different fallback chains. `lib/config.ts` exports a centralized `BACKEND_URL` using `VITE_BACKEND_URL || VITE_API_URL || "http://localhost:8001"`, but two files (`usePlannerImport.ts` and `PlannerRefineButton.tsx`) still use stale `process.env.NEXT_PUBLIC_*` references from the pre-Vite era.
+All frontend files now import `BACKEND_URL` / `PLANNER_URL` from `lib/config.ts`. The stale `NEXT_PUBLIC_*` env var references have been removed.
 
-**Recommendation:** Update `usePlannerImport.ts` and `PlannerRefineButton.tsx` to import `BACKEND_URL` / `PLANNER_URL` from `lib/config.ts` instead of reading `process.env.NEXT_PUBLIC_*` directly.
+### ~~P2 -- Agent Classes vs. Node Functions Are Redundant~~ (RESOLVED)
 
-### P2 -- Agent Classes vs. Node Functions Are Redundant
-
-The `agents/` directory contains class-based agents (`ArchitectAgent`, `InterpreterAgent`) with placeholder methods that are never called. The real logic lives in `graph/nodes.py` as standalone async functions. This is confusing -- two implementations of the same concept.
-
-**Recommendation:** Either remove the unused agent classes or refactor `nodes.py` to delegate to them. The `SecuritySpecialistAgent` is the one agent class that is actually used (as a fallback); keep that pattern and extend it.
+Removed unused `InterpreterAgent` and `ArchitectAgent` classes. The files now contain only their system prompt constants, which are referenced by the Lambda handlers in `apps/functions/`. The `__init__.py` comment has been updated accordingly.
 
 ### P1 -- Deploy Endpoint Accepts Arbitrary CDK Code
 
@@ -332,21 +326,13 @@ The `/api/deploy` endpoint accepts raw `cdk_code` and `app_code` strings from th
 
 **Recommendation:** At minimum, validate that the CDK code only imports from `aws-cdk-lib` and `constructs`. Better: run synthesis in a Docker container with restricted network access and no AWS credentials, then deploy the synthesized CloudFormation template directly.
 
-### P2 -- PlannerNotification Shows Broken Content
+### ~~P2 -- PlannerNotification Shows Broken Content~~ (RESOLVED)
 
-`PlannerNotification.tsx` renders `plannerData.projectName` (always `"Imported Project"`) and `plannerData.architecture` (always `""`). The notification reads: *"Imported Project - . Ready to generate code and infrastructure."* -- note the dangling hyphen-period from the empty architecture field.
+`PlannerNotification.tsx` now conditionally renders architecture and tech stack using `·` separators, and shows review findings count with critical/high breakdown. No more dangling punctuation from empty fields.
 
-**Recommendation:** Conditionally render the architecture field. Parse the project name from the prompt text (it's on the `Project:` line) instead of hardcoding `"Imported Project"`.
+### ~~P2 -- Mixed Direct/Proxy Backend Calls in Frontend~~ (RESOLVED)
 
-### P2 -- Mixed Direct/Proxy Backend Calls in Frontend
-
-`Chat.tsx` uses two different patterns to reach the backend:
-- `handleSubmit` and `handleGenerateCode` call `/api/chat` (relative URL, handled by Vite's `server.proxy` config)
-- `handleDeploy`, `handleSecurityFix`, and `handleDownloadZip` call `BACKEND_URL` directly (bypasses the proxy)
-
-This means error handling and any future middleware (auth tokens, logging) behave differently depending on the action.
-
-**Recommendation:** Route all backend calls through the Vite proxy for consistency, or call the backend directly everywhere. Don't mix both.
+All backend calls in `Chat.tsx` now use `BACKEND_URL` from `lib/config.ts`. The chat flow uses a shared `sendChatRequest()` helper with fire-and-poll (matching the Step Functions backend), and all other calls (security autofix, deploy) also use `BACKEND_URL` consistently.
 
 ### P2 -- Generated File Disk Write Uses Fragile Path Resolution
 
@@ -356,10 +342,14 @@ This means error handling and any future middleware (auth tokens, logging) behav
 
 ### Integration with Project Planner AI
 
-The planner-to-scaffold handoff works end-to-end: the planner's `ScaffoldIntegration.tsx` opens Scaffold AI with `?from=planner&prompt=...`, and `usePlannerImport.ts` populates the Chat textarea. The notification banner appears via `PlannerNotification.tsx`. The main gaps are:
-- **Data fidelity** -- structured plan fields are lost (see P0 above)
-- **Notification content** -- project name and architecture display incorrectly (see P2 above)
-- **URL length** -- long plans may be truncated by browsers/proxies at ~2000 chars
+The planner-to-scaffold handoff works end-to-end via two modes:
+1. **Session-based API** (preferred): Planner POSTs structured plan to `/api/import/plan`, receives `session_id`, opens Scaffold AI with `?from=planner&session=...`. Scaffold fetches full structured data including review findings.
+2. **Legacy URL** (fallback): `?from=planner&prompt=...` with `parsePrompt()` extracting structured fields from formatted text.
+
+Chat auto-submit builds a rich prompt with project name, architecture, tech stack, requirements, and review findings. The notification banner displays all available context.
+
+Remaining gap:
+- **URL length** -- legacy `?prompt=` fallback may be truncated by browsers/proxies at ~2000 chars (mitigated by the session-based API being the primary path)
 
 ---
 
@@ -377,6 +367,15 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ---
 
 ## Recent Updates
+
+### v2.1.0 - Planner Integration & Fire-and-Poll Frontend (Mar 2026)
+- Frontend Chat now uses fire-and-poll pattern matching the Step Functions backend (`sendChatRequest` + `pollExecution`)
+- Planner auto-submit builds rich prompt with structured fields (project name, architecture, tech stack, requirements, review findings)
+- `PlannerNotification` displays tech stack, review findings count with critical/high breakdown, no dangling punctuation
+- Removed unused `InterpreterAgent` and `ArchitectAgent` classes (kept system prompt constants for Lambda handlers)
+- Updated `__init__.py` and `CLAUDE.md` to reflect Step Functions architecture
+- 5 new tests (structured planner data, review findings, workflow failure, non-ok start, fire-and-poll cycle)
+- 135 tests passing (up from 130)
 
 ### v2.0.0 - Step Functions + Strands Refactor (Mar 2026)
 

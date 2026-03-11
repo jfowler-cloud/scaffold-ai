@@ -88,3 +88,23 @@ html body {
 .awsui-dark-mode [class*="awsui_option"]:hover {
   background-color: #1e2228 !important;
 }
+
+/* React Flow dark mode */
+.dark .react-flow__controls button {
+  background-color: #16191f;
+  border-color: #414d5c;
+  fill: #e8eaed;
+  color: #e8eaed;
+}
+.dark .react-flow__controls button:hover {
+  background-color: #1e2228;
+}
+.dark .react-flow__minimap {
+  background-color: #16191f;
+}
+.dark .react-flow__background {
+  background-color: #0f1419;
+}
+.dark .react-flow__edge-path {
+  stroke: #5f6b7a;
+}

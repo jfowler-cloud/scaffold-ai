@@ -1,4 +1,3 @@
-"use client";
 
 import { useState, useRef, useEffect } from "react";
 import { BACKEND_URL } from "@/lib/config";
@@ -23,6 +22,7 @@ interface ChatMessage {
 
 function ChatBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
+  const isDark = document.documentElement.classList.contains("dark");
 
   return (
     <div
@@ -37,8 +37,8 @@ function ChatBubble({ message }: { message: ChatMessage }) {
           maxWidth: "85%",
           padding: "12px 16px",
           borderRadius: "12px",
-          backgroundColor: isUser ? "#0972d3" : "#f2f3f3",
-          color: isUser ? "#ffffff" : "#000716",
+          backgroundColor: isUser ? "#e8001c" : isDark ? "#1e2228" : "#f2f3f3",
+          color: isUser ? "#ffffff" : isDark ? "#e8eaed" : "#000716",
         }}
       >
         <SpaceBetween direction="horizontal" size="xs">
@@ -54,13 +54,14 @@ function ChatBubble({ message }: { message: ChatMessage }) {
 }
 
 function LoadingBubble() {
+  const isDark = document.documentElement.classList.contains("dark");
   return (
     <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: "12px" }}>
       <div
         style={{
           padding: "12px 16px",
           borderRadius: "12px",
-          backgroundColor: "#f2f3f3",
+          backgroundColor: isDark ? "#1e2228" : "#f2f3f3",
         }}
       >
         <SpaceBetween direction="horizontal" size="xs">
@@ -112,28 +113,122 @@ export function Chat({ plannerData }: { plannerData?: any }) {
   const { messages, isLoading, addMessage, setLoading, setGeneratedFiles, generatedFiles } = useChatStore();
   const { getGraphJSON, setGraph, nodes } = useGraphStore();
 
+  /**
+   * Poll a Step Functions execution until it reaches a terminal state.
+   * Returns the final execution result.
+   */
+  const pollExecution = async (executionArn: string): Promise<{
+    message?: string;
+    updated_graph?: any;
+    generated_files?: any[];
+    error?: string;
+  }> => {
+    const POLL_INTERVAL = 2000;
+    const MAX_POLLS = 90; // 3 minutes max
+
+    for (let i = 0; i < MAX_POLLS; i++) {
+      const res = await fetch(`${BACKEND_URL}/api/chat/${encodeURIComponent(executionArn)}/status`);
+      if (!res.ok) throw new Error("Failed to check execution status");
+      const data = await res.json();
+
+      if (data.status === "SUCCEEDED") {
+        return {
+          message: data.message,
+          updated_graph: data.updated_graph,
+          generated_files: data.generated_files,
+        };
+      }
+      if (data.status === "FAILED" || data.status === "TIMED_OUT" || data.status === "ABORTED") {
+        throw new Error(data.error || `Workflow ${data.status.toLowerCase()}`);
+      }
+
+      // Still running — wait and poll again
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
+    }
+    throw new Error("Workflow timed out waiting for response");
+  };
+
+  /**
+   * Send a chat request via fire-and-poll: POST starts the SFN execution,
+   * then poll until the result is ready.
+   */
+  const sendChatRequest = async (userInput: string, format: string = iacFormat.value) => {
+    const graphJSON = getGraphJSON();
+    const startRes = await fetch(`${BACKEND_URL}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_input: userInput, graph_json: graphJSON, iac_format: format }),
+    });
+    if (!startRes.ok) {
+      const err = await startRes.json().catch(() => ({ detail: "Request failed" }));
+      throw new Error(err.detail || "Failed to start workflow");
+    }
+    const { execution_arn } = await startRes.json();
+    return pollExecution(execution_arn);
+  };
+
+  /**
+   * Process the result from a completed chat workflow execution.
+   */
+  const handleChatResult = (data: { message?: string; updated_graph?: any; generated_files?: any[] }) => {
+    if (data.updated_graph?.nodes?.length > 0 || data.updated_graph?.edges?.length > 0) {
+      setGraph(data.updated_graph.nodes || [], data.updated_graph.edges || []);
+    }
+    if (data.generated_files && data.generated_files.length > 0) {
+      setGeneratedFiles(data.generated_files);
+    }
+    addMessage({ id: `assistant-${Date.now()}`, role: "assistant", content: data.message || "" });
+    if (data.message?.includes("Security Review: FAILED")) {
+      setSecurityFailed(true);
+    } else {
+      setSecurityFailed(false);
+    }
+  };
+
   // Auto-populate and submit with planner data if available
   useEffect(() => {
     if (plannerData && plannerData.description) {
-      const msg = plannerData.description;
-      // Add user message and kick off the request automatically
+      // Build a rich prompt with structured context from the planner
+      const parts: string[] = [];
+      if (plannerData.projectName && plannerData.projectName !== "Imported Project") {
+        parts.push(`Project: ${plannerData.projectName}`);
+      }
+      if (plannerData.architecture) {
+        parts.push(`Architecture: ${plannerData.architecture}`);
+      }
+      if (plannerData.techStack && Object.keys(plannerData.techStack).length > 0) {
+        const stackStr = Object.entries(plannerData.techStack).map(([k, v]) => `${k}: ${v}`).join(", ");
+        parts.push(`Tech Stack: ${stackStr}`);
+      }
+      if (plannerData.requirements) {
+        const reqs = [
+          plannerData.requirements.users && `Users: ${plannerData.requirements.users}`,
+          plannerData.requirements.uptime && `Uptime: ${plannerData.requirements.uptime}`,
+          plannerData.requirements.dataSize && `Data: ${plannerData.requirements.dataSize}`,
+        ].filter(Boolean).join(" | ");
+        if (reqs) parts.push(reqs);
+      }
+      parts.push("", plannerData.description);
+
+      if (plannerData.reviewFindings?.length) {
+        const critHigh = plannerData.reviewFindings.filter(
+          (f: any) => f.risk_level === "critical" || f.risk_level === "high"
+        );
+        if (critHigh.length > 0) {
+          parts.push(`\n⚠️ ${critHigh.length} critical/high findings from security review — please address in the architecture.`);
+        }
+      }
+      if (plannerData.reviewSummary) {
+        parts.push(`\nReview Summary: ${plannerData.reviewSummary}`);
+      }
+
+      const msg = parts.join("\n");
+
       addMessage({ id: `user-${Date.now()}`, role: "user", content: msg });
       setLoading(true);
-      const graphJSON = getGraphJSON();
-      fetch(`${BACKEND_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_input: msg, graph_json: graphJSON, iac_format: "cdk" }),
-      })
-        .then(r => r.json())
-        .then(data => {
-          if (data.updated_graph?.nodes?.length > 0 || data.updated_graph?.edges?.length > 0) {
-            setGraph(data.updated_graph.nodes || [], data.updated_graph.edges || []);
-          }
-          if (data.generated_files?.length > 0) setGeneratedFiles(data.generated_files);
-          addMessage({ id: `assistant-${Date.now()}`, role: "assistant", content: data.message });
-          if (data.message?.includes("Security Review: FAILED")) setSecurityFailed(true);
-        })
+
+      sendChatRequest(msg, "cdk")
+        .then(handleChatResult)
         .catch(() => {
           addMessage({ id: `error-${Date.now()}`, role: "assistant", content: "Sorry, I encountered an error. Please try again." });
         })
@@ -252,38 +347,9 @@ export function Chat({ plannerData }: { plannerData?: any }) {
     setSecurityFailed(false);
 
     try {
-      const graphJSON = getGraphJSON();
-
-      const response = await fetch(`${BACKEND_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_input: skipSecurityCheck ? "generate code skip_security_check" : "generate code",
-          graph_json: graphJSON,
-          iac_format: iacFormat.value,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to generate code");
-      }
-
-      const data = await response.json();
-
-      if (data.generated_files && data.generated_files.length > 0) {
-        setGeneratedFiles(data.generated_files);
-      }
-
-      // Check if security review failed
-      if (data.message && data.message.includes("Security Review: FAILED")) {
-        setSecurityFailed(true);
-      }
-
-      addMessage({
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: data.message,
-      });
+      const userInput = skipSecurityCheck ? "generate code skip_security_check" : "generate code";
+      const data = await sendChatRequest(userInput);
+      handleChatResult(data);
     } catch (error) {
       console.error("Generate code error:", error);
       addMessage({
@@ -306,50 +372,13 @@ export function Chat({ plannerData }: { plannerData?: any }) {
     };
 
     addMessage(userMessage);
+    const currentInput = input;
     setInput("");
     setLoading(true);
 
     try {
-      const graphJSON = getGraphJSON();
-
-      const response = await fetch(`${BACKEND_URL}/api/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_input: input,
-          graph_json: graphJSON,
-          iac_format: iacFormat.value,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to get response");
-      }
-
-      const data = await response.json();
-
-      // Update the graph if the backend returned new nodes/edges
-      if (data.updated_graph?.nodes?.length > 0 || data.updated_graph?.edges?.length > 0) {
-        setGraph(data.updated_graph.nodes || [], data.updated_graph.edges || []);
-      }
-
-      // Save generated files if any
-      if (data.generated_files && data.generated_files.length > 0) {
-        setGeneratedFiles(data.generated_files);
-      }
-
-      addMessage({
-        id: `assistant-${Date.now()}`,
-        role: "assistant",
-        content: data.message,
-      });
-
-      // Check if security review failed and prompt user to fix
-      if (data.message && data.message.includes("Security Review: FAILED")) {
-        setSecurityFailed(true);
-      } else {
-        setSecurityFailed(false);
-      }
+      const data = await sendChatRequest(currentInput);
+      handleChatResult(data);
     } catch (error) {
       console.error("Chat error:", error);
       addMessage({
@@ -405,18 +434,8 @@ export function Chat({ plannerData }: { plannerData?: any }) {
 
         {/* Security failure banner */}
         {securityFailed && (
-          <div style={{
-            backgroundColor: "#fff7ed",
-            border: "1px solid #fed7aa",
-            borderRadius: "8px",
-            padding: "12px 16px",
-            marginBottom: "8px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-          }}>
-            <span style={{ fontSize: "13px", color: "#9a3412" }}>
+          <div className="bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800 rounded-lg px-4 py-3 mb-2 flex items-center justify-between gap-3">
+            <span className="text-sm text-orange-800 dark:text-orange-200">
               ⚠️ Security review failed. Fix issues or mark as resolved to proceed.
             </span>
             <SpaceBetween direction="horizontal" size="xs">
@@ -442,7 +461,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
         )}
 
         {/* Input area */}
-        <div style={{ borderTop: "1px solid #e9ebed", paddingTop: "16px" }}>
+        <div className="border-t border-gray-200 dark:border-zinc-700 pt-4">
           <SpaceBetween size="s">
             <SpaceBetween direction="horizontal" size="s" alignItems="center">
               <div style={{ flex: 1 }}>

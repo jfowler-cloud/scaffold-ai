@@ -47,6 +47,60 @@ vi.mock('@cloudscape-design/components/select', () => ({
   ),
 }));
 
+/**
+ * Helper: mock a fire-and-poll chat cycle.
+ * First call returns execution_arn, second call returns SUCCEEDED with result.
+ */
+function mockChatFireAndPoll(result: { message?: string; updated_graph?: any; generated_files?: any[] }) {
+  (global.fetch as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ execution_arn: 'arn:aws:states:us-east-1:123:execution:test' }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        status: 'SUCCEEDED',
+        message: result.message ?? '',
+        updated_graph: result.updated_graph ?? null,
+        generated_files: result.generated_files ?? [],
+      }),
+    });
+}
+
+/**
+ * Helper: mock a fire-and-poll chat cycle that fails at the start.
+ */
+function mockChatStartFailure() {
+  (global.fetch as any).mockRejectedValueOnce(new TypeError('Network error'));
+}
+
+/**
+ * Helper: mock a fire-and-poll where start succeeds but poll returns FAILED.
+ */
+function mockChatPollFailure(error = 'Workflow failed') {
+  (global.fetch as any)
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ execution_arn: 'arn:aws:states:us-east-1:123:execution:test' }),
+    })
+    .mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ status: 'FAILED', error }),
+    });
+}
+
+/**
+ * Helper: mock a start that returns non-ok response.
+ */
+function mockChatStartNonOk() {
+  (global.fetch as any).mockResolvedValueOnce({
+    ok: false,
+    status: 502,
+    json: async () => ({ detail: 'Bad gateway' }),
+  });
+}
+
 describe('Chat', () => {
   beforeEach(() => {
     useChatStore.setState({ messages: [], isLoading: false, generatedFiles: [] });
@@ -84,10 +138,7 @@ describe('Chat', () => {
   });
 
   it('should clear input after sending message', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: 'Response', updated_graph: null, generated_files: [] }),
-    });
+    mockChatFireAndPoll({ message: 'Response' });
 
     render(<Chat />);
 
@@ -101,7 +152,7 @@ describe('Chat', () => {
   });
 
   it('should display error message on fetch failure', async () => {
-    (global.fetch as any).mockRejectedValueOnce(new TypeError('Network error'));
+    mockChatStartFailure();
 
     render(<Chat />);
 
@@ -114,11 +165,22 @@ describe('Chat', () => {
     });
   });
 
-  it('should display error message on 502/503 response', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: false,
-      status: 502,
+  it('should display error message on non-ok start response', async () => {
+    mockChatStartNonOk();
+
+    render(<Chat />);
+
+    const input = screen.getByPlaceholderText(/describe your application architecture/i);
+    fireEvent.change(input, { target: { value: 'Test message' } });
+    fireEvent.click(screen.getByRole('button', { name: /send/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/encountered an error/i)).toBeInTheDocument();
     });
+  });
+
+  it('should display error message on workflow failure', async () => {
+    mockChatPollFailure();
 
     render(<Chat />);
 
@@ -132,12 +194,7 @@ describe('Chat', () => {
   });
 
   it('should show loading spinner while processing', async () => {
-    (global.fetch as any).mockImplementationOnce(() =>
-      new Promise(resolve => setTimeout(() => resolve({
-        ok: true,
-        json: async () => ({ message: 'Done', updated_graph: null, generated_files: [] }),
-      }), 100))
-    );
+    mockChatFireAndPoll({ message: 'Done' });
 
     render(<Chat />);
 
@@ -157,10 +214,7 @@ describe('Chat', () => {
       nodes: [{ id: '1', type: 'lambda', position: { x: 0, y: 0 }, data: { label: 'Lambda', type: 'lambda' } }],
       edges: [{ id: 'e1', source: '1', target: '2' }],
     };
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: 'Created', updated_graph: updatedGraph, generated_files: [] }),
-    });
+    mockChatFireAndPoll({ message: 'Created', updated_graph: updatedGraph });
 
     render(<Chat />);
     const input = screen.getByPlaceholderText(/describe your application architecture/i);
@@ -173,13 +227,9 @@ describe('Chat', () => {
   });
 
   it('should save generated files when response contains them', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        message: 'Generated',
-        updated_graph: null,
-        generated_files: [{ path: 'lib/stack.ts', content: 'code' }],
-      }),
+    mockChatFireAndPoll({
+      message: 'Generated',
+      generated_files: [{ path: 'lib/stack.ts', content: 'code' }],
     });
 
     render(<Chat />);
@@ -193,13 +243,8 @@ describe('Chat', () => {
   });
 
   it('should show security failed banner when response contains FAILED', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        message: 'Security Review: FAILED - issues found',
-        updated_graph: null,
-        generated_files: [],
-      }),
+    mockChatFireAndPoll({
+      message: 'Security Review: FAILED - issues found',
     });
 
     render(<Chat />);
@@ -218,10 +263,7 @@ describe('Chat', () => {
       edges: [],
       selectedNode: null,
     });
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: 'Code generated', generated_files: [{ path: 'a.ts', content: 'x' }] }),
-    });
+    mockChatFireAndPoll({ message: 'Code generated', generated_files: [{ path: 'a.ts', content: 'x' }] });
 
     render(<Chat />);
     fireEvent.click(screen.getByRole('button', { name: /generate code/i }));
@@ -240,7 +282,7 @@ describe('Chat', () => {
       edges: [],
       selectedNode: null,
     });
-    (global.fetch as any).mockResolvedValueOnce({ ok: false, status: 500 });
+    mockChatStartNonOk();
 
     render(<Chat />);
     fireEvent.click(screen.getByRole('button', { name: /generate code/i }));
@@ -315,13 +357,9 @@ describe('Chat', () => {
   });
 
   it('should auto-submit with plannerData', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        message: 'Architecture created',
-        updated_graph: { nodes: [{ id: '1', type: 'lambda', position: { x: 0, y: 0 }, data: { label: 'L', type: 'lambda' } }], edges: [] },
-        generated_files: [],
-      }),
+    mockChatFireAndPoll({
+      message: 'Architecture created',
+      updated_graph: { nodes: [{ id: '1', type: 'lambda', position: { x: 0, y: 0 }, data: { label: 'L', type: 'lambda' } }], edges: [] },
     });
 
     render(<Chat plannerData={{ description: 'Build a serverless API' }} />);
@@ -336,8 +374,53 @@ describe('Chat', () => {
     });
   });
 
+  it('should auto-submit with structured plannerData fields', async () => {
+    mockChatFireAndPoll({ message: 'Architecture created' });
+
+    render(
+      <Chat plannerData={{
+        projectName: 'My App',
+        description: 'Build a serverless API',
+        architecture: 'Full Serverless',
+        techStack: { frontend: 'React', backend: 'Lambda' },
+        requirements: { users: '1K-10K', uptime: '99.9%', dataSize: '<1GB' },
+      }} />
+    );
+
+    await waitFor(() => {
+      const body = (global.fetch as any).mock.calls[0][1].body;
+      expect(body).toContain('My App');
+      expect(body).toContain('Full Serverless');
+      expect(body).toContain('React');
+      expect(body).toContain('Lambda');
+      expect(body).toContain('1K-10K');
+    });
+  });
+
+  it('should include review findings in planner auto-submit', async () => {
+    mockChatFireAndPoll({ message: 'Architecture created' });
+
+    render(
+      <Chat plannerData={{
+        projectName: 'My App',
+        description: 'Build a serverless API',
+        architecture: '',
+        techStack: {},
+        requirements: { users: '', uptime: '', dataSize: '' },
+        reviewFindings: [{ category: 'Security', findings: ['No auth'], recommendations: ['Add Cognito'], risk_level: 'critical' }],
+        reviewSummary: 'Needs auth',
+      }} />
+    );
+
+    await waitFor(() => {
+      const body = (global.fetch as any).mock.calls[0][1].body;
+      expect(body).toContain('critical/high');
+      expect(body).toContain('Needs auth');
+    });
+  });
+
   it('should handle plannerData fetch error', async () => {
-    (global.fetch as any).mockRejectedValueOnce(new Error('fail'));
+    mockChatStartFailure();
 
     render(<Chat plannerData={{ description: 'Build something' }} />);
 
@@ -353,13 +436,8 @@ describe('Chat', () => {
 
   it('should handle Mark Resolved button in security banner', async () => {
     // First trigger security failure
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        message: 'Security Review: FAILED - issues found',
-        updated_graph: null,
-        generated_files: [],
-      }),
+    mockChatFireAndPoll({
+      message: 'Security Review: FAILED - issues found',
     });
 
     useGraphStore.setState({
@@ -378,14 +456,12 @@ describe('Chat', () => {
     });
 
     // Now click Mark Resolved — should call handleGenerateCode(true)
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: 'Code generated', generated_files: [] }),
-    });
+    mockChatFireAndPoll({ message: 'Code generated' });
     fireEvent.click(screen.getByRole('button', { name: /mark resolved/i }));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledTimes(2);
+      // 2 fire-and-poll cycles = 4 fetch calls total
+      expect(global.fetch).toHaveBeenCalledTimes(4);
     });
   });
 
@@ -482,10 +558,7 @@ describe('Chat', () => {
   });
 
   it('should submit on Enter key via textarea', async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ message: 'Response', updated_graph: null, generated_files: [] }),
-    });
+    mockChatFireAndPoll({ message: 'Response' });
 
     render(<Chat />);
     const textarea = screen.getByPlaceholderText(/describe your application architecture/i);

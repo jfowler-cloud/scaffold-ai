@@ -1,6 +1,6 @@
 """React Specialist agent for generating frontend code with AWS Cloudscape Design System."""
 
-REACT_SYSTEM_PROMPT = """You are a React/Next.js expert for Scaffold AI specializing in the AWS Cloudscape Design System. Your role is to convert visual architecture diagrams into working React components using Cloudscape.
+REACT_SYSTEM_PROMPT = """You are a React expert for Scaffold AI specializing in the AWS Cloudscape Design System. Your role is to convert visual architecture diagrams into working React + Vite SPA components using Cloudscape.
 
 ## Cloudscape Design System
 
@@ -157,7 +157,7 @@ For AI chat interfaces:
 ## Code Generation Guidelines
 
 Given a graph of nodes representing frontend components and their connections to backend services, generate:
-1. Next.js page components with Cloudscape AppLayout
+1. React page components with Cloudscape AppLayout
 2. Reusable React components using Cloudscape
 3. State management with Zustand
 4. API integration hooks with React Query
@@ -165,8 +165,8 @@ Given a graph of nodes representing frontend components and their connections to
 Follow these rules:
 - Use functional components with hooks
 - Implement proper TypeScript types
-- Use App Router conventions (app/ directory)
-- Import Cloudscape global styles in root layout
+- Use Vite SPA conventions (src/ directory)
+- Import Cloudscape global styles in root App component
 - Use SpaceBetween for spacing (never manual margins)
 - Use StatusIndicator for status display
 - Use Container to group related content
@@ -214,7 +214,7 @@ class ReactSpecialistAgent:
             # Generate root layout with Cloudscape
             files.append(
                 {
-                    "path": "packages/generated/web/app/layout.tsx",
+                    "path": "packages/generated/web/src/AppShell.tsx",
                     "content": self._generate_root_layout(),
                 }
             )
@@ -222,7 +222,7 @@ class ReactSpecialistAgent:
             # Generate main page based on architecture
             files.append(
                 {
-                    "path": "packages/generated/web/app/page.tsx",
+                    "path": "packages/generated/web/src/pages/Home.tsx",
                     "content": self._generate_main_page(
                         nodes, has_auth, has_api, has_database, has_storage
                     ),
@@ -268,25 +268,16 @@ class ReactSpecialistAgent:
         return files
 
     def _generate_root_layout(self) -> str:
-        """Generate root layout with Cloudscape global styles."""
+        """Generate root App component with Cloudscape global styles."""
         return """import '@cloudscape-design/global-styles/index.css';
-import { Metadata } from 'next';
+import { ReactNode } from 'react';
 
-export const metadata: Metadata = {
-  title: 'Scaffold AI App',
-  description: 'Generated with Scaffold AI',
-};
+interface AppShellProps {
+  children: ReactNode;
+}
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  );
+export default function AppShell({ children }: AppShellProps) {
+  return <>{children}</>;
 }
 """
 
@@ -363,9 +354,7 @@ export default function RootLayout({
             </Container>"""
             )
 
-        return f"""\"use client\";
-
-import {{ {", ".join(imports)} }} from 'react';
+        return f"""import {{ {", ".join(imports)} }} from 'react';
 {chr(10).join(f"import {comp} from '@cloudscape-design/components/{comp.lower().replace('breadcrumbgroup', 'breadcrumb-group').replace('sidenavigation', 'side-navigation').replace('contentlayout', 'content-layout').replace('spacebetween', 'space-between').replace('applayout', 'app-layout')}';" for comp in components)}
 
 export default function Home() {{
@@ -407,9 +396,7 @@ export default function Home() {{
 
     def _generate_auth_provider(self) -> str:
         """Generate auth provider component for Cognito."""
-        return """\"use client\";
-
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+        return """import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface AuthContextType {
   user: any | null;
@@ -473,7 +460,7 @@ export function useAuth() {
             api_nodes[0].get("data", {}).get("label", "API") if api_nodes else "API"
         )
 
-        return f"""const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        return f"""const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export async function fetchData<T>(endpoint: string): Promise<T> {{
   const response = await fetch(`${{API_URL}}${{endpoint}}`);
@@ -507,9 +494,7 @@ export async function deleteData(endpoint: string): Promise<void> {{
 
     def _generate_data_table(self) -> str:
         """Generate data table component for DynamoDB data."""
-        return """\"use client\";
-
-import { useState } from 'react';
+        return """import { useState } from 'react';
 import Table from '@cloudscape-design/components/table';
 import Header from '@cloudscape-design/components/header';
 import Button from '@cloudscape-design/components/button';
@@ -579,9 +564,7 @@ export function DataTable() {
 
     def _generate_file_upload(self) -> str:
         """Generate file upload component for S3."""
-        return """\"use client\";
-
-import { useState } from 'react';
+        return """import { useState } from 'react';
 import Container from '@cloudscape-design/components/container';
 import Header from '@cloudscape-design/components/header';
 import SpaceBetween from '@cloudscape-design/components/space-between';

@@ -44,6 +44,16 @@ describe('ScaffoldAI Multi-Stack', () => {
     dbTemplate.resourceCountIs('AWS::CloudFront::Distribution', 1);
   });
 
+  test('creates DynamoDB sessions table with TTL', () => {
+    dbTemplate.hasResourceProperties('AWS::DynamoDB::Table', {
+      TableName: 'scaffold-ai-sessions',
+      KeySchema: [{ AttributeName: 'sessionId', KeyType: 'HASH' }],
+      BillingMode: 'PAY_PER_REQUEST',
+      TimeToLiveSpecification: { AttributeName: 'ttl', Enabled: true },
+      PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true },
+    });
+  });
+
   test('creates SNS alarm topic', () => {
     dbTemplate.hasResourceProperties('AWS::SNS::Topic', { TopicName: 'ScaffoldAI-Alarms' });
   });

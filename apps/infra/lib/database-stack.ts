@@ -3,6 +3,7 @@
  */
 import * as cdk from 'aws-cdk-lib'
 import * as cognito from 'aws-cdk-lib/aws-cognito'
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb'
 import * as s3 from 'aws-cdk-lib/aws-s3'
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront'
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins'
@@ -14,6 +15,7 @@ export class DatabaseStack extends cdk.Stack {
   readonly userPool: cognito.UserPool
   readonly userPoolClient: cognito.UserPoolClient
   readonly identityPool: cognito.CfnIdentityPool
+  readonly sessionsTable: dynamodb.Table
   readonly hostingBucket: s3.Bucket
   readonly distribution: cloudfront.Distribution
   readonly alarmTopic: sns.Topic
@@ -46,6 +48,17 @@ export class DatabaseStack extends cdk.Stack {
       identityPoolName: 'ScaffoldAI-IdentityPool',
       allowUnauthenticatedIdentities: false,
       cognitoIdentityProviders: [{ clientId: this.userPoolClient.userPoolClientId, providerName: this.userPool.userPoolProviderName }],
+    })
+
+    // ── DynamoDB ─────────────────────────────────────────────────────────────
+    this.sessionsTable = new dynamodb.Table(this, 'SessionsTable', {
+      tableName: 'scaffold-ai-sessions',
+      partitionKey: { name: 'sessionId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      encryption: dynamodb.TableEncryption.AWS_MANAGED,
+      pointInTimeRecovery: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+      timeToLiveAttribute: 'ttl',
     })
 
     // ── S3 + CloudFront ─────────────────────────────────────────────────────
@@ -91,6 +104,8 @@ export class DatabaseStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'UserPoolId', { value: this.userPool.userPoolId })
     new cdk.CfnOutput(this, 'UserPoolClientId', { value: this.userPoolClient.userPoolClientId })
     new cdk.CfnOutput(this, 'IdentityPoolId', { value: this.identityPool.ref })
+    new cdk.CfnOutput(this, 'SessionsTableName', { value: this.sessionsTable.tableName })
+    new cdk.CfnOutput(this, 'HostingBucketName', { value: this.hostingBucket.bucketName })
     new cdk.CfnOutput(this, 'DistributionDomain', { value: this.distribution.distributionDomainName })
   }
 }

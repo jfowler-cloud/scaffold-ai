@@ -30,42 +30,6 @@ class TestAgentPrompts:
         assert "generate_code" in INTERPRETER_SYSTEM_PROMPT
 
 
-class TestInterpreterAgent:
-    @pytest.mark.asyncio
-    async def test_classify_new_feature(self):
-        from scaffold_ai.agents.interpreter import InterpreterAgent
-        agent = InterpreterAgent()
-        assert await agent.classify("add a database") == "new_feature"
-
-    @pytest.mark.asyncio
-    async def test_classify_modify_graph(self):
-        from scaffold_ai.agents.interpreter import InterpreterAgent
-        agent = InterpreterAgent()
-        assert await agent.classify("remove the database") == "modify_graph"
-
-    @pytest.mark.asyncio
-    async def test_classify_generate_code(self):
-        from scaffold_ai.agents.interpreter import InterpreterAgent
-        agent = InterpreterAgent()
-        assert await agent.classify("generate the CDK code") == "generate_code"
-
-    @pytest.mark.asyncio
-    async def test_classify_explain(self):
-        from scaffold_ai.agents.interpreter import InterpreterAgent
-        agent = InterpreterAgent()
-        assert await agent.classify("what does this do?") == "explain"
-
-    @pytest.mark.asyncio
-    async def test_classify_unknown_defaults_to_new_feature(self):
-        from scaffold_ai.agents.interpreter import InterpreterAgent
-        agent = InterpreterAgent()
-        assert await agent.classify("xyzzy frobble") == "new_feature"
-
-    def test_system_prompt_set(self):
-        from scaffold_ai.agents.interpreter import InterpreterAgent
-        agent = InterpreterAgent()
-        assert agent.system_prompt == INTERPRETER_SYSTEM_PROMPT
-
 
 class TestCDKSpecialistAgent:
     @pytest.mark.asyncio

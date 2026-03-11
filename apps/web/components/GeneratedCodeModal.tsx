@@ -1,4 +1,3 @@
-"use client";
 
 import { useChatStore } from "@/lib/store";
 import Modal from "@cloudscape-design/components/modal";
@@ -48,15 +47,7 @@ export function GeneratedCodeModal({ visible, onDismiss }: GeneratedCodeModalPro
                 {file.path}
               </Box>
               <pre
-                style={{
-                  backgroundColor: "#f2f3f3",
-                  padding: "16px",
-                  borderRadius: "8px",
-                  overflow: "auto",
-                  maxHeight: "600px",
-                  fontSize: "13px",
-                  lineHeight: "1.5",
-                }}
+                className="bg-gray-100 dark:bg-zinc-800 dark:text-gray-100 p-4 rounded-lg overflow-auto max-h-[600px] text-[13px] leading-relaxed"
               >
                 <code>{file.content}</code>
               </pre>

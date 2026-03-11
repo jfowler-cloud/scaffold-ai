@@ -145,6 +145,8 @@ class PlanImportRequest(BaseModel):
     architecture: str
     tech_stack: dict[str, str]
     requirements: dict[str, str]
+    review_findings: list[dict] | None = None
+    review_summary: str | None = None
     full_plan: dict | None = None
 
 
@@ -336,29 +338,62 @@ async def get_security_history(request: Request, architecture_id: str):
     return {"history": history, "improvement": improvement}
 
 
-_imported_plans: dict[str, dict] = {}
+_SESSIONS_TABLE = os.getenv("SESSIONS_TABLE", "scaffold-ai-sessions")
+_dynamodb = boto3.resource("dynamodb", region_name=os.getenv("AWS_REGION", "us-east-1"))
 
 
 @app.post("/api/import/plan")
 @limiter.limit("20/minute")
 async def import_plan(request: Request, body: PlanImportRequest):
     import uuid
+    from datetime import datetime, timezone
+    from decimal import Decimal
+
     session_id = str(uuid.uuid4())
-    _imported_plans[session_id] = {
+    ttl = int(datetime.now(timezone.utc).timestamp()) + 86400  # 24h expiry
+
+    item: dict = {
+        "sessionId": session_id,
         "plan_id": body.plan_id,
         "project_name": body.project_name,
         "description": body.description,
         "architecture": body.architecture,
         "tech_stack": body.tech_stack,
         "requirements": body.requirements,
-        "full_plan": body.full_plan,
-        "imported_at": __import__("datetime").datetime.now().isoformat(),
+        "imported_at": datetime.now(timezone.utc).isoformat(),
+        "ttl": ttl,
     }
+    if body.review_findings:
+        item["review_findings"] = body.review_findings
+    if body.review_summary:
+        item["review_summary"] = body.review_summary
+    if body.full_plan:
+        item["full_plan"] = body.full_plan
+
+    try:
+        table = _dynamodb.Table(_SESSIONS_TABLE)
+        # Convert floats to Decimals for DynamoDB
+        item = json.loads(json.dumps(item), parse_float=Decimal)
+        table.put_item(Item=item)
+    except Exception:
+        # Fallback to in-memory if DynamoDB unavailable (local dev)
+        if not hasattr(app.state, "_imported_plans"):
+            app.state._imported_plans = {}
+        app.state._imported_plans[session_id] = item
+
+    review_context = ""
+    if body.review_findings:
+        crit_high = [f for f in body.review_findings if f.get("risk_level") in ("critical", "high")]
+        if crit_high:
+            review_context = f"\n\n⚠️ {len(crit_high)} critical/high findings from security reviews — please address these in the architecture."
+    if body.review_summary:
+        review_context += f"\n\nReview Summary:\n{body.review_summary[:2000]}"
+
     prompt = (
         f"I have a project plan from Project Planner AI:\n\n"
         f"Project: {body.project_name}\nArchitecture: {body.architecture}\n"
         f"Tech Stack: {', '.join(f'{k}: {v}' for k, v in body.tech_stack.items())}\n\n"
-        f"Please help me build this architecture on AWS."
+        f"Please help me build this architecture on AWS.{review_context}"
     )
     return {"session_id": session_id, "message": "Plan imported successfully", "initial_prompt": prompt}
 
@@ -366,7 +401,20 @@ async def import_plan(request: Request, body: PlanImportRequest):
 @app.get("/api/import/plan/{session_id}")
 @limiter.limit("30/minute")
 async def get_imported_plan(request: Request, session_id: str):
-    plan = _imported_plans.get(session_id)
+    plan = None
+    try:
+        table = _dynamodb.Table(_SESSIONS_TABLE)
+        resp = table.get_item(Key={"sessionId": session_id})
+        plan = resp.get("Item")
+    except Exception:
+        # Fallback to in-memory
+        plans = getattr(app.state, "_imported_plans", {})
+        plan = plans.get(session_id)
+
     if not plan:
         raise HTTPException(status_code=404, detail="Plan not found or expired")
+
+    # Remove DynamoDB internal fields from response
+    plan.pop("sessionId", None)
+    plan.pop("ttl", None)
     return plan

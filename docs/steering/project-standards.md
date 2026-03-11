@@ -83,7 +83,7 @@ Only use Next.js when the project needs one of:
 - Dynamic OG/meta tags for social sharing
 - Server-side API proxying (though Lambda functions handle this too)
 
-**scaffold-ai itself** is a Next.js project targeted for migration to React + Vite SPA.
+**scaffold-ai** has been migrated to React + Vite SPA (migration complete).
 
 ---
 

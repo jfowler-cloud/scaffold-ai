@@ -13,10 +13,8 @@ export default defineConfig({
       provider: 'istanbul',
       reporter: ['text', 'json', 'lcov'],
       include: ['src/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}'],
-      exclude: ['src/main.tsx'],
-      // TODO: Restore original thresholds (lines:97, branches:88, functions:94, statements:96)
-      // Temporarily lowered for CodeCommit pipeline setup — raise after coverage pass
-      thresholds: { lines: 80, branches: 80, functions: 80, statements: 80 },
+      exclude: ['src/main.tsx', 'src/test/**'],
+      thresholds: { lines: 93, branches: 85, functions: 93, statements: 93 },
     },
   },
   resolve: {

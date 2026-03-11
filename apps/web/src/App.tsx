@@ -29,6 +29,7 @@ export default function App() {
 
   useEffect(() => {
     applyMode(darkMode ? Mode.Dark : Mode.Light);
+    document.documentElement.classList.toggle("dark", darkMode);
     localStorage.setItem("scaffold-ai-darkMode", String(darkMode));
   }, [darkMode]);
 

@@ -1,4 +1,3 @@
-"use client";
 
 import Button from "@cloudscape-design/components/button";
 

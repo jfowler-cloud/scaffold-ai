@@ -1,4 +1,9 @@
-"""Interpreter agent for understanding user intent."""
+"""Intent classification prompt for Scaffold AI.
+
+This system prompt is used by the interpret Lambda function (apps/functions/interpret/)
+to classify user intent via Bedrock. The keyword-based InterpreterAgent class has been
+removed — intent classification now runs entirely through Step Functions + Strands.
+"""
 
 INTERPRETER_SYSTEM_PROMPT = """You are an intent classification agent for Scaffold AI, a visual application architecture designer.
 
@@ -19,42 +24,3 @@ Your job is to analyze the user's message and classify their intent into one of 
 5. unknown - Cannot determine intent, need clarification
 
 Respond with ONLY the intent category name, nothing else."""
-
-
-class InterpreterAgent:
-    """Agent that interprets user intent from natural language."""
-
-    def __init__(self):
-        self.system_prompt = INTERPRETER_SYSTEM_PROMPT
-
-    async def classify(self, user_input: str) -> str:
-        """
-        Classify user intent.
-
-        In production, this would call Claude via AWS Bedrock.
-        For now, returns a simple keyword-based classification.
-        """
-        user_input_lower = user_input.lower()
-
-        if any(
-            word in user_input_lower
-            for word in ["add", "create", "new", "include", "need"]
-        ):
-            return "new_feature"
-        elif any(
-            word in user_input_lower
-            for word in ["change", "modify", "update", "remove", "delete", "connect"]
-        ):
-            return "modify_graph"
-        elif any(
-            word in user_input_lower
-            for word in ["generate", "code", "deploy", "build", "cdk", "export"]
-        ):
-            return "generate_code"
-        elif any(
-            word in user_input_lower
-            for word in ["explain", "what", "how", "why", "help", "?"]
-        ):
-            return "explain"
-        else:
-            return "new_feature"

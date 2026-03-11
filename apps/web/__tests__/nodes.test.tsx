@@ -44,7 +44,7 @@ describe('Node components', () => {
     { Component: CdnNode, label: 'My CDN', type: 'cdn', subtitle: 'CloudFront' },
     { Component: DatabaseNode, label: 'My DB', type: 'database', subtitle: 'DynamoDB' },
     { Component: EventsNode, label: 'My Events', type: 'events', subtitle: 'EventBridge' },
-    { Component: FrontendNode, label: 'My Frontend', type: 'frontend', subtitle: 'Next.js' },
+    { Component: FrontendNode, label: 'My Frontend', type: 'frontend', subtitle: 'Frontend' },
     { Component: LambdaNode, label: 'My Lambda', type: 'lambda', subtitle: 'Lambda' },
     { Component: NotificationNode, label: 'My SNS', type: 'notification', subtitle: 'SNS' },
     { Component: QueueNode, label: 'My Queue', type: 'queue', subtitle: 'SQS' },

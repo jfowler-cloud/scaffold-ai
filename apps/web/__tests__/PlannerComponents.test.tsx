@@ -47,6 +47,37 @@ describe('PlannerNotification', () => {
       />
     );
     expect(screen.getByText(/My App/)).toBeInTheDocument();
+    // Should not have dangling separator
+    expect(screen.getByText(/My App\. Ready to generate architecture\./)).toBeInTheDocument();
+  });
+
+  it('renders tech stack when provided', () => {
+    render(
+      <PlannerNotification
+        plannerData={{ projectName: 'My App', architecture: 'Serverless', description: '', techStack: { frontend: 'React', backend: 'Lambda' }, requirements: { users: '', uptime: '', dataSize: '' } }}
+        onDismiss={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/React/)).toBeInTheDocument();
+    expect(screen.getByText(/Lambda/)).toBeInTheDocument();
+  });
+
+  it('renders review findings count', () => {
+    render(
+      <PlannerNotification
+        plannerData={{
+          projectName: 'My App', architecture: '', description: '', techStack: {},
+          requirements: { users: '', uptime: '', dataSize: '' },
+          reviewFindings: [
+            { category: 'Security', findings: ['No auth'], recommendations: ['Add Cognito'], risk_level: 'critical' },
+            { category: 'Performance', findings: ['Cold starts'], recommendations: ['Provision'], risk_level: 'medium' },
+          ],
+        }}
+        onDismiss={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/2 review findings/)).toBeInTheDocument();
+    expect(screen.getByText(/1 critical\/high/)).toBeInTheDocument();
   });
 
   it('calls onDismiss when dismissed', () => {

@@ -7,7 +7,7 @@ Scaffold AI is an AI-powered AWS architecture designer. Describe what you want t
 ## Architecture
 
 - **Frontend**: React + Vite SPA, Cloudscape UI, React Flow canvas, Zustand state
-- **Backend**: FastAPI + LangGraph, AWS Bedrock (Claude), Python 3.12+
+- **Backend**: FastAPI + Step Functions + Strands, AWS Bedrock (Claude), Python 3.12+
 - **IaC**: CDK TypeScript (default), CDK Python, CloudFormation YAML, Terraform HCL
 
 ## Key Files
@@ -57,8 +57,11 @@ cd apps/backend && uv run pytest tests/ --cov=src/ --cov-report=term-missing
 
 ## API Endpoints
 
-- `POST /api/chat` — main chat: accepts `user_input`, `graph_json`, `iac_format`; returns `message`, `updated_graph`, `generated_files`
+- `POST /api/chat` — fire-and-poll: accepts `user_input`, `graph_json`, `iac_format`; returns `{ execution_arn }`
+- `GET /api/chat/{arn}/status` — poll execution: returns `{ status, message, updated_graph, generated_files }`
 - `POST /api/security/autofix` — security review: accepts `graph`; returns `updated_graph`, `changes`, `security_score`
+- `POST /api/import/plan` — import plan from Project Planner AI; returns `{ session_id, initial_prompt }`
+- `GET /api/import/plan/{session_id}` — fetch imported plan data
 
 ## IaC Formats
 

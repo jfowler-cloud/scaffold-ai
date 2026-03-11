@@ -1,4 +1,3 @@
-"use client";
 
 /**
  * Shows a small green shield badge on a node when security fixes have been applied.
