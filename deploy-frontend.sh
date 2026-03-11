@@ -44,7 +44,13 @@ cd "$SCRIPT_DIR/apps/web"
 # Remove .env.local to prevent stale values from overriding CloudFormation outputs
 rm -f .env.local
 
-npm ci --quiet
+# pnpm monorepo: install from root; npm: install in apps/web
+if [ -f "$SCRIPT_DIR/pnpm-lock.yaml" ]; then
+  cd "$SCRIPT_DIR" && pnpm install --frozen-lockfile --quiet
+  cd "$SCRIPT_DIR/apps/web"
+else
+  npm ci --quiet
+fi
 npm run build
 
 echo "Uploading to S3: $HOSTING_BUCKET"
