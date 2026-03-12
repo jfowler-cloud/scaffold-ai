@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Authenticator } from "@aws-amplify/ui-react";
+import { Authenticator, useTheme, View, Text, Heading } from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
 import { Canvas } from "@/components/Canvas";
 import { Chat } from "@/components/Chat";
@@ -15,6 +15,30 @@ import Box from "@cloudscape-design/components/box";
 import Link from "@cloudscape-design/components/link";
 import SpaceBetween from "@cloudscape-design/components/space-between";
 import { applyMode, Mode } from "@cloudscape-design/global-styles";
+
+function AuthHeader() {
+  const { tokens } = useTheme();
+  return (
+    <View textAlign="center" padding={tokens.space.large}>
+      <Text fontSize="4xl">🏗️</Text>
+      <Heading level={3} marginTop={tokens.space.small}>Scaffold AI</Heading>
+      <Text fontSize="small" color={tokens.colors.font.secondary}>
+        AI-powered AWS architecture design and code generation
+      </Text>
+    </View>
+  );
+}
+
+function AuthFooter() {
+  const { tokens } = useTheme();
+  return (
+    <View textAlign="center" padding={tokens.space.large}>
+      <Text fontSize="small" color={tokens.colors.font.secondary}>
+        Secure authentication powered by AWS Cognito
+      </Text>
+    </View>
+  );
+}
 
 export default function App() {
   const [navigationOpen, setNavigationOpen] = useState(false);
@@ -42,7 +66,16 @@ export default function App() {
   };
 
   return (
-    <Authenticator hideSignUp>
+    <Authenticator
+      hideSignUp
+      components={{ Header: AuthHeader, Footer: AuthFooter }}
+      formFields={{
+        signIn: {
+          username: { placeholder: "Enter your email", label: "Email" },
+          password: { placeholder: "Enter your password", label: "Password" },
+        },
+      }}
+    >
       {({ signOut, user }) => (
         <>
           <div id="top-nav" style={{ position: "sticky", top: 0, zIndex: 1002 }}>
