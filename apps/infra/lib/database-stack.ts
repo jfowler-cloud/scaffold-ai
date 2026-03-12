@@ -31,7 +31,7 @@ export class DatabaseStack extends cdk.Stack {
       standardAttributes: { email: { required: true, mutable: true } },
       passwordPolicy: { minLength: 8, requireLowercase: true, requireUppercase: true, requireDigits: true, requireSymbols: false },
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
-      selfSignUpEnabled: true,
+      selfSignUpEnabled: false,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     })
 
