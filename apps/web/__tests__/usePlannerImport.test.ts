@@ -1,5 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
+
+// Mock DynamoDB
+const mockSend = vi.fn();
+vi.mock('@aws-sdk/client-dynamodb', () => ({
+  DynamoDBClient: class { constructor() {} },
+}));
+vi.mock('@aws-sdk/lib-dynamodb', () => ({
+  DynamoDBDocumentClient: { from: () => ({ send: mockSend }) },
+  GetCommand: class { input: unknown; constructor(input: unknown) { this.input = input; } },
+}));
+vi.mock('aws-amplify/auth', () => ({
+  fetchAuthSession: vi.fn().mockResolvedValue({
+    credentials: { accessKeyId: 'test', secretAccessKey: 'test', sessionToken: 'test' },
+  }),
+}));
+
 import { usePlannerImport } from '../lib/usePlannerImport';
 
 const setSearch = (params: Record<string, string>) => {
@@ -13,7 +29,7 @@ const setSearch = (params: Record<string, string>) => {
 describe('usePlannerImport', () => {
   beforeEach(() => {
     setSearch({});
-    global.fetch = vi.fn();
+    mockSend.mockReset();
   });
 
   afterEach(() => {
@@ -36,37 +52,36 @@ describe('usePlannerImport', () => {
     expect(result.current.isFromPlanner).toBe(true);
   });
 
-  it('fetches from API when session param present', async () => {
+  it('fetches from DynamoDB when session param present', async () => {
     setSearch({ from: 'planner', session: 'abc123' });
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        project_name: 'API Project',
+    mockSend.mockResolvedValueOnce({
+      Item: {
+        project_name: 'DDB Project',
         description: 'desc',
         architecture: 'Microservices',
         tech_stack: { backend: 'Lambda' },
         requirements: { users: '10K', uptime: '99.9%', dataSize: '5GB' },
-      }),
+      },
     });
     const { result } = renderHook(() => usePlannerImport());
     await waitFor(() => expect(result.current.plannerData).not.toBeNull());
-    expect(result.current.plannerData?.projectName).toBe('API Project');
+    expect(result.current.plannerData?.projectName).toBe('DDB Project');
     expect(result.current.plannerData?.architecture).toBe('Microservices');
   });
 
-  it('falls back to prompt parsing when API fetch fails', async () => {
+  it('falls back to prompt parsing when DynamoDB returns no item', async () => {
     const prompt = 'Project: Fallback App\nArchitecture: Monolith';
     setSearch({ from: 'planner', session: 'bad-session', prompt });
-    (global.fetch as any).mockResolvedValueOnce({ ok: false });
+    mockSend.mockResolvedValueOnce({ Item: undefined });
     const { result } = renderHook(() => usePlannerImport());
     await waitFor(() => expect(result.current.plannerData).not.toBeNull());
     expect(result.current.plannerData?.projectName).toBe('Fallback App');
   });
 
-  it('falls back to prompt parsing when fetch throws', async () => {
+  it('falls back to prompt parsing when DynamoDB throws', async () => {
     const prompt = 'App: Error App';
     setSearch({ from: 'planner', session: 'err', prompt });
-    (global.fetch as any).mockRejectedValueOnce(new Error('network'));
+    mockSend.mockRejectedValueOnce(new Error('AccessDeniedException'));
     const { result } = renderHook(() => usePlannerImport());
     await waitFor(() => expect(result.current.plannerData).not.toBeNull());
     expect(result.current.plannerData?.projectName).toBe('Error App');

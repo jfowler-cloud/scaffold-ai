@@ -1,4 +1,7 @@
 import { useEffect, useState } from "react";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
+import { fetchAuthSession } from "aws-amplify/auth";
 
 export interface ReviewFinding {
   category: string;
@@ -21,13 +24,10 @@ export interface PlannerImport {
   reviewSummary?: string;
 }
 
+const HANDOFF_TABLE = "project-planner-handoff";
+
 /**
  * Parse structured fields out of the formatted prompt text sent by Project Planner AI.
- * The prompt follows a known format with labelled lines like:
- *   Project: My App
- *   Architecture: Full Serverless
- *   Tech Stack: frontend: React, backend: Lambda
- *   Users: 1K-10K | Uptime: 99.9% | Data: <1GB
  */
 function parsePrompt(prompt: string): PlannerImport {
   const lines = prompt.split("\n").map(l => l.trim());
@@ -37,13 +37,9 @@ function parsePrompt(prompt: string): PlannerImport {
     return line ? line.slice(prefix.length).trim() : "";
   };
 
-  // Project name
   const projectName = get("Project:") || get("App:") || "Imported Project";
-
-  // Architecture
   const architecture = get("Architecture:") || get("Recommended Architecture:");
 
-  // Tech stack — parse "key: value, key: value" pairs
   const techStackRaw = get("Tech Stack:") || get("Stack:");
   const techStack: Record<string, string> = {};
   if (techStackRaw) {
@@ -53,7 +49,6 @@ function parsePrompt(prompt: string): PlannerImport {
     });
   }
 
-  // Requirements line: "Users: 1K-10K | Uptime: 99.9% | Data: <1GB"
   const reqLine = lines.find(l => l.toLowerCase().includes("users:") && l.includes("|")) || "";
   const reqParts = Object.fromEntries(
     reqLine.split("|").map(p => {
@@ -75,6 +70,34 @@ function parsePrompt(prompt: string): PlannerImport {
   };
 }
 
+async function fetchPlanFromDynamoDB(sessionId: string): Promise<PlannerImport | null> {
+  const session = await fetchAuthSession();
+  if (!session.credentials) return null;
+
+  const region = import.meta.env.VITE_AWS_REGION || "us-east-1";
+  const ddb = DynamoDBDocumentClient.from(
+    new DynamoDBClient({ region, credentials: session.credentials })
+  );
+
+  const resp = await ddb.send(new GetCommand({
+    TableName: HANDOFF_TABLE,
+    Key: { sessionId },
+  }));
+
+  const item = resp.Item;
+  if (!item) return null;
+
+  return {
+    projectName: item.project_name ?? "Imported Project",
+    description: item.description ?? "",
+    architecture: item.architecture ?? "",
+    techStack: item.tech_stack ?? {},
+    requirements: item.requirements ?? { users: "", uptime: "", dataSize: "" },
+    reviewFindings: item.review_findings,
+    reviewSummary: item.review_summary,
+  };
+}
+
 export function usePlannerImport() {
   const [plannerData, setPlannerData] = useState<PlannerImport | null>(null);
   const [isFromPlanner, setIsFromPlanner] = useState(false);
@@ -87,35 +110,23 @@ export function usePlannerImport() {
     if (fromPlanner) {
       setIsFromPlanner(true);
 
-      // Check for new session-based import first
       const sessionId = urlParams.get("session");
       if (sessionId) {
         setIsLoading(true);
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_API_URL || "http://localhost:8001";
-        
-        fetch(`${backendUrl}/api/import/plan/${sessionId}`)
-          .then(res => {
-            if (!res.ok) throw new Error("Failed to fetch plan");
-            return res.json();
-          })
+
+        fetchPlanFromDynamoDB(sessionId)
           .then(data => {
-            console.log("✅ Received structured plan from Project Planner AI via API");
-            setPlannerData({
-              projectName: data.project_name,
-              description: data.description,
-              architecture: data.architecture,
-              techStack: data.tech_stack,
-              requirements: data.requirements,
-              reviewFindings: data.review_findings,
-              reviewSummary: data.review_summary,
-            });
+            if (data) {
+              console.log("Received plan from Project Planner AI via DynamoDB");
+              setPlannerData(data);
+            } else {
+              throw new Error("Plan not found in DynamoDB");
+            }
           })
           .catch(error => {
-            console.error("Failed to fetch plan from API:", error);
-            // Fall back to prompt parsing if API fails
+            console.warn("DynamoDB handoff unavailable, falling back to prompt parsing:", error.message);
             const prompt = urlParams.get("prompt");
             if (prompt) {
-              console.log("⚠️ Falling back to prompt parsing");
               setPlannerData(parsePrompt(prompt));
             }
           })
@@ -126,7 +137,6 @@ export function usePlannerImport() {
         // Fallback to old prompt-based method
         const prompt = urlParams.get("prompt");
         if (prompt) {
-          console.log("✅ Received prompt from Project Planner AI (legacy method)");
           setPlannerData(parsePrompt(prompt));
         }
       }

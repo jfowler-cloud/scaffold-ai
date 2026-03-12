@@ -81,6 +81,14 @@ export class WorkflowStack extends cdk.Stack {
     fns.getExecutionFn.grantInvoke(userRole)
     stateMachine.grantStartExecution(userRole)
 
+    // Allow reading plan handoff data from Project Planner AI
+    userRole.addToPolicy(new iam.PolicyStatement({
+      actions: ['dynamodb:GetItem'],
+      resources: [
+        cdk.Arn.format({ service: 'dynamodb', resource: 'table', resourceName: 'project-planner-handoff' }, this),
+      ],
+    }))
+
     new cognito.CfnIdentityPoolRoleAttachment(this, 'RoleAttachment', {
       identityPoolId: db.identityPool.ref,
       roles: { authenticated: userRole.roleArn },
