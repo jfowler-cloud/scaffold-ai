@@ -61,7 +61,7 @@ User Input --> Interpreter --> Architect --> Security Specialist --> Code Genera
 ```
 
 - **Interpreter Agent** -- Classifies user intent (new feature, modify, explain, deploy)
-- **Architect Agent** -- Designs AWS serverless architecture with 12 service types
+- **Architect Agent** -- Designs AWS serverless architecture with 65+ AWS service node types
 - **Security Specialist** -- Validates against AWS Well-Architected principles; blocks insecure designs (score < 70/100)
 - **Code Generators** -- Multi-format IaC output (CDK TypeScript, CDK Python, CloudFormation, Terraform)
 - **React Specialist** -- Generates AWS Cloudscape UI components
@@ -88,10 +88,10 @@ User Input --> Interpreter --> Architect --> Security Specialist --> Code Genera
 
 Scaffold AI receives project plans from [Project Planner AI](https://github.com/jfowler-cloud/project-planner-ai) via structured API:
 
-- **REST API endpoints** - `POST /api/import/plan` and `GET /api/import/plan/{session_id}`
-- **Session-based storage** - Plans stored with unique session IDs
-- **Type-safe** - Shared TypeScript types ensure data consistency
-- **Backward compatible** - Falls back to URL parameter parsing if needed
+- **DynamoDB handoff** - Planner writes plan data to `project-planner-handoff` table, Scaffold reads via URL params
+- **Session-based storage** - Plans stored with unique session IDs and 24h TTL
+- **Cognito-authenticated** - Both Planner (write) and Scaffold (read) use IAM-authenticated DynamoDB access
+- **Graceful fallback** - Falls back to clipboard-based import if DynamoDB is unavailable
 - **Auto-populated chat** - Project context pre-filled from plan data
 - **7 comprehensive tests** - Full test coverage for import functionality
 
@@ -105,7 +105,7 @@ The integration enables a seamless workflow: Plan → Build → Deploy.
 |-------|-----------|
 | AI Orchestration | AWS Step Functions + Strands |
 | LLM | AWS Bedrock (Claude) |
-| Backend | FastAPI |
+| Backend | AWS Lambda (Python 3.12+) + Step Functions |
 | Frontend | React 19 + Vite SPA |
 | UI Library | AWS Cloudscape Design System |
 | State | Zustand |
@@ -155,16 +155,12 @@ cp .env.example .env
 ### Running Locally
 
 ```bash
-# Terminal 1: Backend (port 8000)
-cd apps/backend
-uv run uvicorn scaffold_ai.main:app --reload
-
-# Terminal 2: Frontend (port 3000)
+# Frontend (port 3000)
 cd apps/web
 pnpm dev
 ```
 
-When running alongside Project Planner AI (via the planner's `dev.sh`), Scaffold AI uses port 8001 (backend) and 3001 (frontend) to avoid conflicts.
+> **Note:** The `apps/backend/` FastAPI server is for local development only. In production, Scaffold AI uses AWS Lambda functions invoked via Step Functions. The frontend calls AWS services directly via Cognito identity pool credentials.
 
 ### Environment Variables
 
@@ -187,7 +183,7 @@ BEDROCK_MODEL_ID=
 
 **Frontend** (`apps/web/.env`):
 ```bash
-VITE_BACKEND_URL=http://localhost:8000
+VITE_BACKEND_URL=http://localhost:8001
 ```
 
 ---
@@ -342,14 +338,11 @@ All backend calls in `Chat.tsx` now use `BACKEND_URL` from `lib/config.ts`. The 
 
 ### Integration with Project Planner AI
 
-The planner-to-scaffold handoff works end-to-end via two modes:
-1. **Session-based API** (preferred): Planner POSTs structured plan to `/api/import/plan`, receives `session_id`, opens Scaffold AI with `?from=planner&session=...`. Scaffold fetches full structured data including review findings.
-2. **Legacy URL** (fallback): `?from=planner&prompt=...` with `parsePrompt()` extracting structured fields from formatted text.
+The planner-to-scaffold handoff works end-to-end via DynamoDB:
+1. **DynamoDB handoff** (primary): Planner writes plan data to `project-planner-handoff` DynamoDB table via Cognito credentials, opens Scaffold AI with `?from=planner&session=...`. Scaffold reads full structured data including review findings.
+2. **Clipboard fallback**: If DynamoDB write fails, plan description is copied to clipboard for manual paste.
 
 Chat auto-submit builds a rich prompt with project name, architecture, tech stack, requirements, and review findings. The notification banner displays all available context.
-
-Remaining gap:
-- **URL length** -- legacy `?prompt=` fallback may be truncated by browsers/proxies at ~2000 chars (mitigated by the session-based API being the primary path)
 
 ---
 
@@ -478,7 +471,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - 📝 Added comprehensive CLAUDE.md for AI assistant onboarding
 
 ### v1.0.0 - Initial Release (Feb 2026)
-- 🎉 Serverless-first architecture with 12 node types
+- 🎉 Serverless-first architecture with 65+ AWS service node types
 - 🎉 Step Functions + Strands multi-agent workflow with security specialist
 - 🎉 Interactive drag-and-drop architecture canvas
 - 🎉 CloudFormation and Terraform IaC generation
