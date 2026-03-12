@@ -42,7 +42,7 @@ export default function App() {
   };
 
   return (
-    <Authenticator>
+    <Authenticator hideSignUp>
       {({ signOut, user }) => (
         <>
           <div id="top-nav" style={{ position: "sticky", top: 0, zIndex: 1002 }}>
