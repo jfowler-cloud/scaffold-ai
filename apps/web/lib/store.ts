@@ -14,7 +14,71 @@ export type NodeType =
   | "notification"
   | "workflow"
   | "cdn"
-  | "stream";
+  | "stream"
+  // Compute
+  | "ec2"
+  | "ecs"
+  | "eks"
+  | "fargate"
+  | "batch"
+  | "apprunner"
+  | "lightsail"
+  | "elasticbeanstalk"
+  // Database
+  | "rds"
+  | "aurora"
+  | "elasticache"
+  | "neptune"
+  | "documentdb"
+  | "timestream"
+  | "redshift"
+  | "opensearch"
+  // Storage
+  | "efs"
+  | "ebs"
+  | "backup"
+  // Networking
+  | "vpc"
+  | "elb"
+  | "route53"
+  | "natgateway"
+  // Security
+  | "waf"
+  | "secretsmanager"
+  | "kms"
+  | "iam"
+  | "shield"
+  | "guardduty"
+  // ML/AI
+  | "bedrock"
+  | "sagemaker"
+  | "rekognition"
+  // Analytics
+  | "athena"
+  | "glue"
+  | "quicksight"
+  | "emr"
+  | "firehose"
+  | "msk"
+  // Integration
+  | "appsync"
+  | "mq"
+  | "appflow"
+  // Management
+  | "cloudwatch"
+  | "xray"
+  | "cloudtrail"
+  | "systemsmanager"
+  // Developer
+  | "codepipeline"
+  | "codebuild"
+  | "ecr"
+  | "amplify"
+  // Other
+  | "ses"
+  | "pinpoint"
+  | "iot"
+  | "apigw_websocket";
 
 export type LayoutType = "horizontal" | "vertical" | "grid" | "circular";
 
@@ -119,18 +183,78 @@ export const useGraphStore = create<GraphState>((set, get) => ({
 
     // Group nodes by type for type-based layouts (serverless flow)
     const typeOrder: Record<string, number> = {
+      // Frontend & CDN
       frontend: 0,
       cdn: 0,
+      amplify: 0,
+      // Auth & Security
       auth: 1,
+      iam: 1,
+      waf: 1,
+      secretsmanager: 1,
+      kms: 1,
+      shield: 1,
+      guardduty: 1,
+      // API & Networking
       api: 2,
+      apigw_websocket: 2,
+      appsync: 2,
+      elb: 2,
+      route53: 2,
+      vpc: 2,
+      natgateway: 2,
+      iot: 2,
+      // Compute & Orchestration
       lambda: 3,
+      ec2: 3,
+      ecs: 3,
+      eks: 3,
+      fargate: 3,
+      batch: 3,
+      apprunner: 3,
+      lightsail: 3,
+      elasticbeanstalk: 3,
       workflow: 3,
+      codepipeline: 3,
+      codebuild: 3,
+      // Messaging & Events
       queue: 4,
       events: 4,
       notification: 4,
+      mq: 4,
+      ses: 4,
+      pinpoint: 4,
+      appflow: 4,
+      // Streaming, Analytics & Monitoring
       stream: 5,
+      firehose: 5,
+      msk: 5,
+      bedrock: 5,
+      sagemaker: 5,
+      rekognition: 5,
+      athena: 5,
+      glue: 5,
+      quicksight: 5,
+      emr: 5,
+      cloudwatch: 5,
+      xray: 5,
+      cloudtrail: 5,
+      systemsmanager: 5,
+      // Database & Storage
       database: 6,
       storage: 6,
+      rds: 6,
+      aurora: 6,
+      elasticache: 6,
+      neptune: 6,
+      documentdb: 6,
+      timestream: 6,
+      redshift: 6,
+      opensearch: 6,
+      efs: 6,
+      ebs: 6,
+      backup: 6,
+      ecr: 6,
     };
 
     let newNodes: AppNode[];

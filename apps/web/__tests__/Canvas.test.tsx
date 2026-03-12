@@ -64,20 +64,25 @@ describe('Canvas', () => {
     expect(screen.getByText('Vertical Flow')).toBeInTheDocument();
   });
 
-  it('renders Add Service and More Services dropdowns', () => {
+  it('renders categorized service dropdowns', () => {
     render(<Canvas />);
-    expect(screen.getByText('Add Service')).toBeInTheDocument();
-    expect(screen.getByText('More Services')).toBeInTheDocument();
+    expect(screen.getByText('Compute')).toBeInTheDocument();
+    expect(screen.getByText('Database & Storage')).toBeInTheDocument();
+    expect(screen.getByText('Networking & CDN')).toBeInTheDocument();
+    expect(screen.getByText('Security & Auth')).toBeInTheDocument();
+    expect(screen.getByText('Integration & Messaging')).toBeInTheDocument();
+    expect(screen.getByText('Analytics & ML')).toBeInTheDocument();
+    expect(screen.getByText('DevOps & Monitoring')).toBeInTheDocument();
   });
 
-  it('adds a node when Add Service item clicked', () => {
+  it('adds a node when Compute item clicked', () => {
     render(<Canvas />);
     fireEvent.click(screen.getByTestId('dropdown-lambda'));
     expect(useGraphStore.getState().nodes.length).toBe(1);
     expect(useGraphStore.getState().nodes[0].type).toBe('lambda');
   });
 
-  it('adds a node from More Services dropdown', () => {
+  it('adds a node from Integration & Messaging dropdown', () => {
     render(<Canvas />);
     fireEvent.click(screen.getByTestId('dropdown-queue'));
     expect(useGraphStore.getState().nodes.length).toBe(1);

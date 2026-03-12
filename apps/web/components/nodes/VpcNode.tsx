@@ -1,0 +1,26 @@
+
+import { memo } from "react";
+import { Handle, Position, type NodeProps } from "@xyflow/react";
+import type { AppNode } from "@/lib/store";
+import { SecurityBadge } from "./SecurityBadge";
+
+export const VpcNode = memo(function VpcNode({ data, selected }: NodeProps<AppNode>) {
+  return (
+    <div className={`relative px-4 py-3 rounded-lg border-2 bg-white dark:bg-zinc-800 shadow-md min-w-[150px] ${selected ? "border-amber-500 ring-2 ring-amber-200" : "border-amber-300"}`}>
+      <SecurityBadge config={data.config} />
+      <Handle type="target" position={Position.Left} className="!bg-amber-500" />
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded bg-amber-100 flex items-center justify-center">
+          <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <div>
+          <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{data.label}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">VPC</div>
+        </div>
+      </div>
+      <Handle type="source" position={Position.Right} className="!bg-amber-500" />
+    </div>
+  );
+});
