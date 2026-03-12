@@ -2,46 +2,90 @@
 
 ## What It Does
 
-Scaffold AI is an AI-powered AWS architecture designer. Describe what you want to build in natural language, and it generates a visual node graph of AWS services plus deployable IaC code (CDK TypeScript, CDK Python, CloudFormation, or Terraform).
+AI-powered AWS architecture designer. Describe what you want to build in natural language, and it generates a visual node graph of AWS services plus deployable IaC code (CDK TypeScript, CDK Python, CloudFormation, or Terraform).
 
 ## Architecture
 
-- **Frontend**: React + Vite SPA, Cloudscape UI, React Flow canvas, Zustand state
-- **Backend**: FastAPI + Step Functions + Strands, AWS Bedrock (Claude), Python 3.12+
-- **IaC**: CDK TypeScript (default), CDK Python, CloudFormation YAML, Terraform HCL
+- **Frontend**: React 19 + Vite SPA, Cloudscape UI, React Flow canvas, Zustand state, Amplify Authenticator
+- **Backend**: Step Functions + Lambda (Strands agents), AWS Bedrock (Claude), Python 3.12+
+- **Auth**: Cognito User Pool + Identity Pool → temporary AWS credentials (no API Gateway)
+- **IaC**: CDK v2 TypeScript infrastructure
+- **Hosting**: S3 + CloudFront
 
-## Key Files
+## Mono-Repo Layout
 
-- `apps/web/src/App.tsx` — main layout (Cloudscape AppLayout + split panel chat)
-- `apps/web/components/Chat.tsx` — AI chat + code generation UI
-- `apps/web/components/Canvas.tsx` — React Flow architecture canvas
-- `apps/backend/src/scaffold_ai/main.py` — FastAPI app entrypoint
-- `apps/web/lib/store.ts` — Zustand stores (chat, graph)
-- `apps/web/lib/config.ts` — backend URL config (`VITE_BACKEND_URL`)
+```
+scaffold-ai/
+├── apps/
+│   ├── web/                      # React 19 + Vite + Cloudscape SPA
+│   │   ├── src/
+│   │   │   ├── App.tsx           # Amplify auth wrapper, AppLayout, dark mode toggle
+│   │   │   ├── main.tsx          # Entry point, configureAmplify()
+│   │   │   └── index.css         # Red accent theme, Authenticator dark mode CSS
+│   │   ├── components/
+│   │   │   ├── Canvas.tsx        # React Flow architecture canvas (53 AWS node types)
+│   │   │   ├── Chat.tsx          # AI chat + code generation UI
+│   │   │   ├── GeneratedCodeModal.tsx
+│   │   │   └── PlannerNotification.tsx
+│   │   ├── lib/
+│   │   │   ├── amplify.ts        # Amplify config from VITE_* env vars
+│   │   │   ├── api.ts            # AWS SDK calls (SFN StartExecution, Lambda Invoke)
+│   │   │   ├── security-autofix.ts  # Client-side security analysis
+│   │   │   ├── store.ts          # Zustand stores (chat, graph)
+│   │   │   ├── usePlannerImport.ts  # DynamoDB handoff from Project Planner AI
+│   │   │   └── config.ts         # Re-exports from amplify config
+│   │   ├── __tests__/            # Vitest unit tests
+│   │   └── package.json
+│   ├── functions/                # Lambda handlers (Python 3.12+, uv)
+│   │   ├── interpret/            # Parse user intent, extract architecture changes
+│   │   ├── architect/            # Generate/update architecture graph via Strands
+│   │   ├── security_review/      # Security gate before code generation
+│   │   ├── cdk_specialist/       # Generate IaC code (CDK/CFN/TF/Python-CDK)
+│   │   ├── react_specialist/     # Generate React + Cloudscape frontend code
+│   │   ├── get_execution/        # Poll SFN execution status
+│   │   └── tests/
+│   ├── infra/                    # CDK v2 TypeScript
+│   │   ├── lib/
+│   │   │   ├── database-stack.ts   # Cognito, DynamoDB, S3, CloudFront
+│   │   │   ├── functions-stack.ts  # Lambda functions + layers + alarms
+│   │   │   └── workflow-stack.ts   # Step Functions state machine
+│   │   └── layers/               # Lambda layers (shared + agents)
+│   └── backend/                  # FastAPI (legacy, not deployed to prod)
+├── config.json
+└── CLAUDE.md
+```
+
+## Key Architecture Decisions
+
+- **No API Gateway** — frontend calls SFN + Lambda directly via Cognito identity pool credentials
+- **Fire-and-poll pattern**: Frontend starts SFN execution via `StartExecutionCommand`, polls via Lambda `InvokeCommand` for `get_execution`
+- **Client-side security autofix**: Security analysis runs in browser (no AWS call needed)
+- **Lambda modules are self-contained**: Each function directory contains all needed Python modules (no imports from backend package)
+- **Cross-region Bedrock**: IAM policy includes us-east-1, us-east-2, us-west-2 for `us.*` inference profile routing
+- **DynamoDB handoff**: Project Planner AI writes plan data to `project-planner-handoff` table, scaffold-ai reads via URL params
 
 ## Dev Setup
 
 ```bash
-# Backend
-cd apps/backend && uv sync
-uv run uvicorn scaffold_ai.main:app --reload --port 8001
-
 # Frontend
 cd apps/web && pnpm install
 pnpm dev   # http://localhost:3000
+
+# Backend (legacy local dev)
+cd apps/backend && uv sync
+uv run uvicorn scaffold_ai.main:app --reload --port 8001
 ```
 
 ## Environment Variables
 
 **Frontend** (`apps/web/.env.local`):
 ```
-VITE_BACKEND_URL=http://localhost:8001
-```
-
-**Backend** (`apps/backend/.env`):
-```
-AWS_REGION=us-east-1
-AWS_PROFILE=admin
+VITE_AWS_REGION=us-east-1
+VITE_USER_POOL_ID=us-east-1_ouXZdiLOe
+VITE_USER_POOL_CLIENT_ID=7bih9lmkfsq36r5lm77dradjf9
+VITE_IDENTITY_POOL_ID=us-east-1:867b384b-8300-48fb-ad2b-98186cd29206
+VITE_WORKFLOW_ARN=arn:aws:states:us-east-1:831729228662:stateMachine:ScaffoldAI-Workflow
+VITE_GET_EXECUTION_FN=scaffold-ai-get_execution
 ```
 
 ## Testing
@@ -51,27 +95,36 @@ AWS_PROFILE=admin
 cd apps/web && pnpm test
 pnpm test:coverage
 
-# Backend
-cd apps/backend && uv run pytest tests/ --cov=src/ --cov-report=term-missing
+# Lambda functions
+cd apps/functions && uv run pytest tests/ --cov=. --cov-report=term-missing -q
+
+# CDK
+cd apps/infra && npm test
 ```
-
-## API Endpoints
-
-- `POST /api/chat` — fire-and-poll: accepts `user_input`, `graph_json`, `iac_format`; returns `{ execution_arn }`
-- `GET /api/chat/{arn}/status` — poll execution: returns `{ status, message, updated_graph, generated_files }`
-- `POST /api/security/autofix` — security review: accepts `graph`; returns `updated_graph`, `changes`, `security_score`
-- `POST /api/import/plan` — import plan from Project Planner AI; returns `{ session_id, initial_prompt }`
-- `GET /api/import/plan/{session_id}` — fetch imported plan data
 
 ## IaC Formats
 
 | Value | Output |
 |---|---|
-| `cdk` | CDK TypeScript (default) |
-| `python-cdk` | CDK Python |
-| `cloudformation` | CloudFormation YAML |
-| `terraform` | Terraform HCL |
+| `cdk` | CDK TypeScript (default, LLM-generated via Strands) |
+| `python-cdk` | CDK Python (template-based) |
+| `cloudformation` | CloudFormation YAML (template-based) |
+| `terraform` | Terraform HCL (template-based) |
+
+## Deployment
+
+```bash
+# CDK infrastructure
+cd apps/infra && npx cdk deploy --all --profile cdk-deploy-prod --require-approval never
+
+# Frontend to CloudFront
+./deploy-frontend.sh   # Requires AWS_PROFILE with S3/CloudFront access
+```
+
+## UI Theme
+
+Dark mode default (localStorage persisted, toggle in TopNav). Red accent Cloudscape theme — CSS variable overrides in `apps/web/src/index.css`. Primary: `#e8001c`. Portfolio-wide dark Amplify Authenticator sign-in page.
 
 ## PSP Integration
 
-Not yet registered. See `config.json` for test commands.
+Monitored by Project Status Portal. Test commands in `config.json`.
