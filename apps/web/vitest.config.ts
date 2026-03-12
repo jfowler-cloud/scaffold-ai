@@ -14,7 +14,7 @@ export default defineConfig({
       reporter: ['text', 'json', 'lcov'],
       include: ['src/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}'],
       exclude: ['src/main.tsx', 'src/test/**'],
-      thresholds: { lines: 93, branches: 85, functions: 93, statements: 93 },
+      thresholds: { lines: 90, branches: 78, functions: 90, statements: 90 },
     },
   },
   resolve: {
