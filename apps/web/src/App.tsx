@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { Authenticator } from "@aws-amplify/ui-react";
+import "@aws-amplify/ui-react/styles.css";
 import { Canvas } from "@/components/Canvas";
 import { Chat } from "@/components/Chat";
 import { GeneratedCodeModal } from "@/components/GeneratedCodeModal";
@@ -40,91 +42,102 @@ export default function App() {
   };
 
   return (
-    <>
-      <div id="top-nav" style={{ position: "sticky", top: 0, zIndex: 1002 }}>
-        <TopNavigation
-          identity={{ href: "/", title: "Scaffold AI", logo: { src: "/logo.svg", alt: "Scaffold AI" } }}
-          utilities={[
-            { type: "button", text: darkMode ? "☀️ Light" : "🌙 Dark", onClick: toggleTheme },
-            { type: "button", text: "Documentation", href: "https://github.com/jfowler-cloud/scaffold-ai", external: true, externalIconAriaLabel: "(opens in new tab)" },
-            { type: "button", iconName: "status-info", ariaLabel: "Help", onClick: () => setToolsOpen(!toolsOpen) },
-          ]}
-        />
-      </div>
-
-      <AppLayout
-        headerSelector="#top-nav"
-        navigation={
-          <SideNavigation
-            header={{ text: "Scaffold AI", href: "/" }}
-            activeHref="/"
-            onFollow={(e) => {
-              e.preventDefault();
-              if (e.detail.href === "#/generated") setCodeModalVisible(true);
-            }}
-            items={[
-              { type: "link", text: "Canvas", href: "/" },
-              { type: "divider" },
-              { type: "section", text: "Resources", items: [{ type: "link", text: "Generated Code", href: "#/generated" }] },
-              { type: "divider" },
-              { type: "link", text: "Documentation", href: "https://github.com/jfowler-cloud/scaffold-ai", external: true },
-            ]}
-          />
-        }
-        navigationOpen={navigationOpen}
-        onNavigationChange={({ detail }) => setNavigationOpen(detail.open)}
-        navigationWidth={240}
-        tools={
-          <HelpPanel header={<h2>Getting Started</h2>}>
-            <SpaceBetween size="m">
-              <Box variant="p">Scaffold AI helps you design AWS serverless architectures using natural language and visual node graphs.</Box>
-              <Box variant="h4">How to use</Box>
-              <Box variant="p">1. Describe your application in the chat panel</Box>
-              <Box variant="p">2. The AI will generate architecture nodes on the canvas</Box>
-              <Box variant="p">3. Drag and connect nodes to refine your design</Box>
-              <Box variant="p">4. Ask the AI to generate CDK code when ready</Box>
-              <Box variant="h4">Supported Services</Box>
-              <Box variant="p">Lambda, API Gateway, DynamoDB, Cognito, S3, SQS, SNS, EventBridge, Step Functions, CloudFront, Kinesis</Box>
-              <Box variant="h4">Learn more</Box>
-              <Link href="https://github.com/jfowler-cloud/scaffold-ai" external>View on GitHub</Link>
-            </SpaceBetween>
-          </HelpPanel>
-        }
-        toolsOpen={toolsOpen}
-        onToolsChange={({ detail }) => setToolsOpen(detail.open)}
-        toolsWidth={320}
-        splitPanel={
-          <SplitPanel header="AI Assistant" hidePreferencesButton closeBehavior="hide">
-            <Chat plannerData={plannerData} />
-          </SplitPanel>
-        }
-        splitPanelOpen={splitPanelOpen}
-        onSplitPanelToggle={({ detail }) => setSplitPanelOpen(detail.open)}
-        splitPanelSize={splitPanelSize}
-        onSplitPanelResize={({ detail }) => setSplitPanelSize(detail.size)}
-        splitPanelPreferences={{ position: "side" }}
-        content={
-          <div style={{ height: "100%", minHeight: "calc(100vh - 56px)" }}>
-            <Canvas />
+    <Authenticator>
+      {({ signOut, user }) => (
+        <>
+          <div id="top-nav" style={{ position: "sticky", top: 0, zIndex: 1002 }}>
+            <TopNavigation
+              identity={{ href: "/", title: "Scaffold AI", logo: { src: "/logo.svg", alt: "Scaffold AI" } }}
+              utilities={[
+                { type: "button", text: darkMode ? "☀️ Light" : "🌙 Dark", onClick: toggleTheme },
+                { type: "button", text: "Documentation", href: "https://github.com/jfowler-cloud/scaffold-ai", external: true, externalIconAriaLabel: "(opens in new tab)" },
+                { type: "button", iconName: "status-info", ariaLabel: "Help", onClick: () => setToolsOpen(!toolsOpen) },
+                {
+                  type: "menu-dropdown",
+                  text: user?.signInDetails?.loginId ?? "Account",
+                  iconName: "user-profile",
+                  items: [{ id: "signout", text: "Sign out" }],
+                  onItemClick: ({ detail }) => { if (detail.id === "signout") signOut?.(); },
+                },
+              ]}
+            />
           </div>
-        }
-        contentType="default"
-        disableContentPaddings
-        ariaLabels={{
-          navigation: "Side navigation",
-          navigationClose: "Close navigation",
-          navigationToggle: "Open navigation",
-          tools: "Help panel",
-          toolsClose: "Close help",
-          toolsToggle: "Open help",
-        }}
-      />
 
-      <GeneratedCodeModal visible={codeModalVisible} onDismiss={() => setCodeModalVisible(false)} />
+          <AppLayout
+            headerSelector="#top-nav"
+            navigation={
+              <SideNavigation
+                header={{ text: "Scaffold AI", href: "/" }}
+                activeHref="/"
+                onFollow={(e) => {
+                  e.preventDefault();
+                  if (e.detail.href === "#/generated") setCodeModalVisible(true);
+                }}
+                items={[
+                  { type: "link", text: "Canvas", href: "/" },
+                  { type: "divider" },
+                  { type: "section", text: "Resources", items: [{ type: "link", text: "Generated Code", href: "#/generated" }] },
+                  { type: "divider" },
+                  { type: "link", text: "Documentation", href: "https://github.com/jfowler-cloud/scaffold-ai", external: true },
+                ]}
+              />
+            }
+            navigationOpen={navigationOpen}
+            onNavigationChange={({ detail }) => setNavigationOpen(detail.open)}
+            navigationWidth={240}
+            tools={
+              <HelpPanel header={<h2>Getting Started</h2>}>
+                <SpaceBetween size="m">
+                  <Box variant="p">Scaffold AI helps you design AWS serverless architectures using natural language and visual node graphs.</Box>
+                  <Box variant="h4">How to use</Box>
+                  <Box variant="p">1. Describe your application in the chat panel</Box>
+                  <Box variant="p">2. The AI will generate architecture nodes on the canvas</Box>
+                  <Box variant="p">3. Drag and connect nodes to refine your design</Box>
+                  <Box variant="p">4. Ask the AI to generate CDK code when ready</Box>
+                  <Box variant="h4">Supported Services</Box>
+                  <Box variant="p">Lambda, API Gateway, DynamoDB, Cognito, S3, SQS, SNS, EventBridge, Step Functions, CloudFront, Kinesis</Box>
+                  <Box variant="h4">Learn more</Box>
+                  <Link href="https://github.com/jfowler-cloud/scaffold-ai" external>View on GitHub</Link>
+                </SpaceBetween>
+              </HelpPanel>
+            }
+            toolsOpen={toolsOpen}
+            onToolsChange={({ detail }) => setToolsOpen(detail.open)}
+            toolsWidth={320}
+            splitPanel={
+              <SplitPanel header="AI Assistant" hidePreferencesButton closeBehavior="hide">
+                <Chat plannerData={plannerData} />
+              </SplitPanel>
+            }
+            splitPanelOpen={splitPanelOpen}
+            onSplitPanelToggle={({ detail }) => setSplitPanelOpen(detail.open)}
+            splitPanelSize={splitPanelSize}
+            onSplitPanelResize={({ detail }) => setSplitPanelSize(detail.size)}
+            splitPanelPreferences={{ position: "side" }}
+            content={
+              <div style={{ height: "100%", minHeight: "calc(100vh - 56px)" }}>
+                <Canvas />
+              </div>
+            }
+            contentType="default"
+            disableContentPaddings
+            ariaLabels={{
+              navigation: "Side navigation",
+              navigationClose: "Close navigation",
+              navigationToggle: "Open navigation",
+              tools: "Help panel",
+              toolsClose: "Close help",
+              toolsToggle: "Open help",
+            }}
+          />
 
-      {isFromPlanner && showPlannerNotification && (
-        <PlannerNotification plannerData={plannerData} onDismiss={() => setShowPlannerNotification(false)} />
+          <GeneratedCodeModal visible={codeModalVisible} onDismiss={() => setCodeModalVisible(false)} />
+
+          {isFromPlanner && showPlannerNotification && (
+            <PlannerNotification plannerData={plannerData} onDismiss={() => setShowPlannerNotification(false)} />
+          )}
+        </>
       )}
-    </>
+    </Authenticator>
   );
 }

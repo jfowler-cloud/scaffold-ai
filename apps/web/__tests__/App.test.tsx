@@ -2,6 +2,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from '../src/App';
 
+// Mock Authenticator
+vi.mock('@aws-amplify/ui-react', () => ({
+  Authenticator: ({ children }: any) => children({
+    signOut: vi.fn(),
+    user: { signInDetails: { loginId: 'test@example.com' } },
+  }),
+}));
+
 // Mock heavy dependencies
 vi.mock('@cloudscape-design/global-styles', () => ({ applyMode: vi.fn(), Mode: { Dark: 'dark', Light: 'light' } }));
 vi.mock('@cloudscape-design/components/app-layout', () => ({
@@ -26,6 +34,13 @@ vi.mock('@cloudscape-design/components/top-navigation', () => ({
           <button key={i} onClick={u.onClick} aria-label={u.ariaLabel}>
             {u.text || u.ariaLabel}
           </button>
+        ) : u.type === 'menu-dropdown' ? (
+          <div key={i} data-testid="user-menu">
+            <span>{u.text}</span>
+            {u.items?.map((item: any) => (
+              <button key={item.id} onClick={() => u.onItemClick?.({ detail: { id: item.id } })}>{item.text}</button>
+            ))}
+          </div>
         ) : null
       )}
     </div>

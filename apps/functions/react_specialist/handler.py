@@ -4,7 +4,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "shared"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend", "src"))
+sys.path.insert(0, os.path.dirname(__file__))
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +20,7 @@ def handler(event: dict, context=None) -> dict:
 
     try:
         import asyncio
-        from scaffold_ai.agents.react_specialist import ReactSpecialistAgent
+        from react_specialist import ReactSpecialistAgent
         react_files = asyncio.run(ReactSpecialistAgent().generate(graph))
         if react_files:
             generated_files = list(event.get("generated_files", []))

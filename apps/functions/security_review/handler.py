@@ -88,8 +88,7 @@ def handler(event: dict, context=None) -> dict:
     except Exception as e:
         logger.warning("Security review LLM failed, using autofix fallback: %s", e)
         # Fallback: use the existing SecurityAutoFix service
-        sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend", "src"))
-        from scaffold_ai.services.security_autofix import SecurityAutoFix
+        from security_autofix import SecurityAutoFix
         autofix = SecurityAutoFix()
         score_data = autofix.get_security_score(graph)
         review = {

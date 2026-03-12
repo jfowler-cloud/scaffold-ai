@@ -1,6 +1,7 @@
 
 import { useState, useRef, useEffect } from "react";
-import { BACKEND_URL } from "@/lib/config";
+import { sendChat } from "@/lib/api";
+import { analyzeAndFix, getSecurityScore } from "@/lib/security-autofix";
 import { useChatStore, useGraphStore } from "@/lib/store";
 import Container from "@cloudscape-design/components/container";
 import Header from "@cloudscape-design/components/header";
@@ -114,57 +115,11 @@ export function Chat({ plannerData }: { plannerData?: any }) {
   const { getGraphJSON, setGraph, nodes } = useGraphStore();
 
   /**
-   * Poll a Step Functions execution until it reaches a terminal state.
-   * Returns the final execution result.
-   */
-  const pollExecution = async (executionArn: string): Promise<{
-    message?: string;
-    updated_graph?: any;
-    generated_files?: any[];
-    error?: string;
-  }> => {
-    const POLL_INTERVAL = 2000;
-    const MAX_POLLS = 90; // 3 minutes max
-
-    for (let i = 0; i < MAX_POLLS; i++) {
-      const res = await fetch(`${BACKEND_URL}/api/chat/${encodeURIComponent(executionArn)}/status`);
-      if (!res.ok) throw new Error("Failed to check execution status");
-      const data = await res.json();
-
-      if (data.status === "SUCCEEDED") {
-        return {
-          message: data.message,
-          updated_graph: data.updated_graph,
-          generated_files: data.generated_files,
-        };
-      }
-      if (data.status === "FAILED" || data.status === "TIMED_OUT" || data.status === "ABORTED") {
-        throw new Error(data.error || `Workflow ${data.status.toLowerCase()}`);
-      }
-
-      // Still running — wait and poll again
-      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL));
-    }
-    throw new Error("Workflow timed out waiting for response");
-  };
-
-  /**
-   * Send a chat request via fire-and-poll: POST starts the SFN execution,
-   * then poll until the result is ready.
+   * Send a chat request via fire-and-poll using AWS SDK directly.
    */
   const sendChatRequest = async (userInput: string, format: string = iacFormat.value) => {
     const graphJSON = getGraphJSON();
-    const startRes = await fetch(`${BACKEND_URL}/api/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_input: userInput, graph_json: graphJSON, iac_format: format }),
-    });
-    if (!startRes.ok) {
-      const err = await startRes.json().catch(() => ({ detail: "Request failed" }));
-      throw new Error(err.detail || "Failed to start workflow");
-    }
-    const { execution_arn } = await startRes.json();
-    return pollExecution(execution_arn);
+    return sendChat(userInput, graphJSON, format);
   };
 
   /**
@@ -298,37 +253,29 @@ export function Chat({ plannerData }: { plannerData?: any }) {
 
     try {
       const graphJSON = getGraphJSON();
-      const response = await fetch(`${BACKEND_URL}/api/security/autofix`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ graph: graphJSON }),
-      });
+      const { updatedGraph, changes } = analyzeAndFix(graphJSON);
 
-      const data = await response.json();
-
-      if (data.updated_graph) {
-        // Normalize nodes: ensure node.type is set at top level for React Flow
-        const normalizedNodes = (data.updated_graph.nodes || []).map((n: any) => ({
+      if (updatedGraph) {
+        const normalizedNodes = (updatedGraph.nodes || []).map((n: any) => ({
           ...n,
           type: n.type || n.data?.type || "lambda",
         }));
-        setGraph(normalizedNodes, data.updated_graph.edges || []);
+        setGraph(normalizedNodes, updatedGraph.edges || []);
       }
 
-      if (data.changes && data.changes.length > 0) {
+      if (changes.length > 0) {
+        const score = getSecurityScore(updatedGraph);
         addMessage({
           id: `assistant-${Date.now()}`,
           role: "assistant",
-          content: `Security improvements applied:\n${data.changes.join("\n")}\n\nSecurity score: ${data.security_score?.percentage ?? "N/A"}%`,
+          content: `Security improvements applied:\n${changes.map(c => `✅ ${c}`).join("\n")}\n\nSecurity score: ${score.percentage}%`,
         });
-        setLoading(false);
       } else {
         addMessage({
           id: `assistant-${Date.now()}`,
           role: "assistant",
           content: "✅ No security issues found. Your architecture looks good!",
         });
-        setLoading(false);
       }
     } catch (error) {
       addMessage({
@@ -336,6 +283,7 @@ export function Chat({ plannerData }: { plannerData?: any }) {
         role: "assistant",
         content: `❌ Security fix error: ${error instanceof Error ? error.message : "Unknown error"}`,
       });
+    } finally {
       setLoading(false);
     }
   };

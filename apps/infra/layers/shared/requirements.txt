@@ -3,3 +3,4 @@
 pydantic-settings>=2.0.0,<3
 aws-lambda-powertools>=3.0.0,<4
 aws-xray-sdk>=2.14.0,<3
+PyYAML>=6.0,<7

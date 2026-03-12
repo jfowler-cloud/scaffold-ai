@@ -2,6 +2,74 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Amplify Authenticator — dark mode + red accent */
+[data-amplify-authenticator] {
+  --amplify-colors-brand-primary-10: #fff1f1;
+  --amplify-colors-brand-primary-20: #ffe0e0;
+  --amplify-colors-brand-primary-40: #ff9a9a;
+  --amplify-colors-brand-primary-60: #ff5c5c;
+  --amplify-colors-brand-primary-80: #e8001c;
+  --amplify-colors-brand-primary-90: #cc0018;
+  --amplify-colors-brand-primary-100: #a80014;
+  --amplify-colors-background-primary: #0f1419;
+  --amplify-colors-background-secondary: #16191f;
+  --amplify-colors-font-primary: #e8eaed;
+  --amplify-colors-font-secondary: #b4b8bf;
+  --amplify-colors-border-primary: #414d5c;
+  --amplify-colors-border-secondary: #2d3139;
+  --amplify-components-authenticator-router-background-color: #16191f;
+  --amplify-components-authenticator-router-border-color: #2d3139;
+  --amplify-components-button-primary-background-color: #e8001c;
+  --amplify-components-button-primary-hover-background-color: #cc0018;
+  --amplify-components-button-link-color: #ff5c5c;
+  --amplify-components-fieldcontrol-border-color: #414d5c;
+  --amplify-components-fieldcontrol-color: #e8eaed;
+  --amplify-components-fieldcontrol-focus-border-color: #e8001c;
+  --amplify-components-tabs-item-active-border-color: #e8001c;
+  --amplify-components-tabs-item-active-color: #e8001c;
+  --amplify-components-tabs-item-color: #b4b8bf;
+  --amplify-components-tabs-item-hover-color: #ff5c5c;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0f1419;
+}
+
+[data-amplify-authenticator] [data-amplify-router] {
+  background-color: #16191f;
+  border: 1px solid #2d3139;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+[data-amplify-authenticator] input {
+  background-color: #1e2228 !important;
+  color: #e8eaed !important;
+  border-color: #414d5c !important;
+}
+
+[data-amplify-authenticator] input:focus {
+  border-color: #e8001c !important;
+  box-shadow: 0 0 0 2px rgba(232, 0, 28, 0.2) !important;
+}
+
+[data-amplify-authenticator] label {
+  color: #b4b8bf !important;
+}
+
+[data-amplify-authenticator] .amplify-heading {
+  color: #e8eaed !important;
+}
+
+[data-amplify-authenticator] .amplify-text {
+  color: #b4b8bf !important;
+}
+
+[data-amplify-authenticator] [data-amplify-footer] {
+  color: #b4b8bf;
+}
+
 /* Red accent Cloudscape theme */
 html body {
   --color-primary-50-1y05xv: #fff1f1 !important;

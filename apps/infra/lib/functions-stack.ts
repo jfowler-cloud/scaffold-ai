@@ -49,6 +49,9 @@ export class FunctionsStack extends cdk.Stack {
       resources: [
         `arn:aws:bedrock:${this.region}::foundation-model/*`,
         `arn:aws:bedrock:${this.region}:${this.account}:inference-profile/*`,
+        // Cross-region inference profiles (us.* prefix) can route to any US region
+        'arn:aws:bedrock:us-east-2::foundation-model/*',
+        'arn:aws:bedrock:us-west-2::foundation-model/*',
       ],
     })
 

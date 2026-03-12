@@ -6,7 +6,7 @@ import pathlib
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "shared"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "backend", "src"))
+sys.path.insert(0, os.path.dirname(__file__))
 
 from strands import Agent
 from strands.models.bedrock import BedrockModel
@@ -29,7 +29,7 @@ def _write_file(path: str, content: str) -> None:
         dest = repo_root / path
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(content, encoding="utf-8")
-    except OSError as e:
+    except (OSError, IndexError) as e:
         logger.error("Could not write generated file: %s", e)
 
 
@@ -49,11 +49,11 @@ def handler(event: dict, context=None) -> dict:
         return {**event, "response": "No components in your architecture yet."}
 
     # Check for nested stacks
-    from scaffold_ai.services.stack_splitter import StackSplitter
+    from stack_splitter import StackSplitter
     splitter = StackSplitter()
 
     if iac_format == "python-cdk":
-        from scaffold_ai.agents.python_cdk_specialist import PythonCDKSpecialist
+        from python_cdk_specialist import PythonCDKSpecialist
         spec = PythonCDKSpecialist()
         files = [
             {"path": "packages/generated/infrastructure/mystack_stack.py", "content": spec.generate_stack(nodes, edges)},
@@ -66,7 +66,7 @@ def handler(event: dict, context=None) -> dict:
         return {**event, "generated_files": generated_files, "response": f"{event.get('response', '')}\n\n**Python CDK Generated!**"}
 
     if iac_format == "cloudformation":
-        from scaffold_ai.agents.cloudformation_specialist import CloudFormationSpecialistAgent
+        from cloudformation_specialist import CloudFormationSpecialistAgent
         import asyncio
         code = asyncio.run(CloudFormationSpecialistAgent().generate(graph))
         file = {"path": "packages/generated/infrastructure/template.yaml", "content": code}
@@ -75,7 +75,7 @@ def handler(event: dict, context=None) -> dict:
         return {**event, "generated_files": generated_files, "response": f"{event.get('response', '')}\n\n**CloudFormation Template Generated!**"}
 
     if iac_format == "terraform":
-        from scaffold_ai.agents.terraform_specialist import TerraformSpecialistAgent
+        from terraform_specialist import TerraformSpecialistAgent
         import asyncio
         code = asyncio.run(TerraformSpecialistAgent().generate(graph))
         file = {"path": "packages/generated/infrastructure/main.tf", "content": code}
@@ -112,7 +112,7 @@ def handler(event: dict, context=None) -> dict:
             code = code.split("```")[1].split("```")[0]
     except Exception as e:
         logger.exception("CDK LLM generation failed, using fallback: %s", e)
-        from scaffold_ai.services.cdk_generator import CDKGenerator
+        from cdk_generator import CDKGenerator
         code = CDKGenerator().generate(nodes, [])
 
     file_path = "packages/generated/infrastructure/lib/scaffold-ai-stack.ts"
