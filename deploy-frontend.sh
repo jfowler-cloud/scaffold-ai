@@ -29,14 +29,24 @@ export VITE_AWS_REGION="${AWS_REGION:-us-east-1}"
 export VITE_USER_POOL_ID=$(extract_output "ScaffoldAI-Database" "UserPoolId")
 export VITE_USER_POOL_CLIENT_ID=$(extract_output "ScaffoldAI-Database" "UserPoolClientId")
 export VITE_IDENTITY_POOL_ID=$(extract_output "ScaffoldAI-Database" "IdentityPoolId")
+export VITE_WORKFLOW_ARN=$(extract_output "ScaffoldAI-Workflow" "WorkflowArn")
+export VITE_GET_EXECUTION_FN="scaffold-ai-get_execution"
 
-# Backend URL: Step Functions workflow is invoked directly via SDK, but
-# the FastAPI backend URL is needed for local dev proxy
+# Backend URL: Step Functions workflow is invoked directly via SDK, no API Gateway
 export VITE_BACKEND_URL=""
+
+# Project Planner AI CloudFront URL for "Refine in Planner" button
+PLANNER_DOMAIN=$(aws cloudformation describe-stacks --stack-name ProjectPlanner-Database \
+  --query "Stacks[0].Outputs[?OutputKey=='DistributionDomain'].OutputValue" --output text 2>/dev/null || true)
+if [ -n "$PLANNER_DOMAIN" ] && [ "$PLANNER_DOMAIN" != "None" ]; then
+  export VITE_PLANNER_URL="https://${PLANNER_DOMAIN}"
+  echo "  Planner URL: $VITE_PLANNER_URL"
+fi
 
 echo "  User Pool: $VITE_USER_POOL_ID"
 echo "  Client ID: $VITE_USER_POOL_CLIENT_ID"
 echo "  Identity Pool: $VITE_IDENTITY_POOL_ID"
+echo "  Workflow ARN: $VITE_WORKFLOW_ARN"
 
 echo "Building frontend..."
 cd "$SCRIPT_DIR/apps/web"
