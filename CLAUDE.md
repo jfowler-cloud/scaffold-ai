@@ -23,7 +23,7 @@ scaffold-ai/
 │   │   │   ├── main.tsx          # Entry point, configureAmplify()
 │   │   │   └── index.css         # Red accent theme, Authenticator dark mode CSS
 │   │   ├── components/
-│   │   │   ├── Canvas.tsx        # React Flow architecture canvas (53 AWS node types)
+│   │   │   ├── Canvas.tsx        # React Flow architecture canvas (65 AWS node types)
 │   │   │   ├── Chat.tsx          # AI chat + code generation UI
 │   │   │   ├── GeneratedCodeModal.tsx
 │   │   │   └── PlannerNotification.tsx

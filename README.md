@@ -7,8 +7,8 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
-![Tests: 135](https://img.shields.io/badge/Tests-135%20passing-brightgreen?style=flat-square)
-![Coverage: 96%](https://img.shields.io/badge/Coverage-96%25-brightgreen?style=flat-square)
+![Tests: 411](https://img.shields.io/badge/Tests-411%20passing-brightgreen?style=flat-square)
+![Coverage: 95%](https://img.shields.io/badge/Coverage-95%25-brightgreen?style=flat-square)
 ![Step Functions](https://img.shields.io/badge/Step%20Functions-Agent%20Core-orange?style=flat-square)
 ![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
 
@@ -33,7 +33,7 @@ The goal was to demonstrate:
 | **Purpose** | Resume optimization | Project planning | AWS architecture design | Career planning |
 | **Orchestration** | AWS Step Functions | AWS Step Functions | AWS Step Functions | LangGraph |
 | **Agents** | Step Functions workflow | SFN Map + Strands | 5 SFN Lambda + Strands | 6 LangGraph agents |
-| **Tests** | 212 tests, 98% | 109 tests, 92% | 135 tests, 96% | 142 tests, 99% |
+| **Tests** | 212 tests, 98% | 109 tests, 92% | 411 tests, 95% | 142 tests, 99% |
 | **Features** | Resume tailoring | Architecture planning | Architecture generation | Roadmap + Critical Review |
 
 All projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing).
@@ -218,7 +218,7 @@ scaffold-ai/
 │   │
 │   ├── infra/                  # CDK infrastructure
 │   │   ├── lib/workflow-stack.ts  # Step Functions + alarms + budget
-│   │   └── test/               # Snapshot + assertion tests (12 tests)
+│   │   └── test/               # Snapshot + assertion tests (15 tests)
 │   │
 │   └── web/                    # React 19 + Vite SPA
 │       ├── src/                # App entry point and root component
@@ -372,7 +372,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - Removed unused `InterpreterAgent` and `ArchitectAgent` classes (kept system prompt constants for Lambda handlers)
 - Updated `__init__.py` and `CLAUDE.md` to reflect Step Functions architecture
 - 5 new tests (structured planner data, review findings, workflow failure, non-ok start, fire-and-poll cycle)
-- 135 tests passing (up from 130)
+- 411 tests passing across all suites (121 backend, 12 functions, 10 agents, 253 frontend, 15 CDK)
 
 ### v2.0.0 - Step Functions + Strands Refactor (Mar 2026)
 
@@ -386,10 +386,10 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - ✨ CloudWatch alarms (Lambda error rate, P99 duration, SFN execution failures)
 - ✨ AWS Budget alarm ($25/mo, 80% threshold) with SNS topic
 - ✨ CDK cost tags (`Project`, `Environment`, `ManagedBy`) on all resources
-- ✨ CDK snapshot + assertion tests (12 tests)
+- ✨ CDK snapshot + assertion tests (15 tests)
 - ✨ Accessibility tests (`@axe-core/playwright`) with WCAG 2.0 AA checks
 - ✨ E2E test stubs (`e2e-main.tsx`, `e2e-auth-stub.ts`)
-- 📈 Coverage improved: 64% → 96% (133 → 130 frontend tests, thresholds ratcheted to 96/88/94/97)
+- 📈 Coverage improved: 64% → 95% (frontend: 253 tests, thresholds ratcheted to 96/88/94/97)
 
 ### v1.6.0 - Polish & Hardening (Feb 2026)
 - Removed duplicate `SecurityAutoFix` class stub from `security_autofix.py`
@@ -421,7 +421,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ### v1.6.2 - CI Fix (Feb 2026)
 - Fixed `test_security_gate_blocks_insecure_architecture` and `test_security_gate_passes_secure_architecture` — both were making real Bedrock calls in CI (no credentials); now properly mock `get_llm` with ordered side effects
 - Fixed `optimized` tier model ID: `anthropic.claude-sonnet-4-5-20250929-v1:0` (was `20251001`)
-- 133 backend tests passing
+- 121 backend tests passing
 
 ### v1.6.1 - Deployment Tier Model Selection (Feb 2026)
 - ✨ Added `config.py` with `testing/optimized/premium` deployment tier system
