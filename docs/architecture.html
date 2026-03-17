@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scaffold AI &mdash; Architecture Overview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: #0a0e1a;
+      color: #c9d1d9;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    .header {
+      background: linear-gradient(135deg, #1a1025 0%, #0d1b2a 50%, #1b0a0a 100%);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      padding: 3rem 2rem 2.5rem;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, #e8001c, #ff6b6b, #e8001c);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -.5px;
+    }
+    .header p {
+      color: #8b949e;
+      margin-top: .5rem;
+      font-size: 1.05rem;
+      max-width: 640px;
+      margin-inline: auto;
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+    /* ── Stats Row ──────────────────────────────────────────────── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+    }
+    .stat-card {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 12px;
+      padding: 1.25rem;
+      text-align: center;
+    }
+    .stat-card .number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #e8001c;
+    }
+    .stat-card .label {
+      font-size: .82rem;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-top: .15rem;
+    }
+
+    /* ── Section titles ─────────────────────────────────────────── */
+    .section-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #e6edf3;
+      margin: 2.5rem 0 1.25rem;
+      padding-bottom: .5rem;
+      border-bottom: 1px solid #21262d;
+    }
+
+    /* ── Card Grid ──────────────────────────────────────────────── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 12px;
+      padding: 1.5rem;
+      border-top: 3px solid transparent;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .card:hover {
+      box-shadow: 0 4px 24px rgba(0,0,0,.35);
+    }
+    .card.amber  { border-top-color: #f59e0b; }
+    .card.blue   { border-top-color: #3b82f6; }
+    .card.green  { border-top-color: #10b981; }
+    .card.pink   { border-top-color: #ec4899; }
+    .card h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #e6edf3;
+      margin-bottom: .75rem;
+    }
+    .card ul {
+      list-style: none;
+      padding: 0;
+    }
+    .card ul li {
+      padding: .3rem 0;
+      font-size: .88rem;
+      color: #c9d1d9;
+      display: flex;
+      align-items: flex-start;
+      gap: .5rem;
+    }
+    .card ul li::before {
+      content: '';
+      display: inline-block;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #484f58;
+      flex-shrink: 0;
+      margin-top: .45rem;
+    }
+    .card.amber ul li::before { background: #f59e0b; }
+    .card.blue  ul li::before { background: #3b82f6; }
+    .card.green ul li::before { background: #10b981; }
+    .card.pink  ul li::before { background: #ec4899; }
+
+    .sub { color: #8b949e; font-size: .8rem; }
+
+    /* ── Coverage bars ──────────────────────────────────────────── */
+    .coverage { margin-top: 1rem; }
+    .coverage-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .78rem;
+      color: #8b949e;
+      margin-bottom: .3rem;
+    }
+    .coverage-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: #21262d;
+      overflow: hidden;
+    }
+    .coverage-bar .fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width .6s ease;
+    }
+    .fill.amber { background: #f59e0b; }
+    .fill.blue  { background: #3b82f6; }
+    .fill.green { background: #10b981; }
+    .fill.pink  { background: #ec4899; }
+
+    /* ── Tables ──────────────────────────────────────────────────── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .88rem;
+    }
+    thead th {
+      text-align: left;
+      padding: .75rem 1rem;
+      background: #161b22;
+      border-bottom: 2px solid #21262d;
+      color: #e6edf3;
+      font-weight: 600;
+    }
+    tbody td {
+      padding: .65rem 1rem;
+      border-bottom: 1px solid #161b22;
+    }
+    tbody tr:hover { background: rgba(255,255,255,.02); }
+    .table-wrap {
+      border: 1px solid #21262d;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+    code {
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: .82rem;
+      background: rgba(255,255,255,.06);
+      padding: .15rem .4rem;
+      border-radius: 4px;
+      color: #e8001c;
+    }
+
+    /* ── Pills ──────────────────────────────────────────────────── */
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .5rem;
+      margin-top: .5rem;
+    }
+    .pill {
+      display: inline-block;
+      font-size: .78rem;
+      padding: .3rem .75rem;
+      border-radius: 999px;
+      background: #21262d;
+      color: #c9d1d9;
+      border: 1px solid #30363d;
+      font-weight: 500;
+    }
+    .pill.highlight {
+      background: rgba(232, 0, 28, .12);
+      border-color: rgba(232, 0, 28, .3);
+      color: #ff6b6b;
+    }
+
+    /* ── Workflow Diagram ───────────────────────────────────────── */
+    .workflow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: .5rem;
+      margin: 1rem 0;
+      font-size: .85rem;
+    }
+    .wf-step {
+      background: #161b22;
+      border: 1px solid #21262d;
+      padding: .5rem 1rem;
+      border-radius: 8px;
+      color: #e6edf3;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .wf-arrow { color: #484f58; font-size: 1.2rem; }
+    .wf-choice {
+      background: #1b1023;
+      border-color: #6e40c9;
+      color: #d2a8ff;
+    }
+    .wf-end {
+      background: #0d2818;
+      border-color: #238636;
+      color: #7ee787;
+    }
+    .wf-fail {
+      background: #2d0f0f;
+      border-color: #da3633;
+      color: #f85149;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────── */
+    .footer {
+      text-align: center;
+      padding: 2.5rem 1rem;
+      color: #484f58;
+      font-size: .82rem;
+      border-top: 1px solid #161b22;
+      margin-top: 3rem;
+    }
+
+    @media (max-width: 640px) {
+      .header h1 { font-size: 1.6rem; }
+      .container  { padding: 1rem; }
+      .card-grid  { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ HEADER ═══════════════════════════ -->
+<header class="header">
+  <h1>Scaffold AI</h1>
+  <p>AI-powered AWS architecture designer. Describe what you want to build in natural language, get a visual node graph of AWS services plus deployable IaC code.</p>
+</header>
+
+<div class="container">
+
+<!-- ═══════════════════════════ STATS ════════════════════════════ -->
+<div class="stats">
+  <div class="stat-card">
+    <div class="number">5</div>
+    <div class="label">Agents / Functions</div>
+  </div>
+  <div class="stat-card">
+    <div class="number">3</div>
+    <div class="label">CDK Stacks</div>
+  </div>
+  <div class="stat-card">
+    <div class="number">1</div>
+    <div class="label">DynamoDB Table</div>
+  </div>
+  <div class="stat-card">
+    <div class="number">65</div>
+    <div class="label">AWS Node Types</div>
+  </div>
+  <div class="stat-card">
+    <div class="number">4</div>
+    <div class="label">IaC Formats</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ CARD GRID ════════════════════════ -->
+<h2 class="section-title">Application Modules</h2>
+<div class="card-grid">
+
+  <!-- Agents / Functions -->
+  <div class="card amber">
+    <h3>Agents &amp; Functions</h3>
+    <ul>
+      <li><strong>interpret</strong> &mdash; Intent classifier (Strands + Bedrock Claude). Classifies user input into <code>new_feature</code>, <code>modify_graph</code>, <code>generate_code</code>, or <code>explain</code>. Keyword fallback on LLM failure.</li>
+      <li><strong>architect</strong> &mdash; AWS Solutions Architect agent (Strands + Bedrock Claude). Generates/modifies React Flow node graphs with auto-positioning across 7 column types.</li>
+      <li><strong>security_review</strong> &mdash; Security gate before code generation. Includes security autofix module.</li>
+      <li><strong>cdk_specialist</strong> &mdash; Multi-format IaC code generator: CDK TypeScript (LLM via Strands), CDK Python, CloudFormation YAML, and Terraform HCL (template-based).</li>
+      <li><strong>react_specialist</strong> &mdash; Generates React + Cloudscape frontend code for the designed architecture.</li>
+      <li><strong>get_execution</strong> &mdash; Polls Step Functions execution status. Lightweight (256 MB, 30s timeout, shared layer only).</li>
+    </ul>
+    <div class="coverage">
+      <div class="coverage-label"><span>Test coverage &mdash; functions</span><span>pytest + Vitest</span></div>
+      <div class="coverage-bar"><div class="fill amber" style="width:72%"></div></div>
+    </div>
+  </div>
+
+  <!-- Functions / Layers -->
+  <div class="card blue">
+    <h3>Lambda Layers &amp; Runtime</h3>
+    <ul>
+      <li><strong>SharedLayer</strong> &mdash; pydantic-settings, AWS Powertools, X-Ray SDK</li>
+      <li><strong>AgentsLayer</strong> &mdash; strands-agents core for Bedrock model invocation</li>
+      <li>Runtime: <strong>Python 3.12</strong>, managed with <strong>uv</strong></li>
+      <li>Default: 512 MB memory, 5 min timeout, X-Ray active tracing</li>
+      <li>CloudWatch alarms per function: error count (threshold 1) and p99 duration (80% of timeout)</li>
+      <li>Cross-region Bedrock: us-east-1, us-east-2, us-west-2 for <code>us.*</code> inference profiles</li>
+    </ul>
+    <div class="coverage">
+      <div class="coverage-label"><span>Test coverage &mdash; layers/backend</span><span>pytest</span></div>
+      <div class="coverage-bar"><div class="fill blue" style="width:65%"></div></div>
+    </div>
+  </div>
+
+  <!-- Infrastructure -->
+  <div class="card green">
+    <h3>Infrastructure (CDK v2)</h3>
+    <ul>
+      <li><strong>DatabaseStack</strong> &mdash; Cognito User Pool + Identity Pool, DynamoDB sessions table, S3 hosting bucket, CloudFront distribution, SNS alarm topic, monthly budget ($25)</li>
+      <li><strong>FunctionsStack</strong> &mdash; 6 Lambda functions, 2 PythonLayerVersions, Bedrock IAM policies, CloudWatch error + p99 duration alarms</li>
+      <li><strong>WorkflowStack</strong> &mdash; Step Functions state machine, Cognito identity pool role bindings, cross-table DynamoDB access for planner handoff</li>
+    </ul>
+    <div class="coverage">
+      <div class="coverage-label"><span>Test coverage &mdash; infra</span><span>Jest / CDK assertions</span></div>
+      <div class="coverage-bar"><div class="fill green" style="width:60%"></div></div>
+    </div>
+  </div>
+
+  <!-- Web -->
+  <div class="card pink">
+    <h3>Frontend (React 19 SPA)</h3>
+    <ul>
+      <li><strong>Canvas.tsx</strong> &mdash; React Flow architecture canvas with 65 custom AWS node types, auto-positioned across 7 columns</li>
+      <li><strong>Chat.tsx</strong> &mdash; AI chat panel + code generation trigger UI</li>
+      <li><strong>GeneratedCodeModal.tsx</strong> &mdash; Displays generated IaC code (CDK/CFN/TF/Python-CDK)</li>
+      <li><strong>PlannerNotification.tsx</strong> &mdash; DynamoDB handoff toast from Project Planner AI</li>
+      <li><strong>PlannerRefineButton.tsx</strong> &mdash; Refine imported planner data</li>
+      <li><strong>security-autofix.ts</strong> &mdash; Client-side security analysis (no AWS call needed)</li>
+      <li>State: <strong>Zustand</strong> stores (chat, graph). Auth: <strong>Amplify Authenticator</strong></li>
+    </ul>
+    <div class="coverage">
+      <div class="coverage-label"><span>Test coverage &mdash; web</span><span>Vitest</span></div>
+      <div class="coverage-bar"><div class="fill pink" style="width:68%"></div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════ WORKFLOW ═════════════════════════ -->
+<h2 class="section-title">Step Functions Workflow</h2>
+<p style="color:#8b949e;font-size:.9rem;margin-bottom:1rem;">Fire-and-poll pattern: Frontend starts execution via <code>StartExecutionCommand</code>, polls via Lambda <code>get_execution</code>.</p>
+<div class="workflow">
+  <div class="wf-step">Interpret</div>
+  <div class="wf-arrow">&rarr;</div>
+  <div class="wf-step">Architect</div>
+  <div class="wf-arrow">&rarr;</div>
+  <div class="wf-step wf-choice">ShouldGenerate?</div>
+  <div class="wf-arrow">&rarr;</div>
+  <div class="wf-step">SecurityReview</div>
+  <div class="wf-arrow">&rarr;</div>
+  <div class="wf-step wf-choice">SecurityGate?</div>
+  <div class="wf-arrow">&rarr;</div>
+  <div class="wf-step">CDKSpecialist</div>
+  <div class="wf-arrow">&rarr;</div>
+  <div class="wf-step">ReactSpecialist</div>
+  <div class="wf-arrow">&rarr;</div>
+  <div class="wf-step wf-end">Succeed</div>
+</div>
+<div class="workflow" style="margin-top:.5rem;">
+  <span style="color:#8b949e;font-size:.82rem;margin-right:.5rem;">Alt paths:</span>
+  <div class="wf-step wf-end" style="font-size:.82rem;">RespondOnly (non-generate intents)</div>
+  <span style="color:#484f58;margin:0 .25rem;">|</span>
+  <div class="wf-step wf-fail" style="font-size:.82rem;">SecurityFailed (review rejected)</div>
+</div>
+
+<!-- ═══════════════════════════ DYNAMO ═══════════════════════════ -->
+<h2 class="section-title">DynamoDB Tables</h2>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Table</th>
+        <th>Partition Key</th>
+        <th>Sort Key</th>
+        <th>GSIs</th>
+        <th>Notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>scaffold-ai-sessions</code></td>
+        <td><code>sessionId</code> (S)</td>
+        <td>&mdash;</td>
+        <td>&mdash;</td>
+        <td>PAY_PER_REQUEST, TTL on <code>ttl</code>, PITR enabled, AWS-managed encryption, RETAIN</td>
+      </tr>
+      <tr>
+        <td><code>project-planner-handoff</code></td>
+        <td colspan="4" style="color:#8b949e;">External table (owned by Project Planner AI) &mdash; read-only <code>GetItem</code> access via Cognito identity pool role</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════ AUTH ═════════════════════════════ -->
+<h2 class="section-title">Authentication &amp; Authorization</h2>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Details</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Cognito User Pool</td>
+        <td><code>ScaffoldAI-Users</code> &mdash; email sign-in, self-signup disabled, email recovery only</td>
+      </tr>
+      <tr>
+        <td>Cognito Groups</td>
+        <td><code>users</code>, <code>admins</code></td>
+      </tr>
+      <tr>
+        <td>Identity Pool</td>
+        <td><code>ScaffoldAI-IdentityPool</code> &mdash; authenticated only (no unauth). Provides temporary AWS credentials.</td>
+      </tr>
+      <tr>
+        <td>Auth Flows</td>
+        <td><code>USER_PASSWORD_AUTH</code>, <code>USER_SRP_AUTH</code></td>
+      </tr>
+      <tr>
+        <td>Frontend</td>
+        <td>Amplify Authenticator &mdash; dark mode, red accent theme. No API Gateway; direct SDK calls to SFN + Lambda.</td>
+      </tr>
+      <tr>
+        <td>IAM (authenticated role)</td>
+        <td>Can invoke <code>get_execution</code> Lambda, start SFN execution, <code>GetItem</code> on <code>project-planner-handoff</code> table</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════ DEPLOY TIERS ═════════════════════ -->
+<h2 class="section-title">Deployment Tiers</h2>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Tier</th>
+        <th>Hosting</th>
+        <th>Deploy Command</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Production</strong></td>
+        <td>S3 + CloudFront (OAC), HTTPS redirect, SPA fallback to <code>/index.html</code></td>
+        <td><code>cd apps/infra && npx cdk deploy --all --profile cdk-deploy-prod</code></td>
+      </tr>
+      <tr>
+        <td><strong>Frontend Deploy</strong></td>
+        <td>Build + sync to S3, CloudFront invalidation</td>
+        <td><code>./deploy-frontend.sh</code></td>
+      </tr>
+      <tr>
+        <td><strong>Local Dev</strong></td>
+        <td>Vite dev server at <code>localhost:3000</code></td>
+        <td><code>cd apps/web && pnpm dev</code></td>
+      </tr>
+      <tr>
+        <td><strong>Legacy Backend</strong></td>
+        <td>FastAPI (not deployed to prod)</td>
+        <td><code>cd apps/backend && uv run uvicorn scaffold_ai.main:app --reload --port 8001</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════ IaC FORMATS ══════════════════════ -->
+<h2 class="section-title">IaC Output Formats</h2>
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Format Key</th>
+        <th>Output</th>
+        <th>Method</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>cdk</code></td>
+        <td>CDK TypeScript</td>
+        <td>LLM-generated via Strands agent</td>
+      </tr>
+      <tr>
+        <td><code>python-cdk</code></td>
+        <td>CDK Python</td>
+        <td>Template-based</td>
+      </tr>
+      <tr>
+        <td><code>cloudformation</code></td>
+        <td>CloudFormation YAML</td>
+        <td>Template-based</td>
+      </tr>
+      <tr>
+        <td><code>terraform</code></td>
+        <td>Terraform HCL</td>
+        <td>Template-based</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════ TECH STACK ═══════════════════════ -->
+<h2 class="section-title">Tech Stack</h2>
+<div class="pills">
+  <span class="pill highlight">React 19</span>
+  <span class="pill highlight">Vite</span>
+  <span class="pill highlight">Cloudscape UI</span>
+  <span class="pill highlight">React Flow</span>
+  <span class="pill">Zustand</span>
+  <span class="pill">Amplify Authenticator</span>
+  <span class="pill highlight">Python 3.12</span>
+  <span class="pill highlight">Strands Agents SDK</span>
+  <span class="pill">AWS Bedrock (Claude)</span>
+  <span class="pill">CDK v2 (TypeScript)</span>
+  <span class="pill">Step Functions</span>
+  <span class="pill">Lambda</span>
+  <span class="pill">DynamoDB</span>
+  <span class="pill">Cognito</span>
+  <span class="pill">S3</span>
+  <span class="pill">CloudFront</span>
+  <span class="pill">SNS</span>
+  <span class="pill">X-Ray</span>
+  <span class="pill">CloudWatch</span>
+  <span class="pill">uv</span>
+  <span class="pill">pnpm</span>
+  <span class="pill">Vitest</span>
+  <span class="pill">pytest</span>
+  <span class="pill">pydantic-settings</span>
+  <span class="pill">AWS Powertools</span>
+</div>
+
+<!-- ═══════════════════════════ PSP ══════════════════════════════ -->
+<h2 class="section-title">PSP Integration</h2>
+<div class="card-grid" style="grid-template-columns:1fr;">
+  <div class="card green">
+    <ul>
+      <li>Monitored by <strong>Project Status Portal</strong> &mdash; test commands defined in <code>config.json</code></li>
+      <li>Upstream dependency: <strong>project-planner-ai</strong> (DynamoDB handoff via <code>project-planner-handoff</code> table)</li>
+      <li>Test suites: <code>backend</code> (pytest), <code>functions</code> (pytest), <code>frontend</code> (Vitest), <code>e2e</code></li>
+    </ul>
+  </div>
+</div>
+
+</div>
+
+<!-- ═══════════════════════════ FOOTER ═══════════════════════════ -->
+<footer class="footer">
+  Generated March 2026 &middot; Scaffold AI Architecture Overview
+</footer>
+
+</body>
+</html>
