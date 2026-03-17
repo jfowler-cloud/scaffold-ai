@@ -12,9 +12,20 @@ export default defineConfig(({ mode }) => ({
     },
   },
   ...(mode === 'e2e' ? {
+    resolve: {
+      alias: {
+        'aws-amplify/auth': path.resolve(__dirname, 'src/test/e2e-auth-stub.ts'),
+        '@/lib': path.resolve(__dirname, './lib'),
+        '@/components': path.resolve(__dirname, './components'),
+        '@': path.resolve(__dirname, './src'),
+      },
+    },
     build: {
       rollupOptions: {
         input: { index: 'e2e.html' },
+        output: {
+          entryFileNames: 'assets/[name]-[hash].js',
+        },
       },
     },
   } : {}),

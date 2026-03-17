@@ -3,6 +3,7 @@
  * Run with: npx playwright test e2e/screenshots.spec.ts
  */
 import { test } from '@playwright/test'
+import { mockAuth, mockAWS } from './helpers'
 
 const OUT = '/home/user/Desktop/Projects/scaffold-ai/docs/images'
 
@@ -30,6 +31,8 @@ const POPULATED_GRAPH = {
 test.use({ viewport: { width: 1600, height: 900 } })
 
 test('01 - blank canvas', async ({ page }) => {
+  await mockAuth(page)
+  await mockAWS(page)
   await page.route('**/api/chat', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(POPULATED_GRAPH) }))
   await page.goto('/e2e.html')
   await page.waitForSelector('#top-nav', { timeout: 8000 })
@@ -38,6 +41,8 @@ test('01 - blank canvas', async ({ page }) => {
 })
 
 test('02 - populated canvas', async ({ page }) => {
+  await mockAuth(page)
+  await mockAWS(page)
   await page.route('**/api/chat', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(POPULATED_GRAPH) }))
   await page.goto('/e2e.html')
   await page.waitForSelector('#top-nav', { timeout: 8000 })
