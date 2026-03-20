@@ -70,8 +70,8 @@ describe('ScaffoldAI Multi-Stack', () => {
     fnsTemplate.resourceCountIs('AWS::Lambda::Function', 6);
   });
 
-  test('Lambda functions use Python 3.12', () => {
-    fnsTemplate.hasResourceProperties('AWS::Lambda::Function', { Runtime: 'python3.12' });
+  test('Lambda functions use Python 3.13', () => {
+    fnsTemplate.hasResourceProperties('AWS::Lambda::Function', { Runtime: 'python3.13' });
   });
 
   test('Lambda functions have DEPLOYMENT_TIER env var', () => {

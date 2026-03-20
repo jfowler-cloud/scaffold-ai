@@ -55,3 +55,6 @@ test-results.json
 
 # Lambda layers — built by CDK PythonLayerVersion at deploy time
 apps/infra/layers/*/python/
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/e2e-results.json
