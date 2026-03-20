@@ -7,7 +7,7 @@ AI-powered AWS architecture designer. Describe what you want to build in natural
 ## Architecture
 
 - **Frontend**: React 19 + Vite SPA, Cloudscape UI, React Flow canvas, Zustand state, Amplify Authenticator
-- **Backend**: Step Functions + Lambda (Strands agents), AWS Bedrock (Claude), Python 3.12+
+- **Backend**: Step Functions + Lambda (Strands agents), AWS Bedrock (Claude), Python 3.13+
 - **Auth**: Cognito User Pool + Identity Pool → temporary AWS credentials (no API Gateway)
 - **IaC**: CDK v2 TypeScript infrastructure
 - **Hosting**: S3 + CloudFront
@@ -36,7 +36,7 @@ scaffold-ai/
 │   │   │   └── config.ts         # Re-exports from amplify config
 │   │   ├── __tests__/            # Vitest unit tests
 │   │   └── package.json
-│   ├── functions/                # Lambda handlers (Python 3.12+, uv)
+│   ├── functions/                # Lambda handlers (Python 3.13+, uv)
 │   │   ├── interpret/            # Parse user intent, extract architecture changes
 │   │   ├── architect/            # Generate/update architecture graph via Strands
 │   │   ├── security_review/      # Security gate before code generation

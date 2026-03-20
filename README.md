@@ -4,7 +4,7 @@
 
 [![CI](https://github.com/jfowler-cloud/scaffold-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/jfowler-cloud/scaffold-ai/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
 ![Tests: 411](https://img.shields.io/badge/Tests-411%20passing-brightgreen?style=flat-square)
@@ -109,7 +109,7 @@ The integration enables a seamless workflow: Plan → Build → Deploy.
 |-------|-----------|
 | AI Orchestration | AWS Step Functions + Strands |
 | LLM | AWS Bedrock (Claude) |
-| Backend | AWS Lambda (Python 3.12+) + Step Functions |
+| Backend | AWS Lambda (Python 3.13+) + Step Functions |
 | Frontend | React 19 + Vite SPA |
 | UI Library | AWS Cloudscape Design System |
 | State | Zustand |
@@ -133,7 +133,7 @@ Set `DEPLOYMENT_TIER` in your `.env` to switch tiers. Override any tier with `BE
 
 ### Prerequisites
 
-- Python 3.12+
+- Python 3.13+
 - Node.js 22+
 - pnpm 10+
 - AWS CLI configured with Bedrock access
