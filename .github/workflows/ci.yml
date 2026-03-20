@@ -10,7 +10,7 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -24,7 +24,7 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v4
       - run: cd apps/backend && uv sync
       - run: cd apps/backend && uv run ruff check src/
@@ -34,7 +34,7 @@ jobs:
     name: Functions (Lambda handlers)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v4
       - run: cd apps/functions && uv sync --all-extras
       - run: cd apps/functions && uv run ruff check .
@@ -44,7 +44,7 @@ jobs:
     name: Agents (shared utilities)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v4
       - run: cd apps/agents && uv sync --all-extras
       - run: cd apps/agents && uv run pytest tests/
@@ -53,7 +53,7 @@ jobs:
     name: Infrastructure (CDK synth + Jest)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -72,7 +72,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
