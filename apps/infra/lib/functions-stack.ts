@@ -33,13 +33,15 @@ export class FunctionsStack extends cdk.Stack {
     // ── Layers ───────────────────────────────────────────────────────────────
     const sharedLayer = new PythonLayerVersion(this, 'SharedLayer', {
       entry: path.join(__dirname, '..', 'layers', 'shared'),
-      compatibleRuntimes: [lambda.Runtime.PYTHON_3_12],
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_13],
+      compatibleArchitectures: [lambda.Architecture.ARM_64],
       description: 'Scaffold AI shared utilities — pydantic-settings, powertools, xray',
     })
 
     const agentsLayer = new PythonLayerVersion(this, 'AgentsLayer', {
       entry: path.join(__dirname, '..', 'layers', 'agents'),
-      compatibleRuntimes: [lambda.Runtime.PYTHON_3_12],
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_13],
+      compatibleArchitectures: [lambda.Architecture.ARM_64],
       description: 'Scaffold AI strands-agents core',
     })
 
@@ -68,7 +70,8 @@ export class FunctionsStack extends cdk.Stack {
     // ── Lambda Functions ─────────────────────────────────────────────────────
     const fnProps = (name: string, layers: lambda.ILayerVersion[]): lambda.FunctionProps => ({
       functionName: `scaffold-ai-${name}`,
-      runtime: lambda.Runtime.PYTHON_3_12,
+      runtime: lambda.Runtime.PYTHON_3_13,
+      architecture: lambda.Architecture.ARM_64,
       handler: 'handler.handler',
       code: lambda.Code.fromAsset(path.join(__dirname, '..', '..', 'functions', name)),
       timeout: cdk.Duration.minutes(5),
