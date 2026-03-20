@@ -58,6 +58,10 @@ jobs:
         with:
           node-version: '22'
       - run: cd apps/infra && npm ci
+      - name: Set up QEMU for ARM64 Docker builds
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
       - run: cd apps/infra && npx cdk synth
       - run: cd apps/infra && npm test
 
