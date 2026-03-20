@@ -89,7 +89,7 @@ jobs:
       - name: pip-audit (functions)
         run: cd apps/functions && uv sync --group dev && uv run pip-audit
 
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: python, javascript
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
