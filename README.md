@@ -483,6 +483,14 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
+## Known TODOs
+
+- ~~**Chat markdown rendering**: Add `react-markdown` + `remark-gfm` to `Chat.tsx`~~ DONE
+
+## UI Formatting Note
+
+This project has chat markdown rendering with `react-markdown` + `remark-gfm` and a chat sidebar with conversation history. It does not yet have the full UI polish of [recon-ai](https://github.com/jfowler-cloud/recon-ai), which additionally includes CSS custom properties (`:root` dark/light color palette), empty state illustrations, responsive media queries, notification toasts, keyboard shortcuts (Ctrl+K, Esc), chat session rename/delete, and metric card hover effects. These may be backported in a future pass.
+
 ## License
 
 MIT License -- see [LICENSE](LICENSE) for details.
