@@ -27,6 +27,16 @@ vi.mock('jszip', () => ({
   },
 }));
 
+// Mock react-markdown
+vi.mock('react-markdown', () => ({
+  default: ({ children }: any) => <span data-testid="markdown">{children}</span>,
+}));
+
+// Mock remark-gfm
+vi.mock('remark-gfm', () => ({
+  default: () => {},
+}));
+
 // Mock Cloudscape Textarea to expose onKeyDown with detail format
 vi.mock('@cloudscape-design/components/textarea', () => ({
   default: ({ value, onChange, onKeyDown, placeholder, rows, disabled }: any) => (
@@ -58,6 +68,20 @@ vi.mock('@cloudscape-design/components/select', () => ({
   ),
 }));
 
+// Mock Cloudscape Input for session rename
+vi.mock('@cloudscape-design/components/input', () => ({
+  default: ({ value, onChange, onBlur, onKeyDown, autoFocus }: any) => (
+    <input
+      value={value ?? ''}
+      autoFocus={autoFocus}
+      onChange={e => onChange?.({ detail: { value: e.target.value } })}
+      onBlur={onBlur}
+      onKeyDown={e => onKeyDown?.({ detail: { key: e.key } })}
+      data-testid="rename-input"
+    />
+  ),
+}));
+
 describe('Chat', () => {
   beforeEach(() => {
     useChatStore.setState({ messages: [], isLoading: false, generatedFiles: [] });
@@ -69,6 +93,23 @@ describe('Chat', () => {
     render(<Chat />);
     expect(screen.getByPlaceholderText(/describe your application architecture/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send/i })).toBeInTheDocument();
+  });
+
+  it('should render session sidebar with New Chat button', () => {
+    render(<Chat />);
+    expect(screen.getByRole('button', { name: /new chat/i })).toBeInTheDocument();
+  });
+
+  it('should show empty state in session sidebar', () => {
+    render(<Chat />);
+    expect(screen.getByText(/no chat sessions yet/i)).toBeInTheDocument();
+  });
+
+  it('should create new session when New Chat clicked', () => {
+    render(<Chat />);
+    fireEvent.click(screen.getByRole('button', { name: /new chat/i }));
+    // After creating, the "No chat sessions" message should be replaced by the new session
+    expect(screen.queryByText(/no chat sessions yet/i)).not.toBeInTheDocument();
   });
 
   it('should disable Generate Code button when no nodes exist', () => {
@@ -338,6 +379,11 @@ describe('Chat', () => {
     expect(screen.getByText(/welcome to scaffold ai/i)).toBeInTheDocument();
   });
 
+  it('should render keyboard shortcut hints in welcome', () => {
+    render(<Chat />);
+    expect(screen.getByText(/to focus input/i)).toBeInTheDocument();
+  });
+
   it('should handle Mark Resolved button in security banner', async () => {
     // First trigger security failure
     mockSendChat.mockResolvedValueOnce({ message: 'Security Review: FAILED - issues found' });
@@ -477,5 +523,25 @@ describe('Chat', () => {
     const select = screen.getByTestId('iac-select');
     fireEvent.change(select, { target: { value: 'terraform' } });
     expect(select).toHaveValue('terraform');
+  });
+
+  it('should toggle sidebar visibility', () => {
+    render(<Chat />);
+    // Sidebar is open by default, find close button
+    const closeBtn = screen.getByLabelText(/close sessions/i);
+    fireEvent.click(closeBtn);
+    // Sidebar collapsed, should show open button
+    expect(screen.getByLabelText(/open sessions/i)).toBeInTheDocument();
+  });
+
+  it('should delete a session', async () => {
+    render(<Chat />);
+    // Create a session first
+    fireEvent.click(screen.getByRole('button', { name: /new chat/i }));
+    // The session should be visible - look for its delete button
+    const deleteBtn = screen.getByTitle('Delete');
+    fireEvent.click(deleteBtn);
+    // After deleting, should show empty state again
+    expect(screen.getByText(/no chat sessions yet/i)).toBeInTheDocument();
   });
 });

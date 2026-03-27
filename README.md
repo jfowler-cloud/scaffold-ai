@@ -85,7 +85,13 @@ User Input --> Interpreter --> Architect --> Security Specialist --> Code Genera
 - **Project Planner Integration** -- Structured API integration with session-based storage
 - **Shared Types Package** -- Type-safe data transfer with Project Planner AI
 - **Rate Limiting** -- 10 req/min chat, 3 req/hr deployment, 20 req/min plan import
-- **Dark Mode** -- Persistent theme preference
+- **Dark/Light Mode** -- Toggle with localStorage persistence, CSS custom properties (`--sa-*`), Cloudscape Mode switching
+- **Chat Session Sidebar** -- Session list with rename, delete, resume; auto-creates sessions on first message
+- **Markdown Chat** -- `react-markdown` + `remark-gfm` for rich assistant messages (tables, code blocks, lists)
+- **Toast Notifications** -- Flashbar-based auto-dismiss toasts via AuthContext
+- **Keyboard Shortcuts** -- Ctrl+K focus chat input, Escape close modals
+- **Empty States** -- Friendly empty states for chat and session sidebar
+- **Responsive Layout** -- Media queries stack columns on mobile, hide chat sidebar on small screens
 - **Pre-commit Hooks** -- TruffleHog secrets detection, AWS credentials scanning
 
 ### Integration with Project Planner AI
