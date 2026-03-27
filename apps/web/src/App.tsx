@@ -69,7 +69,7 @@ export default function App() {
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [splitPanelOpen, setSplitPanelOpen] = useState(true);
-  const [splitPanelSize, setSplitPanelSize] = useState(520);
+  const [splitPanelSize, setSplitPanelSize] = useState(700);
   const [codeModalVisible, setCodeModalVisible] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("scaffold-ai-darkMode") !== "false";

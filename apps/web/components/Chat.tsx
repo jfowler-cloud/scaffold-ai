@@ -182,7 +182,7 @@ function SessionSidebar({
     <div
       className="sa-sidebar"
       style={{
-        width: "260px",
+        width: "140px",
         minWidth: "260px",
         borderRight: "1px solid var(--sa-border-light)",
         display: "flex",
