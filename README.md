@@ -18,6 +18,8 @@ Describe your application in natural language and Scaffold AI designs the AWS se
 
 See the interactive [Architecture Overview](docs/architecture.html) for a visual summary of agents, functions, infrastructure, and data flow.
 
+![Architecture Overview](docs/images/architecture.png)
+
 ## Why This Project
 
 After building [Resume Tailor AI](https://github.com/jfowler-cloud/resume-tailor-ai) with AWS Step Functions, I wanted to explore modern AI orchestration. I originally built this with LangGraph, then refactored to Step Functions + Strands to align the entire portfolio on a consistent, AWS-native agent pattern.
