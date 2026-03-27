@@ -7,7 +7,7 @@
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
-![Tests: 411](https://img.shields.io/badge/Tests-411%20passing-brightgreen?style=flat-square)
+![Tests: 418](https://img.shields.io/badge/Tests-418%20passing-brightgreen?style=flat-square)
 ![Coverage: 95%](https://img.shields.io/badge/Coverage-95%25-brightgreen?style=flat-square)
 ![Step Functions](https://img.shields.io/badge/Step%20Functions-Agent%20Core-orange?style=flat-square)
 ![Security](https://img.shields.io/badge/Security-Gates%20%2B%20Rate%20Limiting-blue?style=flat-square)
@@ -17,6 +17,8 @@ Describe your application in natural language and Scaffold AI designs the AWS se
 ## Architecture Overview
 
 See the interactive [Architecture Overview](docs/architecture.html) for a visual summary of agents, functions, infrastructure, and data flow.
+
+![Architecture Overview](docs/images/architecture.png)
 
 ## Why This Project
 
@@ -33,7 +35,7 @@ The goal was to demonstrate:
 | **Purpose** | Resume optimization | Project planning | AWS architecture design | Career planning |
 | **Orchestration** | AWS Step Functions | AWS Step Functions | AWS Step Functions | LangGraph |
 | **Agents** | Step Functions workflow | SFN Map + Strands | 5 SFN Lambda + Strands | 6 LangGraph agents |
-| **Tests** | 212 tests, 98% | 109 tests, 92% | 411 tests, 95% | 142 tests, 99% |
+| **Tests** | 212 tests, 98% | 109 tests, 92% | 418 tests, 95% | 142 tests, 99% |
 | **Features** | Resume tailoring | Architecture planning | Architecture generation | Roadmap + Critical Review |
 
 All projects share the same production patterns (validation, error handling, pre-commit hooks, CI/CD, rate limiting, testing).
@@ -85,7 +87,13 @@ User Input --> Interpreter --> Architect --> Security Specialist --> Code Genera
 - **Project Planner Integration** -- Structured API integration with session-based storage
 - **Shared Types Package** -- Type-safe data transfer with Project Planner AI
 - **Rate Limiting** -- 10 req/min chat, 3 req/hr deployment, 20 req/min plan import
-- **Dark Mode** -- Persistent theme preference
+- **Dark/Light Mode** -- Toggle with localStorage persistence, CSS custom properties (`--sa-*`), Cloudscape Mode switching
+- **Chat Session Sidebar** -- Session list with rename, delete, resume; auto-creates sessions on first message
+- **Markdown Chat** -- `react-markdown` + `remark-gfm` for rich assistant messages (tables, code blocks, lists)
+- **Toast Notifications** -- Flashbar-based auto-dismiss toasts via AuthContext
+- **Keyboard Shortcuts** -- Ctrl+K focus chat input, Escape close modals
+- **Empty States** -- Friendly empty states for chat and session sidebar
+- **Responsive Layout** -- Media queries stack columns on mobile, hide chat sidebar on small screens
 - **Pre-commit Hooks** -- TruffleHog secrets detection, AWS credentials scanning
 
 ### Integration with Project Planner AI
@@ -372,7 +380,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - Removed unused `InterpreterAgent` and `ArchitectAgent` classes (kept system prompt constants for Lambda handlers)
 - Updated `__init__.py` and `CLAUDE.md` to reflect Step Functions architecture
 - 5 new tests (structured planner data, review findings, workflow failure, non-ok start, fire-and-poll cycle)
-- 411 tests passing across all suites (121 backend, 12 functions, 10 agents, 253 frontend, 15 CDK)
+- 418 tests passing across all suites (121 backend, 12 functions, 10 agents, 262 frontend, 15 CDK)
 
 ### v2.0.0 - Step Functions + Strands Refactor (Mar 2026)
 
@@ -389,7 +397,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - ✨ CDK snapshot + assertion tests (15 tests)
 - ✨ Accessibility tests (`@axe-core/playwright`) with WCAG 2.0 AA checks
 - ✨ E2E test stubs (`e2e-main.tsx`, `e2e-auth-stub.ts`)
-- 📈 Coverage improved: 64% → 95% (frontend: 253 tests, thresholds ratcheted to 96/88/94/97)
+- 📈 Coverage improved: 64% → 95% (frontend: 262 tests, thresholds ratcheted to 96/88/94/97)
 
 ### v1.6.0 - Polish & Hardening (Feb 2026)
 - Removed duplicate `SecurityAutoFix` class stub from `security_autofix.py`
@@ -482,6 +490,14 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - 🎉 Real-time AI chat for architecture guidance
 
 ---
+
+## Known TODOs
+
+- ~~**Chat markdown rendering**: Add `react-markdown` + `remark-gfm` to `Chat.tsx`~~ DONE
+
+## UI Formatting Note
+
+This project has chat markdown rendering with `react-markdown` + `remark-gfm`, CSS custom properties (`:root` dark/light color palette with `sa-` prefix), notification toasts (Flashbar with auto-dismiss), keyboard shortcuts (Ctrl+K focus chat, Esc close modals), empty state illustrations, responsive media queries, light mode Authenticator/TopNavigation polish, session sidebar styles, and smooth theme transitions. Chat session rename/delete and metric card hover effects from [recon-ai](https://github.com/jfowler-cloud/recon-ai) may be backported in a future pass.
 
 ## License
 

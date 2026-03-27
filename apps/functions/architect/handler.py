@@ -26,9 +26,18 @@ If modifying existing architecture, preserve existing nodes and add new ones.
 Respond with ONLY the JSON."""
 
 _TYPE_COLUMNS = {
-    "frontend": 0, "cdn": 0, "auth": 1, "api": 2,
-    "lambda": 3, "workflow": 3, "queue": 4, "events": 4,
-    "notification": 4, "stream": 5, "database": 6, "storage": 6,
+    "frontend": 0,
+    "cdn": 0,
+    "auth": 1,
+    "api": 2,
+    "lambda": 3,
+    "workflow": 3,
+    "queue": 4,
+    "events": 4,
+    "notification": 4,
+    "stream": 5,
+    "database": 6,
+    "storage": 6,
 }
 
 
@@ -40,12 +49,18 @@ def _position_nodes(new_nodes: list, existing_nodes: list) -> list:
     result = []
     for n in new_nodes:
         col = _TYPE_COLUMNS.get(n.get("type", "api"), 2)
-        result.append({
-            "id": n["id"],
-            "type": n.get("type", "api"),
-            "position": {"x": 50 + col * 320, "y": 50 + col_counts[col] * 200},
-            "data": {"label": n.get("label", "Component"), "type": n.get("type", "api"), "description": n.get("description", "")},
-        })
+        result.append(
+            {
+                "id": n["id"],
+                "type": n.get("type", "api"),
+                "position": {"x": 50 + col * 320, "y": 50 + col_counts[col] * 200},
+                "data": {
+                    "label": n.get("label", "Component"),
+                    "type": n.get("type", "api"),
+                    "description": n.get("description", ""),
+                },
+            }
+        )
         col_counts[col] += 1
     return result
 
@@ -54,7 +69,15 @@ def _explain(event: dict) -> dict:
     graph = event.get("graph_json", {})
     nodes = graph.get("nodes", [])
     if not nodes:
-        return {**event, "response": "Your canvas is empty. Describe what you want to build and I'll create an architecture for you."}
+        # If there's a substantive user input, treat as new_feature instead of explaining empty canvas
+        user_input = event.get("user_input", "")
+        if len(user_input) > 50:
+            event["intent"] = "new_feature"
+            return handler(event, None)
+        return {
+            **event,
+            "response": "Your canvas is empty. Describe what you want to build and I'll create an architecture for you.",
+        }
 
     try:
         model = BedrockModel(model_id=app_config.model_id, max_tokens=1024, temperature=0.5)
@@ -81,18 +104,26 @@ def handler(event: dict, context=None) -> dict:
     existing_edges = graph.get("edges", [])
     existing_ids = {n["id"] for n in existing_nodes}
 
-    nodes_summary = json.dumps(
-        [{"id": n["id"], "type": n.get("data", {}).get("type"), "label": n.get("data", {}).get("label")} for n in existing_nodes],
-        indent=2,
-    ) if existing_nodes else "Empty - no components yet"
-
-    prompt = (
-        f"Current architecture:\n{nodes_summary}\n\n"
-        f"User request: {event['user_input']}"
+    nodes_summary = (
+        json.dumps(
+            [
+                {"id": n["id"], "type": n.get("data", {}).get("type"), "label": n.get("data", {}).get("label")}
+                for n in existing_nodes
+            ],
+            indent=2,
+        )
+        if existing_nodes
+        else "Empty - no components yet"
     )
 
+    prompt = f"Current architecture:\n{nodes_summary}\n\n" f"User request: {event['user_input']}"
+
     try:
-        model = BedrockModel(model_id=app_config.model_id, max_tokens=app_config.bedrock_max_tokens, temperature=app_config.bedrock_temperature)
+        model = BedrockModel(
+            model_id=app_config.model_id,
+            max_tokens=app_config.bedrock_max_tokens,
+            temperature=app_config.bedrock_temperature,
+        )
         agent = Agent(model=model, system_prompt=SYSTEM_PROMPT)
         raw = str(agent(prompt)).strip()
 
@@ -108,7 +139,12 @@ def handler(event: dict, context=None) -> dict:
         new_nodes = [n for n in new_nodes if n["id"] not in existing_ids]
 
         new_edges = [
-            {"id": f"e-{e['source']}-{e['target']}", "source": e["source"], "target": e["target"], "label": e.get("label", "")}
+            {
+                "id": f"e-{e['source']}-{e['target']}",
+                "source": e["source"],
+                "target": e["target"],
+                "label": e.get("label", ""),
+            }
             for e in result.get("edges", [])
         ]
         existing_edge_ids = {e["id"] for e in existing_edges}
@@ -122,7 +158,10 @@ def handler(event: dict, context=None) -> dict:
 
     except json.JSONDecodeError as e:
         logger.error("JSON parse error: %s", e)
-        return {**event, "response": "I understood your request but had trouble generating the architecture. Could you try rephrasing it?"}
+        return {
+            **event,
+            "response": "I understood your request but had trouble generating the architecture. Could you try rephrasing it?",
+        }
     except Exception as e:
         logger.exception("Architect failed: %s", e)
         return {**event, "response": "I encountered an error while designing the architecture. Please try again."}

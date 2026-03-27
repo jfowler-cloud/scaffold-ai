@@ -62,6 +62,18 @@ vi.mock('@cloudscape-design/components/split-panel', () => ({
 vi.mock('@cloudscape-design/components/help-panel', () => ({
   default: ({ children, header }: any) => <div>{header}{children}</div>,
 }));
+vi.mock('@cloudscape-design/components/flashbar', () => ({
+  default: ({ items }: any) => (
+    <div data-testid="flashbar">
+      {items?.map((item: any) => (
+        <div key={item.id || item.content}>
+          <span>{item.content}</span>
+          {item.dismissible && <button onClick={item.onDismiss}>dismiss</button>}
+        </div>
+      ))}
+    </div>
+  ),
+}));
 vi.mock('@cloudscape-design/components/box', () => ({ default: ({ children }: any) => <div>{children}</div> }));
 vi.mock('@cloudscape-design/components/link', () => ({ default: ({ children, href }: any) => <a href={href}>{children}</a> }));
 vi.mock('@cloudscape-design/components/space-between', () => ({ default: ({ children }: any) => <div>{children}</div> }));
@@ -113,6 +125,19 @@ describe('App', () => {
     expect(localStorageMock.getItem('scaffold-ai-darkMode')).not.toBeNull();
   });
 
+  it('toggles sa-light body class on theme switch', () => {
+    render(<App />);
+    const toggleBtn = screen.getByText(/Light|Dark/);
+    fireEvent.click(toggleBtn);
+    // After toggling to light mode, body should have sa-light
+    const hasSaLight = document.body.classList.contains('sa-light');
+    // Toggle again
+    fireEvent.click(toggleBtn);
+    const hasSaLightAfter = document.body.classList.contains('sa-light');
+    // One should be true, the other false (depends on initial state)
+    expect(hasSaLight !== hasSaLightAfter).toBe(true);
+  });
+
   it('opens code modal when Generated Code nav link clicked', () => {
     render(<App />);
     const link = screen.getByText('Generated Code');
@@ -125,6 +150,14 @@ describe('App', () => {
     fireEvent.click(screen.getByText('Generated Code'));
     expect(screen.getByTestId('code-modal')).toBeInTheDocument();
     fireEvent.click(screen.getByText('Close'));
+    expect(screen.queryByTestId('code-modal')).not.toBeInTheDocument();
+  });
+
+  it('closes code modal on Escape key', () => {
+    render(<App />);
+    fireEvent.click(screen.getByText('Generated Code'));
+    expect(screen.getByTestId('code-modal')).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: 'Escape' });
     expect(screen.queryByTestId('code-modal')).not.toBeInTheDocument();
   });
 
@@ -192,5 +225,10 @@ describe('App', () => {
     render(<App />);
     fireEvent.click(screen.getByText('Dismiss'));
     expect(screen.queryByTestId('planner-notification')).not.toBeInTheDocument();
+  });
+
+  it('shows keyboard shortcut hints in help panel', () => {
+    render(<App />);
+    expect(screen.getByText('Keyboard Shortcuts')).toBeInTheDocument();
   });
 });

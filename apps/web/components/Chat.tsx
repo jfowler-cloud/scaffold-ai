@@ -1,5 +1,7 @@
 
 import { useState, useRef, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { sendChat } from "@/lib/api";
 import { analyzeAndFix, getSecurityScore } from "@/lib/security-autofix";
 import { useChatStore, useGraphStore } from "@/lib/store";
@@ -14,11 +16,33 @@ import Icon from "@cloudscape-design/components/icon";
 import Select from "@cloudscape-design/components/select";
 import Modal from "@cloudscape-design/components/modal";
 import Alert from "@cloudscape-design/components/alert";
+import Input from "@cloudscape-design/components/input";
 
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(timestamp).toLocaleDateString();
 }
 
 function ChatBubble({ message }: { message: ChatMessage }) {
@@ -44,9 +68,15 @@ function ChatBubble({ message }: { message: ChatMessage }) {
       >
         <SpaceBetween direction="horizontal" size="xs">
           {!isUser && <Icon name="contact" />}
-          <Box variant="p">
-            {message.content}
-          </Box>
+          <div className="chat-markdown">
+            {isUser ? (
+              <Box variant="p">{message.content}</Box>
+            ) : (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.content}
+              </ReactMarkdown>
+            )}
+          </div>
           {isUser && <Icon name="user-profile" />}
         </SpaceBetween>
       </div>
@@ -79,28 +109,158 @@ function LoadingBubble() {
 
 function WelcomeMessage() {
   return (
-    <Box textAlign="center" padding={{ vertical: "xl" }}>
-      <SpaceBetween size="m">
-        <Box variant="h2">Welcome to Scaffold AI</Box>
-        <Box variant="p" color="text-body-secondary">
-          Describe what you want to build and I&apos;ll create the architecture for you.
+    <div className="sa-empty-state">
+      <Box variant="h2">Welcome to Scaffold AI</Box>
+      <Box variant="p" color="text-body-secondary">
+        Describe what you want to build and I&apos;ll create the architecture for you.
+      </Box>
+      <SpaceBetween size="xs">
+        <Box variant="small" fontWeight="bold">
+          Try:
         </Box>
-        <SpaceBetween size="xs">
-          <Box variant="small" fontWeight="bold">
-            Try:
-          </Box>
-          <Box variant="small" color="text-body-secondary">
-            &quot;Build a todo app with user authentication&quot;
-          </Box>
-          <Box variant="small" color="text-body-secondary">
-            &quot;Create a file upload service with S3&quot;
-          </Box>
-          <Box variant="small" color="text-body-secondary">
-            &quot;Design a REST API with a database&quot;
-          </Box>
-        </SpaceBetween>
+        <Box variant="small" color="text-body-secondary">
+          &quot;Build a todo app with user authentication&quot;
+        </Box>
+        <Box variant="small" color="text-body-secondary">
+          &quot;Create a file upload service with S3&quot;
+        </Box>
+        <Box variant="small" color="text-body-secondary">
+          &quot;Design a REST API with a database&quot;
+        </Box>
+        <Box variant="small" color="text-body-secondary">
+          <span className="kbd">Ctrl+K</span> to focus input &middot; <span className="kbd">Enter</span> to send
+        </Box>
       </SpaceBetween>
-    </Box>
+    </div>
+  );
+}
+
+function SessionSidebar({
+  sessions,
+  activeSessionId,
+  onNewChat,
+  onSelectSession,
+  onRenameSession,
+  onDeleteSession,
+  sidebarOpen,
+  onToggleSidebar,
+}: {
+  sessions: ChatSession[];
+  activeSessionId: string | null;
+  onNewChat: () => void;
+  onSelectSession: (id: string) => void;
+  onRenameSession: (id: string, title: string) => void;
+  onDeleteSession: (id: string) => void;
+  sidebarOpen: boolean;
+  onToggleSidebar: () => void;
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
+
+  const startRename = (session: ChatSession) => {
+    setEditingId(session.id);
+    setEditValue(session.title);
+  };
+
+  const finishRename = () => {
+    if (editingId && editValue.trim()) {
+      onRenameSession(editingId, editValue.trim());
+    }
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  if (!sidebarOpen) {
+    return (
+      <div style={{ padding: "8px 4px", borderRight: `1px solid var(--sa-border-light)` }}>
+        <Button iconName="menu" variant="icon" onClick={onToggleSidebar} ariaLabel="Open sessions" />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="sa-sidebar"
+      style={{
+        width: "140px",
+        minWidth: "260px",
+        borderRight: "1px solid var(--sa-border-light)",
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        overflow: "hidden",
+      }}
+    >
+      <div style={{ padding: "12px", borderBottom: "1px solid var(--sa-border-light)", display: "flex", gap: "8px" }}>
+        <div style={{ flex: 1 }}>
+          <Button variant="primary" iconName="add-plus" onClick={onNewChat} fullWidth>
+            New Chat
+          </Button>
+        </div>
+        <Button iconName="close" variant="icon" onClick={onToggleSidebar} ariaLabel="Close sessions" />
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+        {sessions.length === 0 ? (
+          <div className="sa-empty-state" style={{ padding: "24px 12px" }}>
+            <Box variant="small" color="text-body-secondary">
+              No chat sessions yet. Start a new chat to begin.
+            </Box>
+          </div>
+        ) : (
+          sessions.map((session) => (
+            <div
+              key={session.id}
+              className={`session-item ${session.id === activeSessionId ? "active" : ""}`}
+              onClick={() => {
+                if (editingId !== session.id) onSelectSession(session.id);
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                {editingId === session.id ? (
+                  <Input
+                    value={editValue}
+                    onChange={({ detail }) => setEditValue(detail.value)}
+                    onBlur={finishRename}
+                    onKeyDown={({ detail }) => {
+                      if (detail.key === "Enter") finishRename();
+                      if (detail.key === "Escape") { setEditingId(null); setEditValue(""); }
+                    }}
+                    autoFocus
+                  />
+                ) : (
+                  <>
+                    <div style={{ fontSize: "13px", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {session.title}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "var(--sa-text-muted)", marginTop: "2px" }}>
+                      {formatRelativeTime(session.updatedAt)}
+                    </div>
+                  </>
+                )}
+              </div>
+              {editingId !== session.id && (
+                <div className="session-actions">
+                  <button
+                    title="Rename"
+                    onClick={(e) => { e.stopPropagation(); startRename(session); }}
+                    aria-label={`Rename ${session.title}`}
+                  >
+                    <Icon name="edit" size="small" />
+                  </button>
+                  <button
+                    title="Delete"
+                    onClick={(e) => { e.stopPropagation(); onDeleteSession(session.id); }}
+                    aria-label={`Delete ${session.title}`}
+                  >
+                    <Icon name="close" size="small" />
+                  </button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -110,9 +270,60 @@ export function Chat({ plannerData }: { plannerData?: any }) {
   const [deployModalVisible, setDeployModalVisible] = useState(false);
   const [securityFailed, setSecurityFailed] = useState(false);
   const [lastGenerateInput, setLastGenerateInput] = useState("");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { messages, isLoading, addMessage, setLoading, setGeneratedFiles, generatedFiles } = useChatStore();
+  const { messages, isLoading, addMessage, setLoading, setGeneratedFiles, generatedFiles, clearMessages } = useChatStore();
   const { getGraphJSON, setGraph, nodes } = useGraphStore();
+
+  // Save current session messages to sessions list
+  useEffect(() => {
+    if (activeSessionId && messages.length > 0) {
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === activeSessionId
+            ? { ...s, messages: messages as ChatMessage[], updatedAt: Date.now(), title: s.title === "New Chat" && messages.length > 0 ? messages[0].content.slice(0, 40) : s.title }
+            : s
+        )
+      );
+    }
+  }, [messages, activeSessionId]);
+
+  const handleNewChat = () => {
+    const newSession: ChatSession = {
+      id: `session-${Date.now()}`,
+      title: "New Chat",
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    setSessions((prev) => [newSession, ...prev]);
+    setActiveSessionId(newSession.id);
+    clearMessages();
+  };
+
+  const handleSelectSession = (id: string) => {
+    const session = sessions.find((s) => s.id === id);
+    if (session) {
+      setActiveSessionId(id);
+      // Restore messages from session
+      clearMessages();
+      session.messages.forEach((msg) => addMessage(msg));
+    }
+  };
+
+  const handleRenameSession = (id: string, title: string) => {
+    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, title } : s)));
+  };
+
+  const handleDeleteSession = (id: string) => {
+    setSessions((prev) => prev.filter((s) => s.id !== id));
+    if (activeSessionId === id) {
+      setActiveSessionId(null);
+      clearMessages();
+    }
+  };
 
   /**
    * Send a chat request via fire-and-poll using AWS SDK directly.
@@ -178,6 +389,19 @@ export function Chat({ plannerData }: { plannerData?: any }) {
       }
 
       const msg = parts.join("\n");
+
+      // Auto-create session for planner import
+      if (!activeSessionId) {
+        const newSession: ChatSession = {
+          id: `session-${Date.now()}`,
+          title: plannerData.projectName || "Planner Import",
+          messages: [],
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        setSessions((prev) => [newSession, ...prev]);
+        setActiveSessionId(newSession.id);
+      }
 
       addMessage({ id: `user-${Date.now()}`, role: "user", content: msg });
       setLoading(true);
@@ -313,6 +537,19 @@ export function Chat({ plannerData }: { plannerData?: any }) {
   const handleSubmit = async () => {
     if (!input.trim() || isLoading) return;
 
+    // Auto-create session on first message if none active
+    if (!activeSessionId) {
+      const newSession: ChatSession = {
+        id: `session-${Date.now()}`,
+        title: input.trim().slice(0, 40),
+        messages: [],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      setSessions((prev) => [newSession, ...prev]);
+      setActiveSessionId(newSession.id);
+    }
+
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       role: "user",
@@ -348,6 +585,18 @@ export function Chat({ plannerData }: { plannerData?: any }) {
 
   return (
     <>
+    <div style={{ display: "flex", height: "100%" }}>
+      <SessionSidebar
+        sessions={sessions}
+        activeSessionId={activeSessionId}
+        onNewChat={handleNewChat}
+        onSelectSession={handleSelectSession}
+        onRenameSession={handleRenameSession}
+        onDeleteSession={handleDeleteSession}
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
     <Container
       header={
         <Header
@@ -480,6 +729,8 @@ export function Chat({ plannerData }: { plannerData?: any }) {
         </div>
       </div>
     </Container>
+      </div>
+    </div>
 
       <Modal
         visible={deployModalVisible}

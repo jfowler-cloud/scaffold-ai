@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, createContext, useContext } from "react";
 import { Authenticator, useTheme, View, Text, Heading } from "@aws-amplify/ui-react";
 import "@aws-amplify/ui-react/styles.css";
 import { Canvas } from "@/components/Canvas";
@@ -14,7 +14,32 @@ import HelpPanel from "@cloudscape-design/components/help-panel";
 import Box from "@cloudscape-design/components/box";
 import Link from "@cloudscape-design/components/link";
 import SpaceBetween from "@cloudscape-design/components/space-between";
+import Flashbar from "@cloudscape-design/components/flashbar";
 import { applyMode, Mode } from "@cloudscape-design/global-styles";
+
+type ToastType = "success" | "error" | "warning" | "info";
+
+interface AuthContextValue {
+  user: any;
+  signOut: (() => void) | undefined;
+  toast: (type: ToastType, content: string) => void;
+}
+
+export const AuthContext = createContext<AuthContextValue>({
+  user: null,
+  signOut: undefined,
+  toast: () => {},
+});
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
+
+interface ToastItem {
+  id: string;
+  type: ToastType;
+  content: string;
+}
 
 function AuthHeader() {
   const { tokens } = useTheme();
@@ -44,20 +69,52 @@ export default function App() {
   const [navigationOpen, setNavigationOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
   const [splitPanelOpen, setSplitPanelOpen] = useState(true);
-  const [splitPanelSize, setSplitPanelSize] = useState(420);
+  const [splitPanelSize, setSplitPanelSize] = useState(700);
   const [codeModalVisible, setCodeModalVisible] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     return localStorage.getItem("scaffold-ai-darkMode") !== "false";
   });
   const [showPlannerNotification, setShowPlannerNotification] = useState(true);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const { plannerData, isFromPlanner } = usePlannerImport();
+
+  const toast = useCallback((type: ToastType, content: string) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    setToasts((prev) => [...prev, { id, type, content }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 5000);
+  }, []);
 
   useEffect(() => {
     applyMode(darkMode ? Mode.Dark : Mode.Light);
     document.documentElement.classList.toggle("dark", darkMode);
+    document.body.classList.toggle("sa-light", !darkMode);
     localStorage.setItem("scaffold-ai-darkMode", String(darkMode));
   }, [darkMode]);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+K: focus filter / search (prevent default browser behavior)
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+        e.preventDefault();
+        const input = document.querySelector<HTMLTextAreaElement>(
+          'textarea[placeholder*="Describe"]'
+        );
+        input?.focus();
+      }
+      // Escape: close modals
+      if (e.key === "Escape") {
+        if (codeModalVisible) {
+          setCodeModalVisible(false);
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [codeModalVisible]);
 
   const toggleTheme = () => {
     document.body.classList.add("theme-transitioning");
@@ -77,7 +134,7 @@ export default function App() {
       }}
     >
       {({ signOut, user }) => (
-        <>
+        <AuthContext.Provider value={{ user, signOut, toast }}>
           <div id="top-nav" style={{ position: "sticky", top: 0, zIndex: 1002 }}>
             <TopNavigation
               identity={{ href: "/", title: "Scaffold AI", logo: { src: "/logo.svg", alt: "Scaffold AI" } }}
@@ -95,6 +152,21 @@ export default function App() {
               ]}
             />
           </div>
+
+          {/* Toast notifications */}
+          {toasts.length > 0 && (
+            <div className="toast-container">
+              <Flashbar
+                items={toasts.map((t) => ({
+                  type: t.type === "error" ? "error" : t.type === "warning" ? "warning" : t.type === "info" ? "info" : "success",
+                  content: t.content,
+                  dismissible: true,
+                  id: t.id,
+                  onDismiss: () => setToasts((prev) => prev.filter((x) => x.id !== t.id)),
+                }))}
+              />
+            </div>
+          )}
 
           <AppLayout
             headerSelector="#top-nav"
@@ -127,6 +199,9 @@ export default function App() {
                   <Box variant="p">2. The AI will generate architecture nodes on the canvas</Box>
                   <Box variant="p">3. Drag and connect nodes to refine your design</Box>
                   <Box variant="p">4. Ask the AI to generate CDK code when ready</Box>
+                  <Box variant="h4">Keyboard Shortcuts</Box>
+                  <Box variant="p"><span className="kbd">Ctrl+K</span> Focus chat input</Box>
+                  <Box variant="p"><span className="kbd">Esc</span> Close modals</Box>
                   <Box variant="h4">Supported Services</Box>
                   <Box variant="p">Lambda, API Gateway, DynamoDB, Cognito, S3, SQS, SNS, EventBridge, Step Functions, CloudFront, Kinesis</Box>
                   <Box variant="h4">Learn more</Box>
@@ -169,7 +244,7 @@ export default function App() {
           {isFromPlanner && showPlannerNotification && (
             <PlannerNotification plannerData={plannerData} onDismiss={() => setShowPlannerNotification(false)} />
           )}
-        </>
+        </AuthContext.Provider>
       )}
     </Authenticator>
   );

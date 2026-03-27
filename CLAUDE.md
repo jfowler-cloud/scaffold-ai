@@ -6,7 +6,7 @@ AI-powered AWS architecture designer. Describe what you want to build in natural
 
 ## Architecture
 
-- **Frontend**: React 19 + Vite SPA, Cloudscape UI, React Flow canvas, Zustand state, Amplify Authenticator
+- **Frontend**: React 19 + Vite SPA, Cloudscape UI, React Flow canvas, Zustand state, Amplify Authenticator, react-markdown + remark-gfm
 - **Backend**: Step Functions + Lambda (Strands agents), AWS Bedrock (Claude), Python 3.13+
 - **Auth**: Cognito User Pool + Identity Pool → temporary AWS credentials (no API Gateway)
 - **IaC**: CDK v2 TypeScript infrastructure
@@ -19,14 +19,15 @@ scaffold-ai/
 ├── apps/
 │   ├── web/                      # React 19 + Vite + Cloudscape SPA
 │   │   ├── src/
-│   │   │   ├── App.tsx           # Amplify auth wrapper, AppLayout, dark mode toggle
+│   │   │   ├── App.tsx           # Amplify auth wrapper, AppLayout, dark/light toggle, toast context, keyboard shortcuts
 │   │   │   ├── main.tsx          # Entry point, configureAmplify()
-│   │   │   └── index.css         # Red accent theme, Authenticator dark mode CSS
+│   │   │   └── index.css         # SA design tokens (--sa-*), dark/light themes, chat markdown, session sidebar, responsive
 │   │   ├── components/
 │   │   │   ├── Canvas.tsx        # React Flow architecture canvas (65 AWS node types)
-│   │   │   ├── Chat.tsx          # AI chat + code generation UI
+│   │   │   ├── Chat.tsx          # AI chat + code generation UI + session sidebar + markdown rendering
 │   │   │   ├── GeneratedCodeModal.tsx
-│   │   │   └── PlannerNotification.tsx
+│   │   │   ├── PlannerNotification.tsx
+│   │   │   └── PlannerRefineButton.tsx
 │   │   ├── lib/
 │   │   │   ├── amplify.ts        # Amplify config from VITE_* env vars
 │   │   │   ├── api.ts            # AWS SDK calls (SFN StartExecution, Lambda Invoke)
@@ -123,7 +124,7 @@ cd apps/infra && npx cdk deploy --all --profile cdk-deploy-prod --require-approv
 
 ## UI Theme
 
-Dark mode default (localStorage persisted, toggle in TopNav). Red accent Cloudscape theme — CSS variable overrides in `apps/web/src/index.css`. Primary: `#e8001c`. Portfolio-wide dark Amplify Authenticator sign-in page.
+Dark mode default (localStorage persisted, toggle in TopNav). Red accent Cloudscape theme. CSS custom properties with `--sa-*` prefix in `apps/web/src/index.css` — dark `:root` defaults, `body.sa-light` overrides. Primary: `#e8001c`. Portfolio-wide dark Amplify Authenticator sign-in page. Chat markdown rendered via `react-markdown` + `remark-gfm` with `.chat-markdown` styles. Toast notifications via Flashbar in AuthContext. Keyboard shortcuts: Ctrl+K (focus), Escape (close). Session sidebar with rename/delete. Responsive media queries for mobile.
 
 ## PSP Integration
 

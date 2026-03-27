@@ -14,7 +14,7 @@ def test_keyword_classify_generate_code():
     _set_path()
     from handler import _keyword_classify
 
-    assert _keyword_classify("generate the CDK code") == "generate_code"
+    assert _keyword_classify("generate code for the CDK stack") == "generate_code"
 
 
 def test_keyword_classify_new_feature():
@@ -49,7 +49,7 @@ def test_handler_falls_back_to_keyword_on_exception():
         mock_config.model_id = "some-model"
         from handler import handler
 
-        result = handler({"user_input": "generate the CDK code", "graph_json": {}, "iac_format": "cdk"})
+        result = handler({"user_input": "generate code for the CDK stack", "graph_json": {}, "iac_format": "cdk"})
 
     assert result["intent"] == "generate_code"
 
