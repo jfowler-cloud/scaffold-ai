@@ -26,7 +26,8 @@ scaffold-ai/
 │   │   │   ├── Canvas.tsx        # React Flow architecture canvas (65 AWS node types)
 │   │   │   ├── Chat.tsx          # AI chat + code generation UI + session sidebar + markdown rendering
 │   │   │   ├── GeneratedCodeModal.tsx
-│   │   │   └── PlannerNotification.tsx
+│   │   │   ├── PlannerNotification.tsx
+│   │   │   └── PlannerRefineButton.tsx
 │   │   ├── lib/
 │   │   │   ├── amplify.ts        # Amplify config from VITE_* env vars
 │   │   │   ├── api.ts            # AWS SDK calls (SFN StartExecution, Lambda Invoke)
