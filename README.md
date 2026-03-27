@@ -495,7 +495,7 @@ Contributions welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## UI Formatting Note
 
-This project has chat markdown rendering with `react-markdown` + `remark-gfm` and a chat sidebar with conversation history. It does not yet have the full UI polish of [recon-ai](https://github.com/jfowler-cloud/recon-ai), which additionally includes CSS custom properties (`:root` dark/light color palette), empty state illustrations, responsive media queries, notification toasts, keyboard shortcuts (Ctrl+K, Esc), chat session rename/delete, and metric card hover effects. These may be backported in a future pass.
+This project has chat markdown rendering with `react-markdown` + `remark-gfm`, CSS custom properties (`:root` dark/light color palette with `sa-` prefix), notification toasts (Flashbar with auto-dismiss), keyboard shortcuts (Ctrl+K focus chat, Esc close modals), empty state illustrations, responsive media queries, light mode Authenticator/TopNavigation polish, session sidebar styles, and smooth theme transitions. Chat session rename/delete and metric card hover effects from [recon-ai](https://github.com/jfowler-cloud/recon-ai) may be backported in a future pass.
 
 ## License
 
