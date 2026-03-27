@@ -22,9 +22,9 @@ Classify the user's message into exactly ONE of these intents:
 Respond with ONLY the intent name, nothing else."""
 
 _KEYWORD_FALLBACK = {
-    "generate_code": ["generate", "code", "deploy", "build", "cdk", "export"],
-    "explain":       ["explain", "what is", "how does", "describe", "?"],
-    "modify_graph":  ["remove", "delete", "disconnect", "change", "modify", "update", "connect"],
+    "generate_code": ["generate code", "generate cdk", "deploy", "export code"],
+    "explain": ["explain", "what is", "how does"],
+    "modify_graph": ["remove", "delete", "disconnect", "change", "modify", "update", "connect"],
 }
 
 
